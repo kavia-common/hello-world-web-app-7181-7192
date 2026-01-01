@@ -39,6 +39,25 @@ const DUMMY_HOME_LEARNING_PATH_METRICS_RESPONSE = {
 };
 
 /**
+ * Mocked response used for the "Skill Factory metrics" section on Home.
+ * Payload provided by the prompt.
+ */
+const DUMMY_HOME_SKILL_FACTORY_METRICS_RESPONSE = {
+  status: "success",
+  data: [
+    {
+      skillFactoryId: "SF-PLATFORM-001",
+      skillFactoryName: "Platform Engineering",
+      mentorCount: 2,
+      employeeCount: 4,
+      inPoolCount: 2,
+      notInPoolCount: 2,
+    },
+  ],
+  count: 1,
+};
+
+/**
  * Simulates an API call with loading/error states.
  * This is where a real request will live later:
  *   fetch(`${process.env.REACT_APP_API_BASE}/home/metrics`, ...)
@@ -96,6 +115,36 @@ async function fetchHomeLearningPathMetricsMock({ signal } = {}) {
   }
 
   return DUMMY_HOME_LEARNING_PATH_METRICS_RESPONSE;
+}
+
+/**
+ * Simulates an API call for Skill Factory metrics with loading/error states.
+ * This is where a real request will live later:
+ *   fetch(`${process.env.REACT_APP_API_BASE}/home/skill-factory-metrics`, ...)
+ */
+async function fetchHomeSkillFactoryMetricsMock({ signal } = {}) {
+  // Simulate network latency (slightly staggered from other Home calls)
+  await new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(resolve, 760);
+    if (signal) {
+      signal.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(timeoutId);
+          reject(new DOMException("Request aborted", "AbortError"));
+        },
+        { once: true }
+      );
+    }
+  });
+
+  // Toggle to validate error UI if needed.
+  const shouldFail = false;
+  if (shouldFail) {
+    throw new Error("Failed to load Skill Factory metrics. Please try again.");
+  }
+
+  return DUMMY_HOME_SKILL_FACTORY_METRICS_RESPONSE;
 }
 
 function safeNumber(value) {
@@ -159,6 +208,12 @@ export function HomePage() {
   const [lpMetricsLoading, setLpMetricsLoading] = React.useState(true);
   const [lpMetricsError, setLpMetricsError] = React.useState("");
 
+  // Skill Factory metrics section state
+  const [sfMetricsRows, setSfMetricsRows] = React.useState([]);
+  const [sfMetricsCount, setSfMetricsCount] = React.useState(null);
+  const [sfMetricsLoading, setSfMetricsLoading] = React.useState(true);
+  const [sfMetricsError, setSfMetricsError] = React.useState("");
+
   const load = React.useCallback(async () => {
     setLoading(true);
     setErrorMessage("");
@@ -210,20 +265,49 @@ export function HomePage() {
     return () => controller.abort();
   }, []);
 
+  const loadSkillFactoryMetrics = React.useCallback(async () => {
+    setSfMetricsLoading(true);
+    setSfMetricsError("");
+
+    const controller = new AbortController();
+
+    try {
+      const response = await fetchHomeSkillFactoryMetricsMock({ signal: controller.signal });
+
+      if (!response || response.status !== "success" || !Array.isArray(response.data)) {
+        throw new Error("Unexpected API response format.");
+      }
+
+      setSfMetricsRows(response.data);
+      setSfMetricsCount(typeof response.count === "number" && Number.isFinite(response.count) ? response.count : null);
+    } catch (err) {
+      if (err?.name !== "AbortError") {
+        setSfMetricsError(err?.message || "Something went wrong while loading data.");
+      }
+    } finally {
+      setSfMetricsLoading(false);
+    }
+
+    return () => controller.abort();
+  }, []);
+
   React.useEffect(() => {
     let cleanupDashboard = null;
     let cleanupLp = null;
+    let cleanupSf = null;
 
     (async () => {
       cleanupDashboard = await load();
       cleanupLp = await loadLearningPathMetrics();
+      cleanupSf = await loadSkillFactoryMetrics();
     })();
 
     return () => {
       if (typeof cleanupDashboard === "function") cleanupDashboard();
       if (typeof cleanupLp === "function") cleanupLp();
+      if (typeof cleanupSf === "function") cleanupSf();
     };
-  }, [load, loadLearningPathMetrics]);
+  }, [load, loadLearningPathMetrics, loadSkillFactoryMetrics]);
 
   const cards = React.useMemo(() => {
     const lp = metrics?.learningPaths || {};
@@ -344,7 +428,101 @@ export function HomePage() {
           </div>
         )}
 
-        {/* New section: Learning Path metrics (below existing dashboard) */}
+        {/* New section: Skill Factory metrics (below existing dashboard) */}
+        <section className="HomeSection" aria-label="Skill Factory metrics">
+          <div className="HomeSectionHeader">
+            <div>
+              <h2 className="HomeSectionTitle">Skill Factory metrics</h2>
+              <p className="HomeSectionSubtitle">Pool distribution snapshot (mocked API response).</p>
+            </div>
+
+            <div className="RmgToolbar" aria-label="Skill Factory metrics actions" style={{ marginTop: 0 }}>
+              <button
+                type="button"
+                className="RmgButton"
+                onClick={loadSkillFactoryMetrics}
+                disabled={sfMetricsLoading}
+                aria-disabled={sfMetricsLoading ? "true" : "false"}
+              >
+                {sfMetricsLoading ? "Loading…" : "Refresh"}
+              </button>
+
+              <span className="HomeMiniPill" aria-label="Skill Factory metrics count">
+                Count: <span className="RmgMono">{sfMetricsCount === null ? "—" : sfMetricsCount}</span>
+              </span>
+            </div>
+          </div>
+
+          {sfMetricsLoading && (
+            <div className="RmgState" role="status" aria-live="polite">
+              <div className="RmgSpinner" aria-hidden="true" />
+              <span>Fetching Skill Factory metrics…</span>
+            </div>
+          )}
+
+          {!sfMetricsLoading && sfMetricsError && (
+            <div className="RmgError" role="alert">
+              <div className="RmgErrorTitle">Couldn’t load Skill Factory metrics</div>
+              <div className="RmgErrorMessage">{sfMetricsError}</div>
+              <button type="button" className="RmgButton RmgButton--danger" onClick={loadSkillFactoryMetrics}>
+                Try again
+              </button>
+            </div>
+          )}
+
+          {!sfMetricsLoading && !sfMetricsError && (
+            <div className="SfMetricsGrid" role="region" aria-label="Skill Factory metric cards">
+              {sfMetricsRows.length === 0 ? (
+                <div className="RmgState" role="status" aria-live="polite">
+                  <span>No Skill Factory metrics available.</span>
+                </div>
+              ) : (
+                sfMetricsRows.map((sf) => {
+                  const title = sf.skillFactoryName || sf.skillFactoryId || "Skill Factory";
+                  const subtitle = sf.skillFactoryId ? `ID: ${sf.skillFactoryId}` : "";
+
+                  const metricCards = [
+                    { key: "mentorCount", label: "Mentor Count", value: metricLabelOrDash(sf.mentorCount) },
+                    { key: "employeeCount", label: "Employee Count", value: metricLabelOrDash(sf.employeeCount) },
+                    { key: "inPoolCount", label: "In Pool", value: metricLabelOrDash(sf.inPoolCount) },
+                    { key: "notInPoolCount", label: "Not In Pool", value: metricLabelOrDash(sf.notInPoolCount) },
+                  ];
+
+                  return (
+                    <article
+                      key={sf.skillFactoryId || sf.skillFactoryName}
+                      className="SfMetricsCard"
+                      aria-label={`${title} metrics`}
+                    >
+                      <header className="SfMetricsCardHeader">
+                        <div className="SfMetricsCardTitleRow">
+                          <h3 className="SfMetricsCardTitle">{title}</h3>
+                          {subtitle && <span className="SfMetricsCardMeta RmgMono">{subtitle}</span>}
+                        </div>
+                      </header>
+
+                      <div className="SfMetricsCardGrid" role="list" aria-label={`${title} metric list`}>
+                        {metricCards.map((m) => (
+                          <div
+                            key={m.key}
+                            className="SfMetricMiniCard"
+                            role="listitem"
+                            aria-label={`${m.label} ${m.value}`}
+                          >
+                            <div className="SfMetricMiniValue RmgMono">{m.value}</div>
+                            <div className="SfMetricMiniLabel">{m.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </article>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </section>
+
+        {/* Existing section: Learning Path metrics (keep intact) */}
         <section className="HomeSection" aria-label="Learning Path metrics">
           <div className="HomeSectionHeader">
             <div>
@@ -473,10 +651,7 @@ export function HomePage() {
                             <Link
                               to={baseTo}
                               className={`HomeLpRatePill ${rateToneClass(row.completionRate)}`}
-                              aria-label={`Filter Learning Paths by ${lpName} (completion rate ${formatPercentOrDash(
-                                row.completionRate,
-                                { digits: 0 }
-                              )})`}
+                              aria-label={`Filter Learning Paths by ${lpName} (completion rate ${formatPercentOrDash(row.completionRate, { digits: 0 })})`}
                               title={`Completion rate: ${formatPercentOrDash(row.completionRate, { digits: 0 })}. Click to filter by learning path name.`}
                               onClick={(e) => e.stopPropagation()}
                               onKeyDown={(e) => e.stopPropagation()}
