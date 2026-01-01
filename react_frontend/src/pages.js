@@ -158,18 +158,7 @@ function metricLabelOrDash(value) {
   return num === null ? "—" : String(num);
 }
 
-function formatPercentOrDash(value, { digits = 0 } = {}) {
-  const num = safeNumber(value);
-  if (num === null) return "—";
-  return `${(num * 100).toFixed(digits)}%`;
-}
 
-function rateToneClass(rate) {
-  const num = safeNumber(rate);
-  if (num === null) return "";
-  // Very simple tone threshold for the pill.
-  return num >= 0.5 ? "HomeLpRatePill--good" : "HomeLpRatePill--low";
-}
 
 function getMetricCardA11yText({ title, mainValue, mainLabel, secondary }) {
   const parts = [title];
@@ -240,17 +229,9 @@ function poolParamToLabel(param) {
   return "";
 }
 
-function isInteractiveElement(target) {
-  if (!target) return false;
-  const el = target;
-  const tag = String(el.tagName || "").toLowerCase();
-  return tag === "a" || tag === "button" || tag === "input" || tag === "select" || tag === "textarea";
-}
-
-// PUBLIC_INTERFACE
+ // PUBLIC_INTERFACE
 export function HomePage() {
   /** Home page that renders a dashboard-style overview using mocked API metrics. */
-  const navigate = useNavigate();
 
   const [metrics, setMetrics] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
@@ -720,23 +701,7 @@ export function HomePage() {
   );
 }
 
-function PlaceholderPage({ title, description }) {
-  return (
-    <main className="App-main" aria-label={`${title} page`}>
-      <section className="HelloCard" aria-label={`${title} content`}>
-        <p className="HelloEyebrow">Digi Portal</p>
-        <h1 className="HelloTitle">{title}</h1>
-        <p className="HelloSubtitle">{description}</p>
 
-        <div style={{ marginTop: 20 }}>
-          <Link className="HelloCTA" to="/" aria-label="Back to home">
-            Back to Home
-          </Link>
-        </div>
-      </section>
-    </main>
-  );
-}
 
 /**
  * Mocked/dummy response used for the RMG Tracker table.
