@@ -653,6 +653,207 @@
   border-top: 1px solid rgba(139, 92, 246, 0.16);
 }
 
+.HomeLpMetricsLayout {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+@media (max-width: 980px) {
+  .HomeLpMetricsLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Chart container */
+.HomeLpChart {
+  margin: 0;
+  border-radius: 18px;
+  border: 1px solid rgba(139, 92, 246, 0.18);
+  background:
+    radial-gradient(650px circle at 20% 10%, rgba(236, 72, 153, 0.14), transparent 55%),
+    radial-gradient(700px circle at 90% 20%, rgba(139, 92, 246, 0.14), transparent 55%),
+    rgba(255, 255, 255, 0.72);
+  box-shadow: 0 16px 34px rgba(17, 24, 39, 0.1);
+  backdrop-filter: blur(10px);
+  padding: 14px 14px;
+}
+
+.HomeLpChartCaption {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.HomeLpChartTitle {
+  font-weight: 950;
+  letter-spacing: -0.02em;
+  font-size: 1.02rem;
+}
+
+.HomeLpChartSub {
+  color: rgba(55, 65, 81, 0.78);
+  font-weight: 700;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.HomeLpChartBody {
+  display: grid;
+  gap: 12px;
+}
+
+.HomeLpChartLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(139, 92, 246, 0.16);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.HomeLpLegendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 900;
+  color: rgba(55, 65, 81, 0.82);
+  font-size: 0.82rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.HomeLpLegendSwatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(139, 92, 246, 0.18);
+}
+
+.HomeLpLegendSwatch--completed {
+  background: rgba(16, 185, 129, 0.8);
+}
+
+.HomeLpLegendSwatch--inprogress {
+  background: rgba(236, 72, 153, 0.82);
+}
+
+.HomeLpLegendSwatch--remaining {
+  background: rgba(139, 92, 246, 0.32);
+}
+
+.HomeLpChartList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.HomeLpChartRow {
+  border-radius: 16px;
+  border: 1px solid rgba(139, 92, 246, 0.16);
+  background: rgba(255, 255, 255, 0.66);
+  padding: 12px 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.HomeLpChartRowTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.HomeLpChartRowName {
+  font-weight: 950;
+  letter-spacing: -0.01em;
+  max-width: 70%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.HomeLpChartRowMeta {
+  display: inline-flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: rgba(55, 65, 81, 0.78);
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+
+.HomeLpChartSvg {
+  display: block;
+  width: 100%;
+  height: 18px;
+}
+
+.HomeLpChartTrack {
+  fill: rgba(139, 92, 246, 0.12);
+  stroke: rgba(139, 92, 246, 0.18);
+}
+
+.HomeLpChartSeg--completed {
+  fill: rgba(16, 185, 129, 0.78);
+}
+
+.HomeLpChartSeg--inprogress {
+  fill: rgba(236, 72, 153, 0.82);
+}
+
+.HomeLpChartSeg--remaining {
+  fill: rgba(139, 92, 246, 0.32);
+}
+
+.HomeLpChartNumbers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: rgba(55, 65, 81, 0.8);
+  font-weight: 900;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.HomeLpChartNum {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(139, 92, 246, 0.16);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.HomeLpChartNum--completed {
+  border-color: rgba(16, 185, 129, 0.28);
+}
+
+.HomeLpChartNum--inprogress {
+  border-color: rgba(236, 72, 153, 0.28);
+}
+
+.HomeLpChartNum--remaining {
+  border-color: rgba(139, 92, 246, 0.22);
+}
+
+.HomeLpChartEmpty {
+  margin-top: 6px;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(139, 92, 246, 0.18);
+  background: rgba(255, 255, 255, 0.7);
+  font-weight: 800;
+  color: rgba(55, 65, 81, 0.8);
+}
+
 /* ---------- Home: Skill Factory metrics section ---------- */
 
 .SfMetricsGrid {

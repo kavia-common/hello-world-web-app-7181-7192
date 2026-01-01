@@ -2,6 +2,208 @@ import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 /**
+ * Lightweight, dependency-free SVG chart for Learning Path metrics.
+ * Renders a stacked bar per learning path (completed/inProgress/remaining).
+ */
+function clampNonNegativeNumber(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, n);
+}
+
+function withDefault(value, fallback) {
+  return value === null || value === undefined ? fallback : value;
+}
+
+function toPercent(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.max(0, Math.min(1, n));
+}
+
+function getLpTotals(row) {
+  const enrolled = clampNonNegativeNumber(row?.enrolled);
+  const completed = clampNonNegativeNumber(row?.completed);
+  const inProgress = clampNonNegativeNumber(row?.inProgress);
+  const remaining = Math.max(0, enrolled - completed - inProgress);
+  const total = Math.max(0, completed + inProgress + remaining);
+  return { enrolled, completed, inProgress, remaining, total };
+}
+
+function generateChartId(prefix = "lpchart") {
+  // Stable-enough unique id for aria-labelledby linking.
+  return `${prefix}-${Math.random().toString(16).slice(2)}`;
+}
+
+function LpMetricsStackedBarChart({ rows }) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const titleId = React.useMemo(() => generateChartId("lpchart-title"), []);
+  const descId = React.useMemo(() => generateChartId("lpchart-desc"), []);
+
+  // Use max enrolled for scaling bar widths.
+  const maxTotal = React.useMemo(() => {
+    let max = 0;
+    for (const r of safeRows) {
+      const { enrolled } = getLpTotals(r);
+      max = Math.max(max, enrolled);
+    }
+    return max;
+  }, [safeRows]);
+
+  const hasData = safeRows.length > 0 && maxTotal > 0;
+
+  return (
+    <figure className="HomeLpChart" aria-labelledby={titleId} aria-describedby={descId}>
+      <figcaption className="HomeLpChartCaption">
+        <div className="HomeLpChartTitle" id={titleId}>
+          Progress snapshot
+        </div>
+        <div className="HomeLpChartSub" id={descId}>
+          Stacked bars show Completed, In Progress, and Remaining out of Enrolled (per learning path).
+        </div>
+      </figcaption>
+
+      {!hasData ? (
+        <div className="HomeLpChartEmpty" role="status" aria-live="polite">
+          No chart data available.
+        </div>
+      ) : (
+        <div className="HomeLpChartBody" role="img" aria-label="Learning Path progress chart">
+          <div className="HomeLpChartLegend" aria-label="Chart legend">
+            <span className="HomeLpLegendItem">
+              <span className="HomeLpLegendSwatch HomeLpLegendSwatch--completed" aria-hidden="true" />
+              Completed
+            </span>
+            <span className="HomeLpLegendItem">
+              <span className="HomeLpLegendSwatch HomeLpLegendSwatch--inprogress" aria-hidden="true" />
+              In progress
+            </span>
+            <span className="HomeLpLegendItem">
+              <span className="HomeLpLegendSwatch HomeLpLegendSwatch--remaining" aria-hidden="true" />
+              Remaining
+            </span>
+          </div>
+
+          <ul className="HomeLpChartList" aria-label="Learning paths chart rows">
+            {safeRows.map((row) => {
+              const name = row?.learningPathName || "—";
+              const { enrolled, completed, inProgress, remaining } = getLpTotals(row);
+
+              // Scale width to max enrolled
+              const barW = 240;
+              const barH = 12;
+              const pad = 2;
+
+              const scale = maxTotal > 0 ? barW / maxTotal : 0;
+              const wCompleted = Math.max(0, Math.round(completed * scale));
+              const wInProgress = Math.max(0, Math.round(inProgress * scale));
+              const wRemaining = Math.max(0, Math.round(remaining * scale));
+
+              // Ensure the bar never exceeds barW due to rounding
+              const overflow = Math.max(0, wCompleted + wInProgress + wRemaining - barW);
+              const wRemainingClamped = Math.max(0, wRemaining - overflow);
+
+              const pctCompleted = enrolled > 0 ? toPercent(completed / enrolled) : 0;
+              const pctInProgress = enrolled > 0 ? toPercent(inProgress / enrolled) : 0;
+              const pctRemaining = enrolled > 0 ? toPercent(remaining / enrolled) : 0;
+
+              const a11y = `${name}. Enrolled ${enrolled}. Completed ${completed} (${Math.round(
+                pctCompleted * 100
+              )}%). In progress ${inProgress} (${Math.round(
+                pctInProgress * 100
+              )}%). Remaining ${remaining} (${Math.round(pctRemaining * 100)}%).`;
+
+              return (
+                <li key={name} className="HomeLpChartRow" aria-label={a11y}>
+                  <div className="HomeLpChartRowTop">
+                    <div className="HomeLpChartRowName" title={name}>
+                      {name}
+                    </div>
+                    <div className="HomeLpChartRowMeta">
+                      <span className="HomeLpChartRowMetaItem">
+                        Enrolled: <span className="RmgMono">{enrolled}</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <svg
+                    className="HomeLpChartSvg"
+                    width="100%"
+                    viewBox={`0 0 ${barW + pad * 2} ${barH + pad * 2}`}
+                    role="img"
+                    aria-label={a11y}
+                    focusable="false"
+                  >
+                    <title>{name}</title>
+                    <desc>{a11y}</desc>
+
+                    {/* Track */}
+                    <rect
+                      x={pad}
+                      y={pad}
+                      width={barW}
+                      height={barH}
+                      rx="999"
+                      ry="999"
+                      className="HomeLpChartTrack"
+                    />
+
+                    {/* Completed */}
+                    <rect
+                      x={pad}
+                      y={pad}
+                      width={wCompleted}
+                      height={barH}
+                      rx="999"
+                      ry="999"
+                      className="HomeLpChartSeg HomeLpChartSeg--completed"
+                    />
+
+                    {/* In progress */}
+                    <rect
+                      x={pad + wCompleted}
+                      y={pad}
+                      width={wInProgress}
+                      height={barH}
+                      rx="0"
+                      ry="0"
+                      className="HomeLpChartSeg HomeLpChartSeg--inprogress"
+                    />
+
+                    {/* Remaining */}
+                    <rect
+                      x={pad + wCompleted + wInProgress}
+                      y={pad}
+                      width={wRemainingClamped}
+                      height={barH}
+                      rx="0"
+                      ry="0"
+                      className="HomeLpChartSeg HomeLpChartSeg--remaining"
+                    />
+                  </svg>
+
+                  <div className="HomeLpChartNumbers" aria-hidden="true">
+                    <span className="HomeLpChartNum HomeLpChartNum--completed">
+                      C <span className="RmgMono">{completed}</span>
+                    </span>
+                    <span className="HomeLpChartNum HomeLpChartNum--inprogress">
+                      IP <span className="RmgMono">{inProgress}</span>
+                    </span>
+                    <span className="HomeLpChartNum HomeLpChartNum--remaining">
+                      R <span className="RmgMono">{remaining}</span>
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+    </figure>
+  );
+}
+
+/**
  * Simple pages used by the app router.
  * Kept lightweight and styled via existing App.css utility-ish classes.
  */
@@ -625,107 +827,111 @@ export function HomePage() {
           )}
 
           {!lpMetricsLoading && !lpMetricsError && (
-            <div className="HomeLpTableWrap" role="region" aria-label="Learning Path metrics table">
-              <table className="HomeLpTable">
-                <thead>
-                  <tr>
-                    <th scope="col">Learning Path</th>
-                    <th scope="col" style={{ textAlign: "right" }}>
-                      Enrolled
-                    </th>
-                    <th scope="col" style={{ textAlign: "right" }}>
-                      Completed
-                    </th>
-                    <th scope="col" style={{ textAlign: "right" }}>
-                      In Progress
-                    </th>
-                    <th scope="col">Completion rate</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lpMetricsRows.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="RmgEmptyCell">
-                        No learning path metrics available.
-                      </td>
-                    </tr>
-                  ) : (
-                    lpMetricsRows.map((row) => {
-                      const lpName = row.learningPathName || "";
-                      const baseTo = buildLearningPathsQuery({ q: lpName });
+            <div className="HomeLpMetricsLayout" role="region" aria-label="Learning Path metrics">
+              <LpMetricsStackedBarChart rows={lpMetricsRows} />
 
-                      return (
-                        <tr
-                          key={row.learningPathName}
-                          role="button"
-                          tabIndex={0}
-                          aria-label={`View learning path: ${lpName || "Unknown"}`}
-                          onClick={(e) => {
-                            // If user clicks a nested interactive element (like the pills), let it handle navigation.
-                            if (isInteractiveElement(e.target)) return;
-                            navigate(baseTo);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
+              <div className="HomeLpTableWrap" role="region" aria-label="Learning Path metrics table">
+                <table className="HomeLpTable">
+                  <thead>
+                    <tr>
+                      <th scope="col">Learning Path</th>
+                      <th scope="col" style={{ textAlign: "right" }}>
+                        Enrolled
+                      </th>
+                      <th scope="col" style={{ textAlign: "right" }}>
+                        Completed
+                      </th>
+                      <th scope="col" style={{ textAlign: "right" }}>
+                        In Progress
+                      </th>
+                      <th scope="col">Completion rate</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lpMetricsRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="RmgEmptyCell">
+                          No learning path metrics available.
+                        </td>
+                      </tr>
+                    ) : (
+                      lpMetricsRows.map((row) => {
+                        const lpName = row.learningPathName || "";
+                        const baseTo = buildLearningPathsQuery({ q: lpName });
+
+                        return (
+                          <tr
+                            key={row.learningPathName}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`View learning path: ${lpName || "Unknown"}`}
+                            onClick={(e) => {
+                              // If user clicks a nested interactive element (like the pills), let it handle navigation.
+                              if (isInteractiveElement(e.target)) return;
                               navigate(baseTo);
-                            }
-                          }}
-                          style={{ cursor: "pointer" }}
-                          title="Open Learning Paths with this Learning Path name pre-filtered"
-                        >
-                          <td>
-                            <span className="HomeLpName">{row.learningPathName || "—"}</span>
-                          </td>
-                          <td style={{ textAlign: "right" }}>
-                            <span className="RmgMono">{metricLabelOrDash(row.enrolled)}</span>
-                          </td>
-                          <td style={{ textAlign: "right" }}>
-                            {/* Clickable: filter by q + status=completed */}
-                            <Link
-                              className="RmgMono"
-                              to={buildLearningPathsQuery({ q: lpName, status: "completed" })}
-                              aria-label={`Filter Learning Paths by ${lpName} and status completed`}
-                              title="Open Learning Paths filtered to completed"
-                              onClick={(e) => e.stopPropagation()}
-                              onKeyDown={(e) => e.stopPropagation()}
-                            >
-                              {metricLabelOrDash(row.completed)}
-                            </Link>
-                          </td>
-                          <td style={{ textAlign: "right" }}>
-                            {/* Clickable: filter by q + status=inProgress */}
-                            <Link
-                              className="RmgMono"
-                              to={buildLearningPathsQuery({ q: lpName, status: "inProgress" })}
-                              aria-label={`Filter Learning Paths by ${lpName} and status in progress`}
-                              title="Open Learning Paths filtered to in progress"
-                              onClick={(e) => e.stopPropagation()}
-                              onKeyDown={(e) => e.stopPropagation()}
-                            >
-                              {metricLabelOrDash(row.inProgress)}
-                            </Link>
-                          </td>
-                          <td>
-                            {/* Clickable pill: filter by q only */}
-                            <Link
-                              to={baseTo}
-                              className={`HomeLpRatePill ${rateToneClass(row.completionRate)}`}
-                              aria-label={`Filter Learning Paths by ${lpName} (completion rate ${formatPercentOrDash(row.completionRate, { digits: 0 })})`}
-                              title={`Completion rate: ${formatPercentOrDash(row.completionRate, { digits: 0 })}. Click to filter by learning path name.`}
-                              onClick={(e) => e.stopPropagation()}
-                              onKeyDown={(e) => e.stopPropagation()}
-                              style={{ textDecoration: "none", color: "inherit" }}
-                            >
-                              {formatPercentOrDash(row.completionRate, { digits: 0 })}
-                            </Link>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                navigate(baseTo);
+                              }
+                            }}
+                            style={{ cursor: "pointer" }}
+                            title="Open Learning Paths with this Learning Path name pre-filtered"
+                          >
+                            <td>
+                              <span className="HomeLpName">{row.learningPathName || "—"}</span>
+                            </td>
+                            <td style={{ textAlign: "right" }}>
+                              <span className="RmgMono">{metricLabelOrDash(row.enrolled)}</span>
+                            </td>
+                            <td style={{ textAlign: "right" }}>
+                              {/* Clickable: filter by q + status=completed */}
+                              <Link
+                                className="RmgMono"
+                                to={buildLearningPathsQuery({ q: lpName, status: "completed" })}
+                                aria-label={`Filter Learning Paths by ${lpName} and status completed`}
+                                title="Open Learning Paths filtered to completed"
+                                onClick={(e) => e.stopPropagation()}
+                                onKeyDown={(e) => e.stopPropagation()}
+                              >
+                                {metricLabelOrDash(row.completed)}
+                              </Link>
+                            </td>
+                            <td style={{ textAlign: "right" }}>
+                              {/* Clickable: filter by q + status=inProgress */}
+                              <Link
+                                className="RmgMono"
+                                to={buildLearningPathsQuery({ q: lpName, status: "inProgress" })}
+                                aria-label={`Filter Learning Paths by ${lpName} and status in progress`}
+                                title="Open Learning Paths filtered to in progress"
+                                onClick={(e) => e.stopPropagation()}
+                                onKeyDown={(e) => e.stopPropagation()}
+                              >
+                                {metricLabelOrDash(row.inProgress)}
+                              </Link>
+                            </td>
+                            <td>
+                              {/* Clickable pill: filter by q only */}
+                              <Link
+                                to={baseTo}
+                                className={`HomeLpRatePill ${rateToneClass(row.completionRate)}`}
+                                aria-label={`Filter Learning Paths by ${lpName} (completion rate ${formatPercentOrDash(row.completionRate, { digits: 0 })})`}
+                                title={`Completion rate: ${formatPercentOrDash(row.completionRate, { digits: 0 })}. Click to filter by learning path name.`}
+                                onClick={(e) => e.stopPropagation()}
+                                onKeyDown={(e) => e.stopPropagation()}
+                                style={{ textDecoration: "none", color: "inherit" }}
+                              >
+                                {formatPercentOrDash(row.completionRate, { digits: 0 })}
+                              </Link>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </section>
