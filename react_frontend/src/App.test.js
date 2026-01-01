@@ -1,7 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import App from "./App";
 
-test("renders Hello World message", () => {
+test("renders Digi Portal welcome title", () => {
   render(<App />);
-  expect(screen.getByRole("heading", { name: /hello world/i })).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: /welcome to digi portal/i })
+  ).toBeInTheDocument();
 });
