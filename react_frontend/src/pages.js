@@ -1381,10 +1381,48 @@ function safeNumberOrDash(value) {
 
 // PUBLIC_INTERFACE
 export function LearningPathsPage() {
-  /** Learning Paths page that fetches (mocked) data and renders a table with loading and error states. */
+  /** Learning Paths page that fetches (mocked) data and renders a table with loading and error states + client-side table UX. */
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [errorMessage, setErrorMessage] = React.useState("");
+
+  // Table options (match RMG Tracker / Skill Factories UX)
+  const [searchText, setSearchText] = React.useState("");
+  const [filters, setFilters] = React.useState({
+    duration: "",
+    tag: "",
+  });
+
+  const ALL_COLUMNS = React.useMemo(
+    () => [
+      { id: "learningPathName", label: "Learning Path Name" },
+      { id: "description", label: "Description" },
+      { id: "tags", label: "Tags" },
+      { id: "courseLinks", label: "Course Links" },
+      { id: "duration", label: "Duration" },
+      { id: "enrolledCount", label: "Enrolled" },
+      { id: "completedCount", label: "Completed" },
+      { id: "inProgressCount", label: "In Progress" },
+      { id: "createdAt", label: "Created At" },
+      { id: "updatedAt", label: "Updated At" },
+    ],
+    []
+  );
+
+  const DEFAULT_VISIBLE_COLUMN_IDS = React.useMemo(
+    () => ALL_COLUMNS.map((c) => c.id),
+    [ALL_COLUMNS]
+  );
+
+  const [visibleColumnIds, setVisibleColumnIds] = React.useState(
+    DEFAULT_VISIBLE_COLUMN_IDS
+  );
+  const [columnPanelOpen, setColumnPanelOpen] = React.useState(false);
+
+  // Pagination
+  const PAGE_SIZES = React.useMemo(() => [3, 5, 10, 20], []);
+  const [pageSize, setPageSize] = React.useState(5);
+  const [pageIndex, setPageIndex] = React.useState(0);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -1423,26 +1461,101 @@ export function LearningPathsPage() {
     };
   }, [load]);
 
-  const columns = React.useMemo(
-    () => [
-      { id: "learningPathName", label: "Learning Path Name" },
-      { id: "description", label: "Description" },
-      { id: "tags", label: "Tags" },
-      { id: "courseLinks", label: "Course Links" },
-      { id: "duration", label: "Duration" },
-      { id: "enrolledCount", label: "Enrolled" },
-      { id: "completedCount", label: "Completed" },
-      { id: "inProgressCount", label: "In Progress" },
-      { id: "createdAt", label: "Created At" },
-      { id: "updatedAt", label: "Updated At" },
-    ],
-    []
-  );
+  const filterOptions = React.useMemo(() => {
+    const duration = uniqueSorted(rows.map((r) => r.duration));
+
+    // Flatten tags into a single filter dropdown.
+    const allTags = [];
+    for (const r of rows) {
+      if (Array.isArray(r?.tags)) allTags.push(...r.tags);
+    }
+    const tag = uniqueSorted(allTags);
+
+    return { duration, tag };
+  }, [rows]);
+
+  const filteredRows = React.useMemo(() => {
+    const query = searchText.trim().toLowerCase();
+
+    return rows.filter((lp) => {
+      // Dropdown filters (exact match)
+      if (filters.duration && normalizeText(lp.duration) !== filters.duration) {
+        return false;
+      }
+      if (filters.tag) {
+        const tags = Array.isArray(lp.tags) ? lp.tags : [];
+        if (!tags.includes(filters.tag)) return false;
+      }
+
+      // Global search across all columns (not only visible ones)
+      if (!query) return true;
+
+      const anyMatch = ALL_COLUMNS.some((c) => {
+        switch (c.id) {
+          case "tags":
+            return Array.isArray(lp.tags)
+              ? lp.tags.join(" ").toLowerCase().includes(query)
+              : false;
+          case "courseLinks":
+            return Array.isArray(lp.courseLinks)
+              ? lp.courseLinks.join(" ").toLowerCase().includes(query)
+              : false;
+          case "createdAt":
+          case "updatedAt":
+            return normalizeText(formatLearningPathsIsoDateTimeOrDash(lp[c.id]))
+              .toLowerCase()
+              .includes(query);
+          default:
+            return normalizeText(lp[c.id]).toLowerCase().includes(query);
+        }
+      });
+
+      return anyMatch;
+    });
+  }, [rows, filters, searchText, ALL_COLUMNS]);
+
+  // Reset pagination when data set changes (search/filters/pageSize), matching existing pages
+  React.useEffect(() => {
+    setPageIndex(0);
+  }, [searchText, filters.duration, filters.tag, pageSize]);
+
+  const totalRows = filteredRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+  const safePageIndex = Math.min(pageIndex, totalPages - 1);
+  const start = safePageIndex * pageSize;
+  const end = start + pageSize;
+  const pagedRows = filteredRows.slice(start, end);
+
+  const visibleColumns = React.useMemo(() => {
+    const set = new Set(visibleColumnIds);
+    return ALL_COLUMNS.filter((c) => set.has(c.id));
+  }, [ALL_COLUMNS, visibleColumnIds]);
+
+  function toggleColumn(colId) {
+    setVisibleColumnIds((prev) => {
+      const set = new Set(prev);
+      if (set.has(colId)) set.delete(colId);
+      else set.add(colId);
+
+      // Ensure at least 1 column is always visible for usability.
+      if (set.size === 0) return prev;
+      return Array.from(set);
+    });
+  }
+
+  function clearFilters() {
+    setFilters({ duration: "", tag: "" });
+    setSearchText("");
+  }
 
   function renderCell(lp, colId) {
     switch (colId) {
       case "learningPathName":
-        return <span style={{ fontWeight: 900 }}>{normalizeText(lp.learningPathName) || "—"}</span>;
+        return (
+          <span style={{ fontWeight: 900 }}>
+            {normalizeText(lp.learningPathName) || "—"}
+          </span>
+        );
       case "description":
         return normalizeText(lp.description) || "—";
       case "tags":
@@ -1513,10 +1626,175 @@ export function LearningPathsPage() {
             {loading ? "Loading…" : "Refresh"}
           </button>
 
+          <button
+            type="button"
+            className="RmgButton"
+            onClick={() => setColumnPanelOpen((v) => !v)}
+            aria-expanded={columnPanelOpen ? "true" : "false"}
+            aria-controls="learningpaths-column-panel"
+            disabled={loading}
+          >
+            Columns
+          </button>
+
+          <button
+            type="button"
+            className="RmgButton"
+            onClick={clearFilters}
+            disabled={loading}
+          >
+            Reset
+          </button>
+
           <Link className="RmgLink" to="/">
             Back to Home
           </Link>
         </div>
+
+        {/* Controls */}
+        {!loading && !errorMessage && (
+          <div className="RmgOptions" aria-label="Learning Paths table options">
+            <div className="RmgOptionsRow">
+              <label className="RmgField">
+                <span className="RmgFieldLabel">Search</span>
+                <input
+                  className="RmgInput"
+                  type="search"
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  placeholder="Search any field…"
+                  aria-label="Global search"
+                />
+              </label>
+
+              <label className="RmgField">
+                <span className="RmgFieldLabel">Duration</span>
+                <select
+                  className="RmgSelect"
+                  value={filters.duration}
+                  onChange={(e) => setFilters((f) => ({ ...f, duration: e.target.value }))}
+                  aria-label="Filter by duration"
+                >
+                  <option value="">All</option>
+                  {filterOptions.duration.map((v) => (
+                    <option key={`lp-duration-${v}`} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="RmgField">
+                <span className="RmgFieldLabel">Tag</span>
+                <select
+                  className="RmgSelect"
+                  value={filters.tag}
+                  onChange={(e) => setFilters((f) => ({ ...f, tag: e.target.value }))}
+                  aria-label="Filter by tag"
+                >
+                  <option value="">All</option>
+                  {filterOptions.tag.map((v) => (
+                    <option key={`lp-tag-${v}`} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="RmgOptionsRow RmgOptionsRow--meta" aria-label="Learning Paths table meta">
+              <div className="RmgMetaText" aria-live="polite">
+                Showing <strong>{totalRows === 0 ? 0 : start + 1}</strong>–
+                <strong>{Math.min(end, totalRows)}</strong> of <strong>{totalRows}</strong>
+              </div>
+
+              <label className="RmgField RmgField--inline">
+                <span className="RmgFieldLabel">Page size</span>
+                <select
+                  className="RmgSelect"
+                  value={pageSize}
+                  onChange={(e) => setPageSize(Number(e.target.value))}
+                  aria-label="Select page size"
+                >
+                  {PAGE_SIZES.map((s) => (
+                    <option key={`pageSize-lp-${s}`} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="RmgPager" aria-label="Pagination controls">
+                <button
+                  type="button"
+                  className="RmgButton RmgButton--small"
+                  onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+                  disabled={safePageIndex <= 0}
+                >
+                  Prev
+                </button>
+                <span className="RmgPagerText" aria-label="Current page">
+                  Page <strong>{safePageIndex + 1}</strong> of <strong>{totalPages}</strong>
+                </span>
+                <button
+                  type="button"
+                  className="RmgButton RmgButton--small"
+                  onClick={() => setPageIndex((p) => Math.min(totalPages - 1, p + 1))}
+                  disabled={safePageIndex >= totalPages - 1}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+
+            {columnPanelOpen && (
+              <div
+                id="learningpaths-column-panel"
+                className="RmgColumnPanel"
+                role="region"
+                aria-label="Column visibility"
+              >
+                <div className="RmgColumnPanelHeader">
+                  <div className="RmgColumnPanelTitle">Visible columns</div>
+                  <button
+                    type="button"
+                    className="RmgButton RmgButton--small"
+                    onClick={() => setColumnPanelOpen(false)}
+                    aria-label="Close column visibility panel"
+                  >
+                    Close
+                  </button>
+                </div>
+
+                <div className="RmgColumnGrid">
+                  {ALL_COLUMNS.map((c) => {
+                    const checked = visibleColumnIds.includes(c.id);
+                    const isLastVisible = checked && visibleColumnIds.length === 1;
+
+                    return (
+                      <label key={c.id} className="RmgCheckbox">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleColumn(c.id)}
+                          disabled={isLastVisible}
+                          aria-label={`Toggle column ${c.label}`}
+                        />
+                        <span>{c.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                {visibleColumnIds.length === 1 && (
+                  <div className="RmgHint" role="note">
+                    At least one column must remain visible.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {loading && (
           <div className="RmgState" role="status" aria-live="polite">
@@ -1540,7 +1818,7 @@ export function LearningPathsPage() {
             <table className="RmgTable">
               <thead>
                 <tr>
-                  {columns.map((c) => (
+                  {visibleColumns.map((c) => (
                     <th key={c.id} scope="col">
                       {c.label}
                     </th>
@@ -1549,16 +1827,16 @@ export function LearningPathsPage() {
               </thead>
 
               <tbody>
-                {rows.length === 0 ? (
+                {pagedRows.length === 0 ? (
                   <tr>
-                    <td colSpan={columns.length} className="RmgEmptyCell">
+                    <td colSpan={Math.max(1, visibleColumns.length)} className="RmgEmptyCell">
                       No learning paths found.
                     </td>
                   </tr>
                 ) : (
-                  rows.map((lp) => (
+                  pagedRows.map((lp) => (
                     <tr key={lp.learningPathName}>
-                      {columns.map((c) => (
+                      {visibleColumns.map((c) => (
                         <td key={`${lp.learningPathName}-${c.id}`}>{renderCell(lp, c.id)}</td>
                       ))}
                     </tr>
