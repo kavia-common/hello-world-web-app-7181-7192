@@ -1366,7 +1366,7 @@ async function fetchLearningPathsMock({ signal } = {}) {
   return DUMMY_LEARNING_PATHS_RESPONSE;
 }
 
-function formatIsoDateTimeOrDash(value) {
+function formatAssessmentsIsoDateTimeOrDash(value) {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
@@ -1851,13 +1851,270 @@ export function LearningPathsPage() {
   );
 }
 
+/**
+ * Mocked response used for the Assessments table.
+ * Replace this with a real fetch() call when backend is ready.
+ */
+const DUMMY_ASSESSMENTS_RESPONSE = {
+  status: "success",
+  data: [
+    {
+      assessmentId: "A-001",
+      title: "Quarterly Technical Assessment",
+      description: "Assessment for backend engineering fundamentals.",
+      assignedTo: [
+        {
+          employeeId: "E12345",
+          employeeName: "Jane Doe",
+          email: "jane.doe@example.com",
+        },
+      ],
+      dueDate: "2026-02-01T00:00:00.000Z",
+      status: "Assigned",
+      marks: 85,
+      basisOfScoring: "Rubric-based scoring across 5 competencies.",
+      strength: "Strong system design and API clarity.",
+      areasOfImprovement: "Increase unit test coverage and edge-case handling.",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    },
+  ],
+  count: 1,
+};
+
+/**
+ * Simulates an API call with loading/error states.
+ * This is where a real request will live later:
+ *   fetch(`${process.env.REACT_APP_API_BASE}/assessments`, ...)
+ */
+async function fetchAssessmentsMock({ signal } = {}) {
+  // Simulate network latency
+  await new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(resolve, 650);
+    if (signal) {
+      signal.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(timeoutId);
+          reject(new DOMException("Request aborted", "AbortError"));
+        },
+        { once: true }
+      );
+    }
+  });
+
+  // Toggle to validate error UI if needed.
+  const shouldFail = false;
+  if (shouldFail) {
+    throw new Error("Failed to load Assessments. Please try again.");
+  }
+
+  return DUMMY_ASSESSMENTS_RESPONSE;
+}
+
+function formatIsoDateTimeOrDash(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toISOString().replace(".000Z", "Z");
+}
+
+function formatMarkOrDash(value) {
+  if (value === null || value === undefined) return "—";
+  const num = Number(value);
+  return Number.isFinite(num) ? String(num) : "—";
+}
+
+function firstAssigneeOrDash(assignedTo) {
+  if (!Array.isArray(assignedTo) || assignedTo.length === 0) return "—";
+  const a = assignedTo[0];
+  const label = `${a?.employeeName || "—"} (${a?.employeeId || "—"})`;
+  return label;
+}
+
+function assigneeContactOrDash(assignedTo) {
+  if (!Array.isArray(assignedTo) || assignedTo.length === 0) return "—";
+  const a = assignedTo[0];
+  const parts = [a?.email, a?.employeeId].filter(Boolean);
+  return parts.length ? parts.join(" • ") : "—";
+}
+
 // PUBLIC_INTERFACE
 export function AssessmentsPage() {
-  /** Placeholder page for Assessments route. */
+  /** Assessments page that fetches (mocked) data and renders a table with loading and error states. */
+  const [rows, setRows] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [errorMessage, setErrorMessage] = React.useState("");
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    setErrorMessage("");
+
+    const controller = new AbortController();
+
+    try {
+      const response = await fetchAssessmentsMock({ signal: controller.signal });
+
+      if (!response || response.status !== "success" || !Array.isArray(response.data)) {
+        throw new Error("Unexpected API response format.");
+      }
+
+      setRows(response.data);
+    } catch (err) {
+      if (err?.name !== "AbortError") {
+        setErrorMessage(err?.message || "Something went wrong while loading data.");
+      }
+    } finally {
+      setLoading(false);
+    }
+
+    return () => controller.abort();
+  }, []);
+
+  React.useEffect(() => {
+    let cleanup = null;
+
+    (async () => {
+      cleanup = await load();
+    })();
+
+    return () => {
+      if (typeof cleanup === "function") cleanup();
+    };
+  }, [load]);
+
+  const columns = React.useMemo(
+    () => [
+      { id: "assessmentId", label: "Assessment ID" },
+      { id: "title", label: "Title" },
+      { id: "assignedTo", label: "Assigned To" },
+      { id: "assigneeContact", label: "Contact" },
+      { id: "dueDate", label: "Due Date" },
+      { id: "status", label: "Status" },
+      { id: "marks", label: "Marks" },
+      { id: "basisOfScoring", label: "Basis of Scoring" },
+      { id: "strength", label: "Strength" },
+      { id: "areasOfImprovement", label: "Areas of Improvement" },
+      { id: "createdAt", label: "Created At" },
+      { id: "updatedAt", label: "Updated At" },
+    ],
+    []
+  );
+
+  function renderCell(a, colId) {
+    switch (colId) {
+      case "assessmentId":
+        return <span className="RmgMono">{normalizeText(a.assessmentId) || "—"}</span>;
+      case "title":
+        return <span style={{ fontWeight: 900 }}>{normalizeText(a.title) || "—"}</span>;
+      case "assignedTo":
+        return (
+          <span title={assigneeContactOrDash(a.assignedTo)}>
+            {firstAssigneeOrDash(a.assignedTo)}
+          </span>
+        );
+      case "assigneeContact":
+        return <span className="RmgMono">{assigneeContactOrDash(a.assignedTo)}</span>;
+      case "dueDate":
+        return (
+          <span className="RmgMono">{formatAssessmentsIsoDateTimeOrDash(a.dueDate)}</span>
+        );
+      case "createdAt":
+      case "updatedAt":
+        return (
+          <span className="RmgMono">
+            {formatAssessmentsIsoDateTimeOrDash(a[colId])}
+          </span>
+        );
+      case "marks":
+        return <span className="RmgMono">{formatMarkOrDash(a.marks)}</span>;
+      case "status":
+        return (
+          <span className={`RmgPill RmgPill--${String(a.status || "").toLowerCase()}`}>
+            {normalizeText(a.status) || "—"}
+          </span>
+        );
+      default:
+        return normalizeText(a[colId]) || "—";
+    }
+  }
+
   return (
-    <PlaceholderPage
-      title="Assessments"
-      description="Take assessments and measure growth here. (Placeholder)"
-    />
+    <main className="App-main" aria-label="Assessments page">
+      <section className="HelloCard HelloCard--wide" aria-label="Assessments content">
+        <p className="HelloEyebrow">Digi Portal</p>
+        <h1 className="HelloTitle">Assessments</h1>
+        <p className="HelloSubtitle">
+          Assessments loaded from a mocked API response (for now).
+        </p>
+
+        <div className="RmgToolbar" aria-label="Assessments actions">
+          <button
+            type="button"
+            className="RmgButton"
+            onClick={load}
+            disabled={loading}
+            aria-disabled={loading ? "true" : "false"}
+          >
+            {loading ? "Loading…" : "Refresh"}
+          </button>
+
+          <Link className="RmgLink" to="/">
+            Back to Home
+          </Link>
+        </div>
+
+        {loading && (
+          <div className="RmgState" role="status" aria-live="polite">
+            <div className="RmgSpinner" aria-hidden="true" />
+            <span>Fetching Assessments…</span>
+          </div>
+        )}
+
+        {!loading && errorMessage && (
+          <div className="RmgError" role="alert">
+            <div className="RmgErrorTitle">Couldn’t load data</div>
+            <div className="RmgErrorMessage">{errorMessage}</div>
+            <button type="button" className="RmgButton RmgButton--danger" onClick={load}>
+              Try again
+            </button>
+          </div>
+        )}
+
+        {!loading && !errorMessage && (
+          <div className="RmgTableWrap" role="region" aria-label="Assessments table">
+            <table className="RmgTable">
+              <thead>
+                <tr>
+                  {columns.map((c) => (
+                    <th key={c.id} scope="col">
+                      {c.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+
+              <tbody>
+                {rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={columns.length} className="RmgEmptyCell">
+                      No assessments found.
+                    </td>
+                  </tr>
+                ) : (
+                  rows.map((a) => (
+                    <tr key={a.assessmentId}>
+                      {columns.map((c) => (
+                        <td key={`${a.assessmentId}-${c.id}`}>{renderCell(a, c.id)}</td>
+                      ))}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </main>
   );
 }
