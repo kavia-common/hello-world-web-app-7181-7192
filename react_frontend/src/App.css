@@ -703,6 +703,15 @@
 .HomeLpChartBody {
   display: grid;
   gap: 12px;
+  position: relative; /* anchors tooltip stacking context */
+}
+
+.HomeLpChartHeaderRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .HomeLpChartLegend {
@@ -714,6 +723,108 @@
   border-radius: 14px;
   border: 1px solid rgba(139, 92, 246, 0.16);
   background: rgba(255, 255, 255, 0.62);
+}
+
+.HomeLpChartControls {
+  display: grid;
+  gap: 6px;
+  padding: 10px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(139, 92, 246, 0.16);
+  background: rgba(255, 255, 255, 0.62);
+  min-width: 200px;
+}
+
+.HomeLpChartControlsLabel {
+  font-size: 0.82rem;
+  font-weight: 950;
+  letter-spacing: 0.03em;
+  color: rgba(55, 65, 81, 0.78);
+  text-transform: uppercase;
+}
+
+.HomeLpChartToggle {
+  display: inline-flex;
+  border-radius: 999px;
+  border: 1px solid rgba(139, 92, 246, 0.18);
+  background: rgba(255, 255, 255, 0.72);
+  overflow: hidden;
+}
+
+.HomeLpChartToggleBtn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: rgba(55, 65, 81, 0.86);
+  font-weight: 950;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.HomeLpChartToggleBtn:focus-visible {
+  outline: 3px solid rgba(236, 72, 153, 0.26);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .HomeLpChartToggleBtn:hover {
+    background: rgba(236, 72, 153, 0.08);
+  }
+}
+
+.HomeLpChartToggleBtn--active {
+  color: #ffffff;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+}
+
+.HomeLpTooltip {
+  z-index: 9999;
+  max-width: min(320px, 85vw);
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(139, 92, 246, 0.22);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 18px 45px rgba(17, 24, 39, 0.16);
+  color: rgba(55, 65, 81, 0.92);
+  font-weight: 800;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  pointer-events: none; /* don't interfere with hover */
+}
+
+.HomeLpChartSeg {
+  cursor: help;
+}
+
+.HomeLpChartSeg:focus-visible {
+  outline: 3px solid rgba(236, 72, 153, 0.35);
+  outline-offset: 2px;
+}
+
+.HomeLpGroupedWrap {
+  display: grid;
+  gap: 10px;
+}
+
+.HomeLpGroupedItem {
+  display: grid;
+  gap: 6px;
+}
+
+.HomeLpGroupedLabel {
+  font-size: 0.78rem;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(55, 65, 81, 0.74);
+}
+
+.HomeLpChartHint {
+  color: rgba(55, 65, 81, 0.74);
+  font-weight: 700;
+  font-size: 0.88rem;
+  line-height: 1.35;
 }
 
 .HomeLpLegendItem {
