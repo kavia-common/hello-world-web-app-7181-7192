@@ -224,8 +224,8 @@ function App() {
             // Header title
             header: { title: "Digi Bot" },
 
-            // Footer branding
-            footer: { text: "made with <3 from Digital Competency" },
+            // Footer branding (exact wording requested)
+            footer: { text: "made with ❤️ from Digital Competency" },
           }}
           styles={{
             /**
