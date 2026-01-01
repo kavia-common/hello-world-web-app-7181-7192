@@ -1397,3 +1397,21 @@
     justify-content: space-between;
   }
 }
+
+/* ---------- Global chatbot theming helpers ---------- */
+
+.GlobalChatbot {
+  /* Keep it above page content, but below sticky navbar */
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 30;
+}
+
+/* Mobile spacing so it doesn't crowd content */
+@media (max-width: 520px) {
+  .GlobalChatbot {
+    right: 12px;
+    bottom: 12px;
+  }
+}
