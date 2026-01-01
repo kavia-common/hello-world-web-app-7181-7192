@@ -2987,3 +2987,59 @@ export function AssessmentsPage() {
     </main>
   );
 }
+
+// PUBLIC_INTERFACE
+export function GetStartedPage() {
+  /** Get Started page that provides a friendly, guided entry into the main portal sections. */
+  return (
+    <main className="App-main" aria-label="Get Started page">
+      <section className="HelloCard HelloCard--wide" aria-label="Get Started content">
+        <p className="HelloEyebrow">Digi Portal</p>
+        <h1 className="HelloTitle">Get Started</h1>
+        <p className="HelloSubtitle">
+          Pick a section to explore—or open the chatbot and type “Learning Paths”, “RMG”, or “Assessments”.
+        </p>
+
+        <div className="HomeDashboard" role="region" aria-label="Get Started shortcuts">
+          <Link className="MetricCard" to="/learning-paths" aria-label="Open Learning Paths">
+            <div className="MetricCard-top">
+              <div className="MetricCard-eyebrow">Structured journeys</div>
+              <div className="MetricCard-title">Learning Paths</div>
+            </div>
+            <div className="MetricCard-footer">View →</div>
+          </Link>
+
+          <Link className="MetricCard" to="/skill-factories" aria-label="Open Skill Factories">
+            <div className="MetricCard-top">
+              <div className="MetricCard-eyebrow">Mentorship hubs</div>
+              <div className="MetricCard-title">Skill Factories</div>
+            </div>
+            <div className="MetricCard-footer">View →</div>
+          </Link>
+
+          <Link className="MetricCard" to="/rmg-tracker" aria-label="Open RMG Tracker">
+            <div className="MetricCard-top">
+              <div className="MetricCard-eyebrow">Resource status</div>
+              <div className="MetricCard-title">RMG Tracker</div>
+            </div>
+            <div className="MetricCard-footer">View →</div>
+          </Link>
+
+          <Link className="MetricCard" to="/assessments" aria-label="Open Assessments">
+            <div className="MetricCard-top">
+              <div className="MetricCard-eyebrow">Measure growth</div>
+              <div className="MetricCard-title">Assessments</div>
+            </div>
+            <div className="MetricCard-footer">View →</div>
+          </Link>
+        </div>
+
+        <div className="RmgToolbar" aria-label="Get Started actions">
+          <Link className="RmgLink" to="/">
+            Back to Home
+          </Link>
+        </div>
+      </section>
+    </main>
+  );
+}

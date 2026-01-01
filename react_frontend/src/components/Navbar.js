@@ -1,5 +1,5 @@
 import React from "react";
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 
 /**
  * Site-wide navigation bar.
@@ -19,12 +19,12 @@ export default function Navbar() {
   return (
     <header className="TopBar">
       <div className="TopBar-inner">
-        <a className="TopBar-brand" href="/" aria-label="Digi Portal home">
+        <Link className="TopBar-brand" to="/" aria-label="Digi Portal home" onClick={handleNavigate}>
           <span className="TopBar-brandMark" aria-hidden="true">
             DP
           </span>
           <span className="TopBar-brandText">Digi Portal</span>
-        </a>
+        </Link>
 
         <button
           type="button"
@@ -41,6 +41,17 @@ export default function Navbar() {
 
         <nav className="TopBar-nav" aria-label="Primary" data-open={isOpen ? "true" : "false"}>
           <ul id="primary-navigation" className="TopBar-list">
+            <li>
+              <NavLink
+                to="/get-started"
+                className={({ isActive }) =>
+                  `TopBar-link${isActive ? " TopBar-linkActive" : ""}`
+                }
+                onClick={handleNavigate}
+              >
+                Get Started
+              </NavLink>
+            </li>
             <li>
               <NavLink
                 to="/rmg-tracker"

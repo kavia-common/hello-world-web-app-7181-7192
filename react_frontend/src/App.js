@@ -5,6 +5,7 @@ import Navbar from "./components/Navbar";
 import "./App.css";
 import {
   AssessmentsPage,
+  GetStartedPage,
   HomePage,
   LearningPathsPage,
   RmgTrackerPage,
@@ -21,81 +22,141 @@ function useDigiPortalChatFlow() {
   return React.useMemo(() => {
     /**
      * react-chatbotify (v2.x) expects `options` to be an array of strings (or `{items: string[]}`).
-     * Passing objects (e.g., `{label, value}`) causes React to try to render the object as a child,
-     * which crashes the app with:
-     *   "Objects are not valid as a React child (found: object with keys {label, value})"
+     * Passing objects (e.g., `{label, value}`) causes React to try to render the object as a child.
      *
-     * To keep a "pretty label" and a "value", we use labels as the visible options and map labels
-     * to destinations/commands.
+     * Important: In react-chatbotify v2.x, the Block API uses `function` (not `callback`)
+     * to run side-effects when a user submits text or clicks an option. If `callback` is used,
+     * it will be ignored, which is why navigation didn't happen.
      */
     const OPTION_TO_DESTINATION = {
+      // Primary destinations (quick replies)
       "RMG Tracker": "/rmg-tracker",
       "Skill Factories": "/skill-factories",
       "Learning Paths": "/learning-paths",
       Assessments: "/assessments",
+      "Get Started": "/get-started",
 
+      // Helpful commands (chat-only)
       Help: "help",
-      "What’s here?": "overview",
-      "Go to RMG": "/rmg-tracker",
-
       "Show shortcuts": "help",
+      "What’s here?": "overview",
+      Overview: "overview",
+
+      // Common phrases
+      "Go to RMG": "/rmg-tracker",
       "Go Home": "/",
     };
+
+    const ROUTES = new Set([
+      "/",
+      "/get-started",
+      "/rmg-tracker",
+      "/skill-factories",
+      "/learning-paths",
+      "/assessments",
+    ]);
+
+    function normalizeText(v) {
+      return String(v || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[’']/g, "'")
+        .replace(/\s+/g, " ");
+    }
 
     function resolveDestinationFromUserInput(userInput) {
       const raw = String(userInput || "").trim();
       if (!raw) return "";
 
-      // If user typed a route directly, allow it.
-      if (raw.startsWith("/")) return raw;
+      // If user typed a route directly, allow it (but only routes we support).
+      if (raw.startsWith("/")) {
+        // Strip origin if someone pasted a full URL.
+        try {
+          const maybeUrl = new URL(raw, window.location.origin);
+          const path = maybeUrl.pathname + (maybeUrl.search || "");
+          const pathnameOnly = maybeUrl.pathname;
+          return ROUTES.has(pathnameOnly) ? path : "";
+        } catch {
+          // raw is already a path-like string
+          const [pathnameOnly] = raw.split("?");
+          return ROUTES.has(pathnameOnly) ? raw : "";
+        }
+      }
 
       // If they clicked a quick option (label), map it.
-      return OPTION_TO_DESTINATION[raw] || "";
+      if (OPTION_TO_DESTINATION[raw]) return OPTION_TO_DESTINATION[raw];
+
+      // If they typed a common prompt, interpret it.
+      const n = normalizeText(raw);
+
+      // Commands
+      if (n === "help" || n === "shortcuts" || n === "show shortcuts")
+        return "help";
+      if (n === "overview" || n === "what's here" || n === "whats here")
+        return "overview";
+
+      // Destinations (typed)
+      if (n.includes("learning path")) return "/learning-paths";
+      if (n.includes("skill factor")) return "/skill-factories";
+      if (n.includes("rmg")) return "/rmg-tracker";
+      if (n.includes("assessment")) return "/assessments";
+      if (n === "get started" || n.includes("get started") || n.includes("start"))
+        return "/get-started";
+      if (n === "home" || n.includes("go home")) return "/";
+
+      return "";
     }
 
-    // Small helper: answer with a message + "quick link" buttons.
+    async function navigateIfRoute(params) {
+      const dest = resolveDestinationFromUserInput(params?.userInput);
+
+      if (dest && dest.startsWith("/")) {
+        // SPA navigation (no full page reload)
+        navigate(dest);
+        // Optional UX: close the chat window after navigation
+        // (this is safe even if the component ignores it)
+        await params?.toggleChatWindow?.(false);
+      }
+    }
+
     const helpStep = {
       message:
-        "I can help you jump to key sections, or answer basic questions about what’s on each page. Where do you want to go?",
-      options: ["RMG Tracker", "Skill Factories", "Learning Paths", "Assessments"],
-      // When an option is picked, we navigate and send a confirmation.
-      callback: ({ userInput }) => {
-        const dest = resolveDestinationFromUserInput(userInput);
-        if (dest.startsWith("/")) navigate(dest);
+        "I can help you jump to key sections. Where do you want to go?",
+      options: [
+        "Get Started",
+        "Learning Paths",
+        "Skill Factories",
+        "RMG Tracker",
+        "Assessments",
+      ],
+      function: async (params) => {
+        // If user clicked an option in THIS step, navigate immediately.
+        await navigateIfRoute(params);
       },
       path: ({ userInput }) => {
         const dest = resolveDestinationFromUserInput(userInput);
-        // If they typed a command (help/overview), route accordingly.
+
         if (dest === "help") return "help";
         if (dest === "overview") return "overview";
-        if (dest.startsWith("/")) return "navigate";
+        if (dest && dest.startsWith("/")) return "navigate";
+
+        // Stay on help if input isn't understood.
         return "help";
       },
     };
 
-    /**
-     * react-chatbotify supports a "flow" object where each key is a step and
-     * each step can define:
-     * - message: bot message
-     * - options: quick reply buttons (strings)
-     * - path: next step (string or function)
-     * - callback: invoked when user responds / selects an option
-     *
-     * This minimal flow:
-     * 1) Greets
-     * 2) Offers Help / "What can you do?"
-     * 3) Provides navigation shortcuts
-     */
     const flow = {
       start: {
         message:
           "Hi! I’m the Digi Portal assistant. Want help finding something?",
-        options: ["Help", "What’s here?", "Go to RMG"],
+        options: ["Get Started", "Help", "What’s here?"],
         path: ({ userInput }) => {
           const dest = resolveDestinationFromUserInput(userInput);
+
           if (dest === "help") return "help";
           if (dest === "overview") return "overview";
-          if (dest.startsWith("/")) return "navigate";
+          if (dest && dest.startsWith("/")) return "navigate";
+
           return "help";
         },
       },
@@ -103,10 +164,11 @@ function useDigiPortalChatFlow() {
       overview: {
         message:
           "Digi Portal has: RMG Tracker (resource status), Skill Factories (mentorship hubs), Learning Paths (journeys), and Assessments (measure growth). Want a shortcut?",
-        options: ["Show shortcuts", "Go Home"],
+        options: ["Show shortcuts", "Go Home", "Get Started"],
         path: ({ userInput }) => {
           const dest = resolveDestinationFromUserInput(userInput);
-          if (dest.startsWith("/")) return "navigate";
+
+          if (dest && dest.startsWith("/")) return "navigate";
           return "help";
         },
       },
@@ -115,11 +177,11 @@ function useDigiPortalChatFlow() {
 
       navigate: {
         message: "Got it—taking you there!",
-        callback: ({ userInput }) => {
-          const dest = resolveDestinationFromUserInput(userInput);
-          if (dest.startsWith("/")) navigate(dest);
+        function: async (params) => {
+          // When we arrive in this step, navigate based on the most recent user input.
+          await navigateIfRoute(params);
         },
-        path: "help", // return to shortcuts after navigation
+        path: "help",
       },
     };
 
@@ -159,6 +221,7 @@ function App() {
 
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/get-started" element={<GetStartedPage />} />
         <Route path="/rmg-tracker" element={<RmgTrackerPage />} />
         <Route path="/skill-factories" element={<SkillFactoriesPage />} />
         <Route path="/learning-paths" element={<LearningPathsPage />} />
