@@ -307,6 +307,133 @@
   }
 }
 
+/* ---------- Home dashboard (metrics) ---------- */
+
+.HomeDashboard {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 980px) {
+  .HomeDashboard {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .HomeDashboard {
+    grid-template-columns: 1fr;
+  }
+}
+
+.MetricCard {
+  display: grid;
+  gap: 14px;
+  padding: 16px 16px;
+  border-radius: 18px;
+  text-decoration: none;
+  color: rgba(55, 65, 81, 0.94);
+
+  border: 1px solid rgba(139, 92, 246, 0.18);
+  background:
+    radial-gradient(500px circle at 25% 20%, rgba(236, 72, 153, 0.18), transparent 55%),
+    radial-gradient(600px circle at 90% 10%, rgba(139, 92, 246, 0.18), transparent 55%),
+    rgba(255, 255, 255, 0.72);
+  box-shadow: 0 16px 34px rgba(17, 24, 39, 0.1);
+  backdrop-filter: blur(10px);
+
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .MetricCard:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 22px 50px rgba(17, 24, 39, 0.14);
+    border-color: rgba(236, 72, 153, 0.26);
+  }
+}
+
+.MetricCard:focus-visible {
+  outline: 3px solid rgba(236, 72, 153, 0.28);
+  outline-offset: 3px;
+}
+
+.MetricCard-eyebrow {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 900;
+  color: rgba(55, 65, 81, 0.62);
+}
+
+.MetricCard-title {
+  margin-top: 6px;
+  font-weight: 950;
+  letter-spacing: -0.01em;
+  font-size: 1.05rem;
+}
+
+.MetricCard-body {
+  display: grid;
+  gap: 10px;
+}
+
+.MetricCard-valueRow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.MetricCard-value {
+  font-size: 2.2rem;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-weight: 950;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.MetricCard-label {
+  font-weight: 900;
+  color: rgba(55, 65, 81, 0.72);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.72rem;
+}
+
+.MetricCard-subRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(139, 92, 246, 0.16);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.MetricCard-subLabel {
+  font-weight: 900;
+  color: rgba(55, 65, 81, 0.74);
+}
+
+.MetricCard-subValue {
+  font-weight: 950;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  color: rgba(55, 65, 81, 0.88);
+}
+
+.MetricCard-footer {
+  font-weight: 900;
+  color: rgba(55, 65, 81, 0.78);
+}
+
 /* ---------- RMG Tracker (table + states) ---------- */
 
 .HelloCard--wide {

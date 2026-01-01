@@ -6,20 +6,230 @@ import { Link } from "react-router-dom";
  * Kept lightweight and styled via existing App.css utility-ish classes.
  */
 
+/**
+ * Mocked response used for the Home dashboard metrics.
+ * Replace this with a real fetch() call when backend is ready.
+ */
+const DUMMY_HOME_METRICS_RESPONSE = {
+  status: "success",
+  data: {
+    learningPaths: { total: 12, active: 8 },
+    skillFactories: { total: 4, mentors: 18 },
+    employees: { total: 245, inPool: 37 },
+    assessments: { total: 28, pending: 6 },
+  },
+};
+
+/**
+ * Simulates an API call with loading/error states.
+ * This is where a real request will live later:
+ *   fetch(`${process.env.REACT_APP_API_BASE}/home/metrics`, ...)
+ */
+async function fetchHomeMetricsMock({ signal } = {}) {
+  // Simulate network latency
+  await new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(resolve, 650);
+    if (signal) {
+      signal.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(timeoutId);
+          reject(new DOMException("Request aborted", "AbortError"));
+        },
+        { once: true }
+      );
+    }
+  });
+
+  // Toggle to validate error UI if needed.
+  const shouldFail = false;
+  if (shouldFail) {
+    throw new Error("Failed to load dashboard metrics. Please try again.");
+  }
+
+  return DUMMY_HOME_METRICS_RESPONSE;
+}
+
+function safeNumber(value) {
+  if (value === null || value === undefined) return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function metricLabelOrDash(value) {
+  const num = safeNumber(value);
+  return num === null ? "—" : String(num);
+}
+
+function getMetricCardA11yText({ title, mainValue, mainLabel, secondary }) {
+  const parts = [title];
+  if (mainLabel) parts.push(`${mainLabel} ${mainValue}`);
+  if (secondary) parts.push(`${secondary.label} ${secondary.value}`);
+  return parts.join(". ");
+}
+
 // PUBLIC_INTERFACE
 export function HomePage() {
-  /** Home page that preserves the existing centered hero content. */
+  /** Home page that renders a dashboard-style overview using mocked API metrics. */
+  const [metrics, setMetrics] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  const [errorMessage, setErrorMessage] = React.useState("");
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    setErrorMessage("");
+
+    const controller = new AbortController();
+
+    try {
+      const response = await fetchHomeMetricsMock({ signal: controller.signal });
+
+      if (!response || response.status !== "success" || !response.data) {
+        throw new Error("Unexpected API response format.");
+      }
+
+      setMetrics(response.data);
+    } catch (err) {
+      if (err?.name !== "AbortError") {
+        setErrorMessage(err?.message || "Something went wrong while loading data.");
+      }
+    } finally {
+      setLoading(false);
+    }
+
+    return () => controller.abort();
+  }, []);
+
+  React.useEffect(() => {
+    let cleanup = null;
+
+    (async () => {
+      cleanup = await load();
+    })();
+
+    return () => {
+      if (typeof cleanup === "function") cleanup();
+    };
+  }, [load]);
+
+  const cards = React.useMemo(() => {
+    const lp = metrics?.learningPaths || {};
+    const sf = metrics?.skillFactories || {};
+    const emp = metrics?.employees || {};
+    const asmt = metrics?.assessments || {};
+
+    return [
+      {
+        key: "learningPaths",
+        title: "Learning Paths",
+        eyebrow: "Structured journeys",
+        main: { value: metricLabelOrDash(lp.total), label: "Total" },
+        secondary: { value: metricLabelOrDash(lp.active), label: "Active" },
+        href: "/learning-paths",
+      },
+      {
+        key: "skillFactories",
+        title: "Skill Factories",
+        eyebrow: "Mentorship hubs",
+        main: { value: metricLabelOrDash(sf.total), label: "Total" },
+        secondary: { value: metricLabelOrDash(sf.mentors), label: "Mentors" },
+        href: "/skill-factories",
+      },
+      {
+        key: "employees",
+        title: "Employees",
+        eyebrow: "Talent base",
+        main: { value: metricLabelOrDash(emp.total), label: "Total" },
+        secondary: { value: metricLabelOrDash(emp.inPool), label: "In pool" },
+        href: "/rmg-tracker",
+      },
+      {
+        key: "assessments",
+        title: "Assessments",
+        eyebrow: "Measure growth",
+        main: { value: metricLabelOrDash(asmt.total), label: "Total" },
+        secondary: { value: metricLabelOrDash(asmt.pending), label: "Pending" },
+        href: "/assessments",
+      },
+    ];
+  }, [metrics]);
+
   return (
     <main className="App-main" aria-label="Welcome page">
-      <section className="HelloCard" aria-label="Welcome hero">
+      <section className="HelloCard HelloCard--wide" aria-label="Home dashboard">
+        <p className="HelloEyebrow">Digi Portal</p>
         <h1 className="HelloTitle">Welcome to Digi Portal</h1>
         <p className="HelloSubtitle">Build, assess, and grow your digital skills.</p>
 
-        <div style={{ marginTop: 20 }}>
-          <a className="HelloCTA" href="/" aria-label="Get started">
-            Get Started
+        <div className="RmgToolbar" aria-label="Dashboard actions">
+          <button
+            type="button"
+            className="RmgButton"
+            onClick={load}
+            disabled={loading}
+            aria-disabled={loading ? "true" : "false"}
+          >
+            {loading ? "Loading…" : "Refresh"}
+          </button>
+
+          <a className="RmgLink" href="/learning-paths">
+            Explore Learning Paths
           </a>
         </div>
+
+        {loading && (
+          <div className="RmgState" role="status" aria-live="polite">
+            <div className="RmgSpinner" aria-hidden="true" />
+            <span>Fetching dashboard metrics…</span>
+          </div>
+        )}
+
+        {!loading && errorMessage && (
+          <div className="RmgError" role="alert">
+            <div className="RmgErrorTitle">Couldn’t load metrics</div>
+            <div className="RmgErrorMessage">{errorMessage}</div>
+            <button type="button" className="RmgButton RmgButton--danger" onClick={load}>
+              Try again
+            </button>
+          </div>
+        )}
+
+        {!loading && !errorMessage && (
+          <div className="HomeDashboard" role="region" aria-label="Key metrics">
+            {cards.map((c) => (
+              <a
+                key={c.key}
+                className="MetricCard"
+                href={c.href}
+                aria-label={getMetricCardA11yText({
+                  title: c.title,
+                  mainValue: c.main.value,
+                  mainLabel: c.main.label,
+                  secondary: { value: c.secondary.value, label: c.secondary.label },
+                })}
+              >
+                <div className="MetricCard-top">
+                  <div className="MetricCard-eyebrow">{c.eyebrow}</div>
+                  <div className="MetricCard-title">{c.title}</div>
+                </div>
+
+                <div className="MetricCard-body">
+                  <div className="MetricCard-valueRow">
+                    <div className="MetricCard-value">{c.main.value}</div>
+                    <div className="MetricCard-label">{c.main.label}</div>
+                  </div>
+
+                  <div className="MetricCard-subRow">
+                    <span className="MetricCard-subLabel">{c.secondary.label}</span>
+                    <span className="MetricCard-subValue">{c.secondary.value}</span>
+                  </div>
+                </div>
+
+                <div className="MetricCard-footer">View details →</div>
+              </a>
+            ))}
+          </div>
+        )}
       </section>
     </main>
   );
