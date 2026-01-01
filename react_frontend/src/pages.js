@@ -289,7 +289,14 @@ export function RmgTrackerPage() {
   // Reset pagination when the dataset changes (search/filters/pageSize)
   React.useEffect(() => {
     setPageIndex(0);
-  }, [searchText, filters.employeeType, filters.currentStatus, filters.location, filters.grade, pageSize]);
+  }, [
+    searchText,
+    filters.employeeType,
+    filters.currentStatus,
+    filters.location,
+    filters.grade,
+    pageSize,
+  ]);
 
   const totalRows = filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
@@ -900,7 +907,10 @@ export function SkillFactoriesPage() {
           case "mentors":
             return Array.isArray(sf.mentors)
               ? sf.mentors
-                  .map((m) => `${m?.mentorName || ""} ${m?.mentorEmail || ""} ${yesNo(m?.isInPool)}`)
+                  .map(
+                    (m) =>
+                      `${m?.mentorName || ""} ${m?.mentorEmail || ""} ${yesNo(m?.isInPool)}`
+                  )
                   .join(" ")
                   .toLowerCase()
                   .includes(query)
@@ -919,13 +929,8 @@ export function SkillFactoriesPage() {
                   .includes(query)
               : false;
           case "createdAt":
-            return normalizeText(formatIsoDateTimeOrDash(sf.createdAt))
-              .toLowerCase()
-              .includes(query);
           case "updatedAt":
-            return normalizeText(formatIsoDateTimeOrDash(sf.updatedAt))
-              .toLowerCase()
-              .includes(query);
+            return normalizeText(formatIsoDateTimeOrDash(sf[c.id])).toLowerCase().includes(query);
           default:
             return normalizeText(sf[c.id]).toLowerCase().includes(query);
         }
@@ -1033,9 +1038,8 @@ export function SkillFactoriesPage() {
       case "employees":
         return renderEmployeeChips(sf);
       case "createdAt":
-        return <span className="RmgMono">{formatIsoDateTimeOrDash(sf.createdAt)}</span>;
       case "updatedAt":
-        return <span className="RmgMono">{formatIsoDateTimeOrDash(sf.updatedAt)}</span>;
+        return <span className="RmgMono">{formatIsoDateTimeOrDash(sf[colId])}</span>;
       default:
         return normalizeText(sf[colId]) || "—";
     }
@@ -1939,12 +1943,60 @@ function assigneeContactOrDash(assignedTo) {
   return parts.length ? parts.join(" • ") : "—";
 }
 
+function normalizeAssessmentStatus(value) {
+  // Used only for pill styling classes.
+  // Converts e.g. "In Review" -> "in-review"
+  if (!value) return "";
+  return String(value).trim().toLowerCase().replace(/\s+/g, "-");
+}
+
 // PUBLIC_INTERFACE
 export function AssessmentsPage() {
-  /** Assessments page that fetches (mocked) data and renders a table with loading and error states. */
+  /** Assessments page that fetches (mocked) data and renders a table with loading and error states + client-side table UX. */
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [errorMessage, setErrorMessage] = React.useState("");
+
+  // Table options (match RMG Tracker / Skill Factories / Learning Paths UX)
+  const [searchText, setSearchText] = React.useState("");
+  const [filters, setFilters] = React.useState({
+    status: "",
+    dueMonth: "",
+  });
+
+  const ALL_COLUMNS = React.useMemo(
+    () => [
+      { id: "assessmentId", label: "Assessment ID" },
+      { id: "title", label: "Title" },
+      { id: "description", label: "Description" },
+      { id: "assignedTo", label: "Assigned To" },
+      { id: "assigneeContact", label: "Contact" },
+      { id: "dueDate", label: "Due Date" },
+      { id: "status", label: "Status" },
+      { id: "marks", label: "Marks" },
+      { id: "basisOfScoring", label: "Basis of Scoring" },
+      { id: "strength", label: "Strength" },
+      { id: "areasOfImprovement", label: "Areas of Improvement" },
+      { id: "createdAt", label: "Created At" },
+      { id: "updatedAt", label: "Updated At" },
+    ],
+    []
+  );
+
+  const DEFAULT_VISIBLE_COLUMN_IDS = React.useMemo(
+    () => ALL_COLUMNS.map((c) => c.id),
+    [ALL_COLUMNS]
+  );
+
+  const [visibleColumnIds, setVisibleColumnIds] = React.useState(
+    DEFAULT_VISIBLE_COLUMN_IDS
+  );
+  const [columnPanelOpen, setColumnPanelOpen] = React.useState(false);
+
+  // Pagination
+  const PAGE_SIZES = React.useMemo(() => [3, 5, 10, 20], []);
+  const [pageSize, setPageSize] = React.useState(5);
+  const [pageIndex, setPageIndex] = React.useState(0);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -1983,23 +2035,105 @@ export function AssessmentsPage() {
     };
   }, [load]);
 
-  const columns = React.useMemo(
-    () => [
-      { id: "assessmentId", label: "Assessment ID" },
-      { id: "title", label: "Title" },
-      { id: "assignedTo", label: "Assigned To" },
-      { id: "assigneeContact", label: "Contact" },
-      { id: "dueDate", label: "Due Date" },
-      { id: "status", label: "Status" },
-      { id: "marks", label: "Marks" },
-      { id: "basisOfScoring", label: "Basis of Scoring" },
-      { id: "strength", label: "Strength" },
-      { id: "areasOfImprovement", label: "Areas of Improvement" },
-      { id: "createdAt", label: "Created At" },
-      { id: "updatedAt", label: "Updated At" },
-    ],
-    []
-  );
+  const filterOptions = React.useMemo(() => {
+    // Status options derived from data (and sorted)
+    const status = uniqueSorted(rows.map((r) => r?.status));
+
+    // Due Month: derived from dueDate
+    const months = [];
+    for (const r of rows) {
+      const value = r?.dueDate;
+      const d = value ? new Date(value) : null;
+      if (!d || Number.isNaN(d.getTime())) continue;
+
+      // YYYY-MM (safe, stable, sortable)
+      const month = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+      months.push(month);
+    }
+    const dueMonth = uniqueSorted(months);
+
+    return { status, dueMonth };
+  }, [rows]);
+
+  const filteredRows = React.useMemo(() => {
+    const query = searchText.trim().toLowerCase();
+
+    return rows.filter((a) => {
+      // Dropdown filters
+      if (filters.status && normalizeText(a.status) !== filters.status) {
+        return false;
+      }
+      if (filters.dueMonth) {
+        const d = a?.dueDate ? new Date(a.dueDate) : null;
+        const month = d && !Number.isNaN(d.getTime())
+          ? `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`
+          : "";
+        if (month !== filters.dueMonth) return false;
+      }
+
+      // Global search across all columns (not only visible ones)
+      if (!query) return true;
+
+      const anyMatch = ALL_COLUMNS.some((c) => {
+        switch (c.id) {
+          case "assignedTo":
+            return normalizeText(firstAssigneeOrDash(a.assignedTo))
+              .toLowerCase()
+              .includes(query);
+          case "assigneeContact":
+            return normalizeText(assigneeContactOrDash(a.assignedTo))
+              .toLowerCase()
+              .includes(query);
+          case "dueDate":
+          case "createdAt":
+          case "updatedAt":
+            return normalizeText(formatAssessmentsIsoDateTimeOrDash(a[c.id]))
+              .toLowerCase()
+              .includes(query);
+          case "marks":
+            return String(formatMarkOrDash(a.marks)).toLowerCase().includes(query);
+          default:
+            return normalizeText(a[c.id]).toLowerCase().includes(query);
+        }
+      });
+
+      return anyMatch;
+    });
+  }, [rows, filters, searchText, ALL_COLUMNS]);
+
+  // Reset pagination when the dataset changes (search/filters/pageSize)
+  React.useEffect(() => {
+    setPageIndex(0);
+  }, [searchText, filters.status, filters.dueMonth, pageSize]);
+
+  const totalRows = filteredRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+  const safePageIndex = Math.min(pageIndex, totalPages - 1);
+  const start = safePageIndex * pageSize;
+  const end = start + pageSize;
+  const pagedRows = filteredRows.slice(start, end);
+
+  const visibleColumns = React.useMemo(() => {
+    const set = new Set(visibleColumnIds);
+    return ALL_COLUMNS.filter((c) => set.has(c.id));
+  }, [ALL_COLUMNS, visibleColumnIds]);
+
+  function toggleColumn(colId) {
+    setVisibleColumnIds((prev) => {
+      const set = new Set(prev);
+      if (set.has(colId)) set.delete(colId);
+      else set.add(colId);
+
+      // Ensure at least 1 column is always visible for usability.
+      if (set.size === 0) return prev;
+      return Array.from(set);
+    });
+  }
+
+  function clearFilters() {
+    setFilters({ status: "", dueMonth: "" });
+    setSearchText("");
+  }
 
   function renderCell(a, colId) {
     switch (colId) {
@@ -2016,21 +2150,15 @@ export function AssessmentsPage() {
       case "assigneeContact":
         return <span className="RmgMono">{assigneeContactOrDash(a.assignedTo)}</span>;
       case "dueDate":
-        return (
-          <span className="RmgMono">{formatAssessmentsIsoDateTimeOrDash(a.dueDate)}</span>
-        );
+        return <span className="RmgMono">{formatAssessmentsIsoDateTimeOrDash(a.dueDate)}</span>;
       case "createdAt":
       case "updatedAt":
-        return (
-          <span className="RmgMono">
-            {formatAssessmentsIsoDateTimeOrDash(a[colId])}
-          </span>
-        );
+        return <span className="RmgMono">{formatAssessmentsIsoDateTimeOrDash(a[colId])}</span>;
       case "marks":
         return <span className="RmgMono">{formatMarkOrDash(a.marks)}</span>;
       case "status":
         return (
-          <span className={`RmgPill RmgPill--${String(a.status || "").toLowerCase()}`}>
+          <span className={`RmgPill RmgPill--${normalizeAssessmentStatus(a.status)}`}>
             {normalizeText(a.status) || "—"}
           </span>
         );
@@ -2059,10 +2187,175 @@ export function AssessmentsPage() {
             {loading ? "Loading…" : "Refresh"}
           </button>
 
+          <button
+            type="button"
+            className="RmgButton"
+            onClick={() => setColumnPanelOpen((v) => !v)}
+            aria-expanded={columnPanelOpen ? "true" : "false"}
+            aria-controls="assessments-column-panel"
+            disabled={loading}
+          >
+            Columns
+          </button>
+
+          <button
+            type="button"
+            className="RmgButton"
+            onClick={clearFilters}
+            disabled={loading}
+          >
+            Reset
+          </button>
+
           <Link className="RmgLink" to="/">
             Back to Home
           </Link>
         </div>
+
+        {/* Controls */}
+        {!loading && !errorMessage && (
+          <div className="RmgOptions" aria-label="Assessments table options">
+            <div className="RmgOptionsRow">
+              <label className="RmgField">
+                <span className="RmgFieldLabel">Search</span>
+                <input
+                  className="RmgInput"
+                  type="search"
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  placeholder="Search any field…"
+                  aria-label="Global search"
+                />
+              </label>
+
+              <label className="RmgField">
+                <span className="RmgFieldLabel">Status</span>
+                <select
+                  className="RmgSelect"
+                  value={filters.status}
+                  onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
+                  aria-label="Filter by status"
+                >
+                  <option value="">All</option>
+                  {filterOptions.status.map((v) => (
+                    <option key={`assessment-status-${v}`} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="RmgField">
+                <span className="RmgFieldLabel">Due month</span>
+                <select
+                  className="RmgSelect"
+                  value={filters.dueMonth}
+                  onChange={(e) => setFilters((f) => ({ ...f, dueMonth: e.target.value }))}
+                  aria-label="Filter by due month"
+                >
+                  <option value="">All</option>
+                  {filterOptions.dueMonth.map((v) => (
+                    <option key={`assessment-duemonth-${v}`} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="RmgOptionsRow RmgOptionsRow--meta" aria-label="Assessments table meta">
+              <div className="RmgMetaText" aria-live="polite">
+                Showing <strong>{totalRows === 0 ? 0 : start + 1}</strong>–
+                <strong>{Math.min(end, totalRows)}</strong> of <strong>{totalRows}</strong>
+              </div>
+
+              <label className="RmgField RmgField--inline">
+                <span className="RmgFieldLabel">Page size</span>
+                <select
+                  className="RmgSelect"
+                  value={pageSize}
+                  onChange={(e) => setPageSize(Number(e.target.value))}
+                  aria-label="Select page size"
+                >
+                  {PAGE_SIZES.map((s) => (
+                    <option key={`pageSize-assessments-${s}`} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="RmgPager" aria-label="Pagination controls">
+                <button
+                  type="button"
+                  className="RmgButton RmgButton--small"
+                  onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+                  disabled={safePageIndex <= 0}
+                >
+                  Prev
+                </button>
+                <span className="RmgPagerText" aria-label="Current page">
+                  Page <strong>{safePageIndex + 1}</strong> of <strong>{totalPages}</strong>
+                </span>
+                <button
+                  type="button"
+                  className="RmgButton RmgButton--small"
+                  onClick={() => setPageIndex((p) => Math.min(totalPages - 1, p + 1))}
+                  disabled={safePageIndex >= totalPages - 1}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+
+            {columnPanelOpen && (
+              <div
+                id="assessments-column-panel"
+                className="RmgColumnPanel"
+                role="region"
+                aria-label="Column visibility"
+              >
+                <div className="RmgColumnPanelHeader">
+                  <div className="RmgColumnPanelTitle">Visible columns</div>
+                  <button
+                    type="button"
+                    className="RmgButton RmgButton--small"
+                    onClick={() => setColumnPanelOpen(false)}
+                    aria-label="Close column visibility panel"
+                  >
+                    Close
+                  </button>
+                </div>
+
+                <div className="RmgColumnGrid">
+                  {ALL_COLUMNS.map((c) => {
+                    const checked = visibleColumnIds.includes(c.id);
+                    const isLastVisible = checked && visibleColumnIds.length === 1;
+
+                    return (
+                      <label key={c.id} className="RmgCheckbox">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleColumn(c.id)}
+                          disabled={isLastVisible}
+                          aria-label={`Toggle column ${c.label}`}
+                        />
+                        <span>{c.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                {visibleColumnIds.length === 1 && (
+                  <div className="RmgHint" role="note">
+                    At least one column must remain visible.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {loading && (
           <div className="RmgState" role="status" aria-live="polite">
@@ -2086,7 +2379,7 @@ export function AssessmentsPage() {
             <table className="RmgTable">
               <thead>
                 <tr>
-                  {columns.map((c) => (
+                  {visibleColumns.map((c) => (
                     <th key={c.id} scope="col">
                       {c.label}
                     </th>
@@ -2095,16 +2388,16 @@ export function AssessmentsPage() {
               </thead>
 
               <tbody>
-                {rows.length === 0 ? (
+                {pagedRows.length === 0 ? (
                   <tr>
-                    <td colSpan={columns.length} className="RmgEmptyCell">
+                    <td colSpan={Math.max(1, visibleColumns.length)} className="RmgEmptyCell">
                       No assessments found.
                     </td>
                   </tr>
                 ) : (
-                  rows.map((a) => (
+                  pagedRows.map((a) => (
                     <tr key={a.assessmentId}>
-                      {columns.map((c) => (
+                      {visibleColumns.map((c) => (
                         <td key={`${a.assessmentId}-${c.id}`}>{renderCell(a, c.id)}</td>
                       ))}
                     </tr>
