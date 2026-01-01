@@ -102,7 +102,7 @@ function LpMetricsStackedBarChart({ rows }) {
   const controlsId = React.useMemo(() => generateChartId("lpchart-controls"), []);
   const tooltipId = React.useMemo(() => generateChartId("lpchart-tooltip"), []);
 
-  const [chartType, setChartType] = React.useState("stacked"); // "stacked" | "grouped"
+  const [chartType, setChartType] = React.useState("grouped"); // "stacked" | "grouped"
   const [tooltip, setTooltip] = React.useState(null); // { x, y, text, rowName, seriesKey }
 
   // Use max enrolled for scaling bar widths (consistent across types).
