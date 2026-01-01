@@ -186,6 +186,42 @@ function buildLearningPathsQuery({ q, status }) {
   return qs ? `/learning-paths?${qs}` : "/learning-paths";
 }
 
+/**
+ * Skill Factories URL query parameters:
+ * - q: global search term (we'll use this for skillFactoryName searches, but it searches across all columns)
+ * - mentorPool: "in" | "not-in" (maps to Mentors Pool dropdown)
+ * - employeePool: "in" | "not-in" (maps to Employees Pool dropdown)
+ */
+function buildSkillFactoriesQuery({ q, mentorPool, employeePool } = {}) {
+  const params = new URLSearchParams();
+  if (q) params.set("q", q);
+  if (mentorPool) params.set("mentorPool", mentorPool);
+  if (employeePool) params.set("employeePool", employeePool);
+  const qs = params.toString();
+  return qs ? `/skill-factories?${qs}` : "/skill-factories";
+}
+
+function parseSkillFactoriesQuery(locationSearch) {
+  const params = new URLSearchParams(locationSearch || "");
+  const q = (params.get("q") || "").trim();
+  const mentorPool = (params.get("mentorPool") || "").trim();
+  const employeePool = (params.get("employeePool") || "").trim();
+  return { q, mentorPool, employeePool };
+}
+
+function normalizePoolParam(value) {
+  const v = String(value || "").trim().toLowerCase();
+  if (v === "in" || v === "in-pool" || v === "in_pool") return "in";
+  if (v === "not-in" || v === "notin" || v === "not_in" || v === "out") return "not-in";
+  return "";
+}
+
+function poolParamToLabel(param) {
+  if (param === "in") return "In pool";
+  if (param === "not-in") return "Not in pool";
+  return "";
+}
+
 function isInteractiveElement(target) {
   if (!target) return false;
   const el = target;
@@ -502,17 +538,41 @@ export function HomePage() {
                       </header>
 
                       <div className="SfMetricsCardGrid" role="list" aria-label={`${title} metric list`}>
-                        {metricCards.map((m) => (
-                          <div
-                            key={m.key}
-                            className="SfMetricMiniCard"
-                            role="listitem"
-                            aria-label={`${m.label} ${m.value}`}
-                          >
-                            <div className="SfMetricMiniValue RmgMono">{m.value}</div>
-                            <div className="SfMetricMiniLabel">{m.label}</div>
-                          </div>
-                        ))}
+                        {metricCards.map((m) => {
+                          const baseQ = sf.skillFactoryName || "";
+                          const to =
+                            m.key === "inPoolCount"
+                              ? buildSkillFactoriesQuery({ q: baseQ, employeePool: "in" })
+                              : m.key === "notInPoolCount"
+                                ? buildSkillFactoriesQuery({ q: baseQ, employeePool: "not-in" })
+                                : m.key === "mentorCount"
+                                  ? buildSkillFactoriesQuery({ q: baseQ })
+                                  : m.key === "employeeCount"
+                                    ? buildSkillFactoriesQuery({ q: baseQ })
+                                    : buildSkillFactoriesQuery({ q: baseQ });
+
+                          const titleHint =
+                            m.key === "inPoolCount"
+                              ? "Open Skill Factories filtered to employees in pool"
+                              : m.key === "notInPoolCount"
+                                ? "Open Skill Factories filtered to employees not in pool"
+                                : "Open Skill Factories filtered by this Skill Factory";
+
+                          return (
+                            <Link
+                              key={m.key}
+                              className="SfMetricMiniCard"
+                              role="listitem"
+                              to={to}
+                              aria-label={`${m.label} ${m.value}. ${titleHint}.`}
+                              title={titleHint}
+                              style={{ textDecoration: "none", color: "inherit" }}
+                            >
+                              <div className="SfMetricMiniValue RmgMono">{m.value}</div>
+                              <div className="SfMetricMiniLabel">{m.label}</div>
+                            </Link>
+                          );
+                        })}
                       </div>
                     </article>
                   );
@@ -1410,6 +1470,8 @@ function safeArrayCount(value) {
 // PUBLIC_INTERFACE
 export function SkillFactoriesPage() {
   /** Skill Factories page that fetches (mocked) data and renders a table with loading and error states + client-side table UX. */
+  const location = useLocation();
+
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [errorMessage, setErrorMessage] = React.useState("");
@@ -1421,6 +1483,39 @@ export function SkillFactoriesPage() {
     mentorPoolStatus: "",
     employeePoolStatus: "",
   });
+
+  // Apply URL query parameters to pre-populate controls (mirrors LearningPathsPage approach).
+  const hasAppliedQueryRef = React.useRef(false);
+  React.useEffect(() => {
+    const { q, mentorPool, employeePool } = parseSkillFactoriesQuery(location.search);
+
+    // Keep the search input in sync with URL (supports manual edits and navigation changes).
+    setSearchText(q);
+
+    const normalizedMentorPool = normalizePoolParam(mentorPool);
+    const normalizedEmployeePool = normalizePoolParam(employeePool);
+
+    const nextMentorLabel = poolParamToLabel(normalizedMentorPool);
+    const nextEmployeeLabel = poolParamToLabel(normalizedEmployeePool);
+
+    if (!hasAppliedQueryRef.current) {
+      // Apply once on first mount.
+      setFilters((f) => ({
+        ...f,
+        mentorPoolStatus: nextMentorLabel || "",
+        employeePoolStatus: nextEmployeeLabel || "",
+      }));
+      hasAppliedQueryRef.current = true;
+      return;
+    }
+
+    // If URL changes while on the page, update accordingly.
+    setFilters((f) => ({
+      ...f,
+      mentorPoolStatus: nextMentorLabel || "",
+      employeePoolStatus: nextEmployeeLabel || "",
+    }));
+  }, [location.search]);
 
   const ALL_COLUMNS = React.useMemo(
     () => [
