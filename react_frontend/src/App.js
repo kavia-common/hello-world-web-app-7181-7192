@@ -219,7 +219,15 @@ function App() {
              */
             settings: {
               tooltip: { text: "Digi Bot" },
+
+              /**
+               * Force the header title across react-chatbotify versions.
+               * Some releases read `settings.header.title`, others may fall back
+               * to legacy top-level `headerTitle`. Setting both prevents any
+               * default/previous title (e.g., "Tan Jin") from appearing.
+               */
               header: { title: "Digi Bot" },
+
               footer: { text: "made with <3 from Digital Competency" },
             },
 
@@ -227,8 +235,9 @@ function App() {
             botBubbleColor: "#EC4899",
             userBubbleColor: "#8B5CF6",
 
-            // Backwards-compatible field used by some versions; safe to pass even if ignored.
+            // Backwards-compatible fields used by some versions; safe to pass even if ignored.
             tooltipText: "Digi Bot",
+            headerTitle: "Digi Bot",
           }}
         />
       </div>
