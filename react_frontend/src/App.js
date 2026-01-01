@@ -120,8 +120,7 @@ function useDigiPortalChatFlow() {
     }
 
     const helpStep = {
-      message:
-        "I can help you jump to key sections. Where do you want to go?",
+      message: "I can help you jump to key sections. Where do you want to go?",
       options: [
         "Get Started",
         "Learning Paths",
@@ -209,11 +208,27 @@ function App() {
               fontFamily:
                 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif',
             },
+
+            /**
+             * Branding / labels (react-chatbotify v2.5):
+             * - Tooltip text shows near the launcher button.
+             * - Header title shows at the top of the chat window.
+             * - Footer text replaces the default "Powered By react-chatbotify".
+             *
+             * We only update visible labels/branding as requested; behavior/flow/styles remain unchanged.
+             */
+            settings: {
+              tooltip: { text: "Digi Bot" },
+              header: { title: "Digi Bot" },
+              footer: { text: "made with <3 from Digital Competency" },
+            },
+
             // Keep it lightweight and non-intrusive by default.
             botBubbleColor: "#EC4899",
             userBubbleColor: "#8B5CF6",
-            // Some versions use these optional fields; safe to pass even if ignored.
-            tooltipText: "Need help?",
+
+            // Backwards-compatible field used by some versions; safe to pass even if ignored.
+            tooltipText: "Digi Bot",
           }}
         />
       </div>
