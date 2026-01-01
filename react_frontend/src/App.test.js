@@ -44,7 +44,7 @@ test("renders Digi Portal welcome title and subtitle on home route", () => {
   ).toBeInTheDocument();
 });
 
-test("renders placeholder page content for an app route", () => {
+test("renders RMG Tracker page and shows loading then table", async () => {
   render(
     <MemoryRouter initialEntries={["/rmg-tracker"]}>
       <App />
@@ -52,5 +52,13 @@ test("renders placeholder page content for an app route", () => {
   );
 
   expect(screen.getByRole("heading", { name: /rmg tracker/i })).toBeInTheDocument();
-  expect(screen.getByText(/placeholder/i)).toBeInTheDocument();
+
+  // Loading state should appear immediately
+  expect(screen.getByText(/fetching rmg data/i)).toBeInTheDocument();
+
+  // Table should render after mock fetch resolves
+  expect(await screen.findByRole("table")).toBeInTheDocument();
+
+  // Verify at least one key field from the dummy dataset shows up
+  expect(await screen.findByText("E10234")).toBeInTheDocument();
 });
