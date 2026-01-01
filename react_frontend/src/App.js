@@ -1,23 +1,32 @@
 import React from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
+import Navbar from "./components/Navbar";
 import "./App.css";
+import {
+  AssessmentsPage,
+  HomePage,
+  LearningPathsPage,
+  RmgTrackerPage,
+  SkillFactoriesPage,
+} from "./pages";
 
 // PUBLIC_INTERFACE
 function App() {
-  /** Root application component that renders the centered welcome hero. */
+  /** Root application component that renders the navbar and page routes. */
   return (
     <div className="App">
-      <main className="App-main" aria-label="Welcome page">
-        <section className="HelloCard" aria-label="Welcome hero">
-          <h1 className="HelloTitle">Welcome to Digi Portal</h1>
-          <p className="HelloSubtitle">Build, assess, and grow your digital skills.</p>
+      <Navbar />
 
-          <div style={{ marginTop: 20 }}>
-            <a className="HelloCTA" href="/" aria-label="Get started">
-              Get Started
-            </a>
-          </div>
-        </section>
-      </main>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/rmg-tracker" element={<RmgTrackerPage />} />
+        <Route path="/skill-factories" element={<SkillFactoriesPage />} />
+        <Route path="/learning-paths" element={<LearningPathsPage />} />
+        <Route path="/assessments" element={<AssessmentsPage />} />
+
+        {/* Friendly fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </div>
   );
 }
