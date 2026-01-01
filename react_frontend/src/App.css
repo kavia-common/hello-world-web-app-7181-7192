@@ -517,3 +517,159 @@
   border: 1px solid rgba(139, 92, 246, 0.18);
   background: rgba(255, 255, 255, 0.65);
 }
+
+/* ---------- RMG Tracker (options + pagination + columns panel) ---------- */
+
+.RmgOptions {
+  margin-top: 16px;
+  padding: 14px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(139, 92, 246, 0.18);
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.RmgOptionsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.RmgOptionsRow--meta {
+  margin-top: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.RmgField {
+  display: grid;
+  gap: 6px;
+  min-width: 190px;
+}
+
+.RmgField--inline {
+  min-width: 160px;
+}
+
+.RmgFieldLabel {
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  color: rgba(55, 65, 81, 0.78);
+  text-transform: uppercase;
+}
+
+.RmgInput,
+.RmgSelect {
+  appearance: none;
+  border-radius: 14px;
+  border: 1px solid rgba(139, 92, 246, 0.22);
+  background: rgba(255, 255, 255, 0.78);
+  padding: 10px 12px;
+  font-weight: 700;
+  color: rgba(55, 65, 81, 0.92);
+  box-shadow: 0 10px 22px rgba(17, 24, 39, 0.06);
+}
+
+.RmgInput:focus-visible,
+.RmgSelect:focus-visible {
+  outline: 3px solid rgba(236, 72, 153, 0.26);
+  outline-offset: 3px;
+}
+
+.RmgMetaText {
+  font-weight: 800;
+  color: rgba(55, 65, 81, 0.86);
+}
+
+.RmgPager {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.RmgPagerText {
+  font-weight: 800;
+  color: rgba(55, 65, 81, 0.82);
+}
+
+.RmgButton--small {
+  padding: 8px 12px;
+  font-weight: 900;
+}
+
+.RmgColumnPanel {
+  margin-top: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(139, 92, 246, 0.18);
+  background: linear-gradient(
+    90deg,
+    rgba(236, 72, 153, 0.08),
+    rgba(139, 92, 246, 0.08)
+  );
+  padding: 12px 12px;
+}
+
+.RmgColumnPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.RmgColumnPanelTitle {
+  font-weight: 950;
+  letter-spacing: -0.01em;
+}
+
+.RmgColumnGrid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.RmgCheckbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(139, 92, 246, 0.18);
+  background: rgba(255, 255, 255, 0.62);
+  font-weight: 800;
+}
+
+.RmgCheckbox input {
+  width: 16px;
+  height: 16px;
+}
+
+.RmgHint {
+  margin-top: 10px;
+  color: rgba(55, 65, 81, 0.82);
+  font-weight: 700;
+}
+
+@media (max-width: 920px) {
+  .RmgColumnGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .RmgField {
+    min-width: 100%;
+  }
+
+  .RmgOptionsRow--meta {
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  .RmgPager {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
