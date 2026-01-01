@@ -645,6 +645,125 @@
   background: rgba(255, 255, 255, 0.65);
 }
 
+/* ---------- Home: Learning Path metrics section ---------- */
+
+.HomeSection {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(139, 92, 246, 0.16);
+}
+
+.HomeSectionHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.HomeSectionTitle {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+}
+
+.HomeSectionSubtitle {
+  margin: 8px 0 0;
+  color: rgba(55, 65, 81, 0.82);
+  font-weight: 700;
+}
+
+.HomeMiniPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(139, 92, 246, 0.18);
+  background: rgba(255, 255, 255, 0.6);
+  font-weight: 900;
+  color: rgba(55, 65, 81, 0.88);
+}
+
+.HomeLpGrid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.HomeLpTableWrap {
+  margin-top: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(139, 92, 246, 0.18);
+  background: rgba(255, 255, 255, 0.72);
+  overflow: auto;
+}
+
+.HomeLpTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 720px;
+}
+
+.HomeLpTable thead th {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(236, 72, 153, 0.12),
+    rgba(139, 92, 246, 0.12)
+  );
+  backdrop-filter: blur(10px);
+  text-align: left;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 12px 12px;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.18);
+  white-space: nowrap;
+}
+
+.HomeLpTable tbody td {
+  padding: 12px 12px;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.12);
+  vertical-align: top;
+  font-size: 0.95rem;
+}
+
+.HomeLpTable tbody tr:hover td {
+  background: rgba(236, 72, 153, 0.05);
+}
+
+.HomeLpName {
+  font-weight: 950;
+  letter-spacing: -0.01em;
+}
+
+.HomeLpRatePill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 950;
+  font-size: 0.85rem;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  background: rgba(139, 92, 246, 0.08);
+  white-space: nowrap;
+}
+
+.HomeLpRatePill--good {
+  border-color: rgba(16, 185, 129, 0.28);
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.HomeLpRatePill--low {
+  border-color: rgba(236, 72, 153, 0.28);
+  background: rgba(236, 72, 153, 0.12);
+}
+
 /* ---------- RMG Tracker (options + pagination + columns panel) ---------- */
 
 .RmgOptions {

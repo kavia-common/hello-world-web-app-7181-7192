@@ -21,6 +21,24 @@ const DUMMY_HOME_METRICS_RESPONSE = {
 };
 
 /**
+ * Mocked response used for the "Learning Path metrics" section on Home.
+ * Note: The prompt includes `count: 2` even though `data` has 1 row; we display count if present.
+ */
+const DUMMY_HOME_LEARNING_PATH_METRICS_RESPONSE = {
+  status: "success",
+  data: [
+    {
+      learningPathName: "Cloud Fundamentals",
+      enrolled: 100,
+      completed: 40,
+      inProgress: 50,
+      completionRate: 0.4,
+    },
+  ],
+  count: 2,
+};
+
+/**
  * Simulates an API call with loading/error states.
  * This is where a real request will live later:
  *   fetch(`${process.env.REACT_APP_API_BASE}/home/metrics`, ...)
@@ -50,6 +68,36 @@ async function fetchHomeMetricsMock({ signal } = {}) {
   return DUMMY_HOME_METRICS_RESPONSE;
 }
 
+/**
+ * Simulates an API call for Learning Path metrics with loading/error states.
+ * This is where a real request will live later:
+ *   fetch(`${process.env.REACT_APP_API_BASE}/home/learning-path-metrics`, ...)
+ */
+async function fetchHomeLearningPathMetricsMock({ signal } = {}) {
+  // Simulate network latency (slightly staggered from the dashboard call)
+  await new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(resolve, 720);
+    if (signal) {
+      signal.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(timeoutId);
+          reject(new DOMException("Request aborted", "AbortError"));
+        },
+        { once: true }
+      );
+    }
+  });
+
+  // Toggle to validate error UI if needed.
+  const shouldFail = false;
+  if (shouldFail) {
+    throw new Error("Failed to load Learning Path metrics. Please try again.");
+  }
+
+  return DUMMY_HOME_LEARNING_PATH_METRICS_RESPONSE;
+}
+
 function safeNumber(value) {
   if (value === null || value === undefined) return null;
   const num = Number(value);
@@ -59,6 +107,19 @@ function safeNumber(value) {
 function metricLabelOrDash(value) {
   const num = safeNumber(value);
   return num === null ? "—" : String(num);
+}
+
+function formatPercentOrDash(value, { digits = 0 } = {}) {
+  const num = safeNumber(value);
+  if (num === null) return "—";
+  return `${(num * 100).toFixed(digits)}%`;
+}
+
+function rateToneClass(rate) {
+  const num = safeNumber(rate);
+  if (num === null) return "";
+  // Very simple tone threshold for the pill.
+  return num >= 0.5 ? "HomeLpRatePill--good" : "HomeLpRatePill--low";
 }
 
 function getMetricCardA11yText({ title, mainValue, mainLabel, secondary }) {
@@ -74,6 +135,12 @@ export function HomePage() {
   const [metrics, setMetrics] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [errorMessage, setErrorMessage] = React.useState("");
+
+  // Learning Path metrics section state
+  const [lpMetricsRows, setLpMetricsRows] = React.useState([]);
+  const [lpMetricsCount, setLpMetricsCount] = React.useState(null);
+  const [lpMetricsLoading, setLpMetricsLoading] = React.useState(true);
+  const [lpMetricsError, setLpMetricsError] = React.useState("");
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -100,17 +167,54 @@ export function HomePage() {
     return () => controller.abort();
   }, []);
 
+  const loadLearningPathMetrics = React.useCallback(async () => {
+    setLpMetricsLoading(true);
+    setLpMetricsError("");
+
+    const controller = new AbortController();
+
+    try {
+      const response = await fetchHomeLearningPathMetricsMock({ signal: controller.signal });
+
+      if (
+        !response ||
+        response.status !== "success" ||
+        !Array.isArray(response.data)
+      ) {
+        throw new Error("Unexpected API response format.");
+      }
+
+      setLpMetricsRows(response.data);
+      setLpMetricsCount(
+        typeof response.count === "number" && Number.isFinite(response.count)
+          ? response.count
+          : null
+      );
+    } catch (err) {
+      if (err?.name !== "AbortError") {
+        setLpMetricsError(err?.message || "Something went wrong while loading data.");
+      }
+    } finally {
+      setLpMetricsLoading(false);
+    }
+
+    return () => controller.abort();
+  }, []);
+
   React.useEffect(() => {
-    let cleanup = null;
+    let cleanupDashboard = null;
+    let cleanupLp = null;
 
     (async () => {
-      cleanup = await load();
+      cleanupDashboard = await load();
+      cleanupLp = await loadLearningPathMetrics();
     })();
 
     return () => {
-      if (typeof cleanup === "function") cleanup();
+      if (typeof cleanupDashboard === "function") cleanupDashboard();
+      if (typeof cleanupLp === "function") cleanupLp();
     };
-  }, [load]);
+  }, [load, loadLearningPathMetrics]);
 
   const cards = React.useMemo(() => {
     const lp = metrics?.learningPaths || {};
@@ -230,6 +334,113 @@ export function HomePage() {
             ))}
           </div>
         )}
+
+        {/* New section: Learning Path metrics (below existing dashboard) */}
+        <section className="HomeSection" aria-label="Learning Path metrics">
+          <div className="HomeSectionHeader">
+            <div>
+              <h2 className="HomeSectionTitle">Learning Path metrics</h2>
+              <p className="HomeSectionSubtitle">
+                Enrollment and progress snapshot (mocked API response).
+              </p>
+            </div>
+
+            <div className="RmgToolbar" aria-label="Learning Path metrics actions" style={{ marginTop: 0 }}>
+              <button
+                type="button"
+                className="RmgButton"
+                onClick={loadLearningPathMetrics}
+                disabled={lpMetricsLoading}
+                aria-disabled={lpMetricsLoading ? "true" : "false"}
+              >
+                {lpMetricsLoading ? "Loading…" : "Refresh"}
+              </button>
+
+              <span className="HomeMiniPill" aria-label="Learning path metrics count">
+                Count: <span className="RmgMono">{lpMetricsCount === null ? "—" : lpMetricsCount}</span>
+              </span>
+            </div>
+          </div>
+
+          {lpMetricsLoading && (
+            <div className="RmgState" role="status" aria-live="polite">
+              <div className="RmgSpinner" aria-hidden="true" />
+              <span>Fetching Learning Path metrics…</span>
+            </div>
+          )}
+
+          {!lpMetricsLoading && lpMetricsError && (
+            <div className="RmgError" role="alert">
+              <div className="RmgErrorTitle">Couldn’t load Learning Path metrics</div>
+              <div className="RmgErrorMessage">{lpMetricsError}</div>
+              <button
+                type="button"
+                className="RmgButton RmgButton--danger"
+                onClick={loadLearningPathMetrics}
+              >
+                Try again
+              </button>
+            </div>
+          )}
+
+          {!lpMetricsLoading && !lpMetricsError && (
+            <div className="HomeLpTableWrap" role="region" aria-label="Learning Path metrics table">
+              <table className="HomeLpTable">
+                <thead>
+                  <tr>
+                    <th scope="col">Learning Path</th>
+                    <th scope="col" style={{ textAlign: "right" }}>
+                      Enrolled
+                    </th>
+                    <th scope="col" style={{ textAlign: "right" }}>
+                      Completed
+                    </th>
+                    <th scope="col" style={{ textAlign: "right" }}>
+                      In Progress
+                    </th>
+                    <th scope="col">Completion rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lpMetricsRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="RmgEmptyCell">
+                        No learning path metrics available.
+                      </td>
+                    </tr>
+                  ) : (
+                    lpMetricsRows.map((row) => (
+                      <tr key={row.learningPathName}>
+                        <td>
+                          <span className="HomeLpName">
+                            {row.learningPathName || "—"}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: "right" }}>
+                          <span className="RmgMono">{metricLabelOrDash(row.enrolled)}</span>
+                        </td>
+                        <td style={{ textAlign: "right" }}>
+                          <span className="RmgMono">{metricLabelOrDash(row.completed)}</span>
+                        </td>
+                        <td style={{ textAlign: "right" }}>
+                          <span className="RmgMono">{metricLabelOrDash(row.inProgress)}</span>
+                        </td>
+                        <td>
+                          <span
+                            className={`HomeLpRatePill ${rateToneClass(row.completionRate)}`}
+                            title={`Completion rate: ${formatPercentOrDash(row.completionRate, { digits: 0 })}`}
+                          >
+                            {formatPercentOrDash(row.completionRate, { digits: 0 })}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
       </section>
     </main>
   );
