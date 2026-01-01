@@ -87,3 +87,58 @@ import "@testing-library/jest-dom";
     };
   }
 })();
+
+/**
+ * react-chatbotify relies on a few browser APIs that are not present in Jest/JSDOM by default.
+ * These polyfills keep unit tests stable without affecting production builds.
+ */
+(function ensureBrowserApisForTests() {
+  const g = globalThis;
+
+  // structuredClone: available in Node 18+, but not always exposed in JSDOM.
+  if (typeof g.structuredClone !== "function") {
+    try {
+      // eslint-disable-next-line global-require
+      const util = require("util");
+      if (typeof util?.structuredClone === "function") {
+        g.structuredClone = util.structuredClone;
+      }
+    } catch (e) {
+      // ignore; fallback below
+    }
+  }
+
+  if (typeof g.structuredClone !== "function") {
+    // Fallback: sufficient for the simple POJOs used in tests.
+    g.structuredClone = (value) => JSON.parse(JSON.stringify(value));
+  }
+
+  // AudioContext: react-chatbotify initializes AudioContext even if audio features aren't used.
+  if (typeof g.AudioContext !== "function") {
+    class MockAudioContext {
+      constructor() {
+        this.destination = {};
+      }
+      createGain() {
+        return {
+          gain: { value: 1, setValueAtTime: () => {} },
+          connect: () => {},
+        };
+      }
+      decodeAudioData() {
+        return Promise.resolve({});
+      }
+      resume() {
+        return Promise.resolve();
+      }
+      close() {
+        return Promise.resolve();
+      }
+      get currentTime() {
+        return 0;
+      }
+    }
+
+    g.AudioContext = MockAudioContext;
+  }
+})();

@@ -19,21 +19,57 @@ function useDigiPortalChatFlow() {
   const navigate = useNavigate();
 
   return React.useMemo(() => {
+    /**
+     * react-chatbotify (v2.x) expects `options` to be an array of strings (or `{items: string[]}`).
+     * Passing objects (e.g., `{label, value}`) causes React to try to render the object as a child,
+     * which crashes the app with:
+     *   "Objects are not valid as a React child (found: object with keys {label, value})"
+     *
+     * To keep a "pretty label" and a "value", we use labels as the visible options and map labels
+     * to destinations/commands.
+     */
+    const OPTION_TO_DESTINATION = {
+      "RMG Tracker": "/rmg-tracker",
+      "Skill Factories": "/skill-factories",
+      "Learning Paths": "/learning-paths",
+      Assessments: "/assessments",
+
+      Help: "help",
+      "What’s here?": "overview",
+      "Go to RMG": "/rmg-tracker",
+
+      "Show shortcuts": "help",
+      "Go Home": "/",
+    };
+
+    function resolveDestinationFromUserInput(userInput) {
+      const raw = String(userInput || "").trim();
+      if (!raw) return "";
+
+      // If user typed a route directly, allow it.
+      if (raw.startsWith("/")) return raw;
+
+      // If they clicked a quick option (label), map it.
+      return OPTION_TO_DESTINATION[raw] || "";
+    }
+
     // Small helper: answer with a message + "quick link" buttons.
     const helpStep = {
       message:
         "I can help you jump to key sections, or answer basic questions about what’s on each page. Where do you want to go?",
-      options: [
-        { label: "RMG Tracker", value: "/rmg-tracker" },
-        { label: "Skill Factories", value: "/skill-factories" },
-        { label: "Learning Paths", value: "/learning-paths" },
-        { label: "Assessments", value: "/assessments" },
-      ],
+      options: ["RMG Tracker", "Skill Factories", "Learning Paths", "Assessments"],
       // When an option is picked, we navigate and send a confirmation.
       callback: ({ userInput }) => {
-        const to = String(userInput || "").trim();
-        if (!to.startsWith("/")) return;
-        navigate(to);
+        const dest = resolveDestinationFromUserInput(userInput);
+        if (dest.startsWith("/")) navigate(dest);
+      },
+      path: ({ userInput }) => {
+        const dest = resolveDestinationFromUserInput(userInput);
+        // If they typed a command (help/overview), route accordingly.
+        if (dest === "help") return "help";
+        if (dest === "overview") return "overview";
+        if (dest.startsWith("/")) return "navigate";
+        return "help";
       },
     };
 
@@ -41,7 +77,7 @@ function useDigiPortalChatFlow() {
      * react-chatbotify supports a "flow" object where each key is a step and
      * each step can define:
      * - message: bot message
-     * - options: quick reply buttons
+     * - options: quick reply buttons (strings)
      * - path: next step (string or function)
      * - callback: invoked when user responds / selects an option
      *
@@ -54,16 +90,12 @@ function useDigiPortalChatFlow() {
       start: {
         message:
           "Hi! I’m the Digi Portal assistant. Want help finding something?",
-        options: [
-          { label: "Help", value: "help" },
-          { label: "What’s here?", value: "overview" },
-          { label: "Go to RMG", value: "/rmg-tracker" },
-        ],
+        options: ["Help", "What’s here?", "Go to RMG"],
         path: ({ userInput }) => {
-          const input = String(userInput || "").trim().toLowerCase();
-          if (input === "help") return "help";
-          if (input === "overview") return "overview";
-          if (input.startsWith("/")) return "navigate";
+          const dest = resolveDestinationFromUserInput(userInput);
+          if (dest === "help") return "help";
+          if (dest === "overview") return "overview";
+          if (dest.startsWith("/")) return "navigate";
           return "help";
         },
       },
@@ -71,13 +103,10 @@ function useDigiPortalChatFlow() {
       overview: {
         message:
           "Digi Portal has: RMG Tracker (resource status), Skill Factories (mentorship hubs), Learning Paths (journeys), and Assessments (measure growth). Want a shortcut?",
-        options: [
-          { label: "Show shortcuts", value: "help" },
-          { label: "Go Home", value: "/" },
-        ],
+        options: ["Show shortcuts", "Go Home"],
         path: ({ userInput }) => {
-          const input = String(userInput || "").trim();
-          if (input === "/") return "navigate";
+          const dest = resolveDestinationFromUserInput(userInput);
+          if (dest.startsWith("/")) return "navigate";
           return "help";
         },
       },
@@ -87,8 +116,8 @@ function useDigiPortalChatFlow() {
       navigate: {
         message: "Got it—taking you there!",
         callback: ({ userInput }) => {
-          const to = String(userInput || "").trim();
-          if (to.startsWith("/")) navigate(to);
+          const dest = resolveDestinationFromUserInput(userInput);
+          if (dest.startsWith("/")) navigate(dest);
         },
         path: "help", // return to shortcuts after navigation
       },

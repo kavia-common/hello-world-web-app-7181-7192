@@ -18,10 +18,10 @@ test("renders navbar with required links", () => {
     "href",
     "/skill-factories"
   );
-  expect(screen.getByRole("link", { name: /learning paths/i })).toHaveAttribute(
-    "href",
-    "/learning-paths"
-  );
+  // Be specific: Home also contains "Explore Learning Paths" link.
+  expect(
+    screen.getByRole("link", { name: /^learning paths$/i })
+  ).toHaveAttribute("href", "/learning-paths");
   expect(screen.getByRole("link", { name: /assessments/i })).toHaveAttribute(
     "href",
     "/assessments"
