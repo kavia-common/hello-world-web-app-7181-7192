@@ -10,10 +10,7 @@ function App() {
         <section className="HelloCard" aria-label="Welcome hero">
           <p className="HelloEyebrow">Ocean Professional</p>
           <h1 className="HelloTitle">Welcome to Digi Portal</h1>
-          <p className="HelloSubtitle">
-            Your central place to explore tools, updates, and next steps—built with a
-            playful, polished ocean-inspired theme.
-          </p>
+          <p className="HelloSubtitle">Build, assess, and grow your digital skills.</p>
 
           <div style={{ marginTop: 20 }}>
             <a className="HelloCTA" href="/" aria-label="Get started">
