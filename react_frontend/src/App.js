@@ -200,8 +200,17 @@ function App() {
       <div className="GlobalChatbot" aria-label="Digi Portal chatbot">
         <Chatbot
           flow={flow}
-          options={{
-            theme: {
+          /**
+           * react-chatbotify v2 ChatBot API:
+           * - Use `settings` for functional configuration (header/title, tooltip, footer, general colors).
+           * - Use `styles` for CSS-in-JS style overrides.
+           * - `themes` is optional; we keep styling minimal and rely on settings/styles for our branding.
+           *
+           * This avoids non-v2 props (like `options`) that can be ignored by v2 and cause defaults
+           * such as "Tan Jin" to appear.
+           */
+          settings={{
+            general: {
               // Ocean Professional / Playful vibe to match existing UI
               primaryColor: "#EC4899",
               secondaryColor: "#8B5CF6",
@@ -209,35 +218,22 @@ function App() {
                 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif',
             },
 
+            // Launcher tooltip
+            tooltip: { text: "Digi Bot" },
+
+            // Header title
+            header: { title: "Digi Bot" },
+
+            // Footer branding
+            footer: { text: "made with <3 from Digital Competency" },
+          }}
+          styles={{
             /**
-             * Branding / labels (react-chatbotify v2.5):
-             * - Tooltip text shows near the launcher button.
-             * - Header title shows at the top of the chat window.
-             * - Footer text replaces the default "Powered By react-chatbotify".
-             *
-             * We only update visible labels/branding as requested; behavior/flow/styles remain unchanged.
+             * Keep bubble colors aligned with the existing palette.
+             * (v2 supports style overrides for fine-grained control; these are safe and non-breaking.)
              */
-            settings: {
-              tooltip: { text: "Digi Bot" },
-
-              /**
-               * Force the header title across react-chatbotify versions.
-               * Some releases read `settings.header.title`, others may fall back
-               * to legacy top-level `headerTitle`. Setting both prevents any
-               * default/previous title (e.g., "Tan Jin") from appearing.
-               */
-              header: { title: "Digi Bot" },
-
-              footer: { text: "made with <3 from Digital Competency" },
-            },
-
-            // Keep it lightweight and non-intrusive by default.
-            botBubbleColor: "#EC4899",
-            userBubbleColor: "#8B5CF6",
-
-            // Backwards-compatible fields used by some versions; safe to pass even if ignored.
-            tooltipText: "Digi Bot",
-            headerTitle: "Digi Bot",
+            botBubbleStyle: { backgroundColor: "#EC4899" },
+            userBubbleStyle: { backgroundColor: "#8B5CF6" },
           }}
         />
       </div>
