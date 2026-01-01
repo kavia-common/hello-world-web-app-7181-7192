@@ -8,7 +8,6 @@ function App() {
     <div className="App">
       <main className="App-main" aria-label="Welcome page">
         <section className="HelloCard" aria-label="Welcome hero">
-          <p className="HelloEyebrow">Ocean Professional</p>
           <h1 className="HelloTitle">Welcome to Digi Portal</h1>
           <p className="HelloSubtitle">Build, assess, and grow your digital skills.</p>
 
