@@ -147,8 +147,7 @@ function useDigiPortalChatFlow() {
 
     const flow = {
       start: {
-        message:
-          "Hi! I’m the Digi Portal assistant. Want help finding something?",
+        message: "Hi! I’m Digi Bot. Want help finding something?",
         options: ["Get Started", "Help", "What’s here?"],
         path: ({ userInput }) => {
           const dest = resolveDestinationFromUserInput(userInput);

@@ -1415,3 +1415,169 @@
     bottom: 12px;
   }
 }
+
+/* ---------- Digi Bot (react-chatbotify) theme overrides ----------
+   We keep flow/logic unchanged and only override visuals.
+   Palette:
+   - Primary:   #EC4899
+   - Secondary: #8B5CF6
+   - Background:#FDF2F8
+   - Text:      #374151
+*/
+
+:root {
+  --digibot-primary: #ec4899;
+  --digibot-secondary: #8b5cf6;
+  --digibot-bg: #fdf2f8;
+  --digibot-text: #374151;
+
+  /* Accessible focus ring color (pink + alpha) */
+  --digibot-focus: rgba(236, 72, 153, 0.32);
+}
+
+/* Chat window shell */
+.GlobalChatbot .rcb-chat-window {
+  border-radius: 22px;
+  border: 1px solid rgba(139, 92, 246, 0.18);
+  box-shadow: 0 18px 45px rgba(17, 24, 39, 0.16);
+  overflow: hidden;
+}
+
+/* Header */
+.GlobalChatbot .rcb-chat-header-container {
+  color: #ffffff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  background: linear-gradient(90deg, var(--digibot-primary), var(--digibot-secondary));
+}
+
+/* Make the header title and subtitle readable */
+.GlobalChatbot .rcb-chat-header-title,
+.GlobalChatbot .rcb-chat-header-subtitle {
+  color: #ffffff;
+}
+
+/* Launcher button */
+.GlobalChatbot .rcb-toggle-button {
+  width: 58px;
+  height: 58px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--digibot-primary), var(--digibot-secondary));
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 16px 34px rgba(236, 72, 153, 0.22);
+  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .GlobalChatbot .rcb-toggle-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 22px 50px rgba(139, 92, 246, 0.22);
+    filter: saturate(1.06);
+  }
+}
+
+.GlobalChatbot .rcb-toggle-button:focus-visible {
+  outline: 3px solid var(--digibot-focus);
+  outline-offset: 4px;
+}
+
+/* Body background */
+.GlobalChatbot .rcb-chat-body-container {
+  background: var(--digibot-bg);
+}
+
+/* Bot and user bubbles */
+.GlobalChatbot .rcb-bot-message {
+  background: rgba(236, 72, 153, 0.12);
+  border: 1px solid rgba(236, 72, 153, 0.18);
+  color: var(--digibot-text);
+}
+
+.GlobalChatbot .rcb-user-message {
+  background: rgba(139, 92, 246, 0.14);
+  border: 1px solid rgba(139, 92, 246, 0.18);
+  color: var(--digibot-text);
+}
+
+/* Typing indicator dots to match theme */
+.GlobalChatbot .rcb-dot {
+  background: rgba(236, 72, 153, 0.75);
+}
+
+/* Input bar */
+.GlobalChatbot .rcb-chat-input {
+  border-top: 1px solid rgba(139, 92, 246, 0.16);
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(10px);
+}
+
+.GlobalChatbot .rcb-chat-input-textarea {
+  color: var(--digibot-text);
+}
+
+.GlobalChatbot .rcb-chat-input-textarea::placeholder {
+  color: rgba(55, 65, 81, 0.6);
+}
+
+.GlobalChatbot .rcb-chat-input-textarea:focus-visible {
+  outline: 3px solid var(--digibot-focus);
+  outline-offset: 3px;
+}
+
+/* Quick reply options */
+.GlobalChatbot .rcb-options {
+  border-radius: 999px;
+  border: 1px solid rgba(139, 92, 246, 0.18);
+  background: rgba(255, 255, 255, 0.72);
+  color: rgba(55, 65, 81, 0.9);
+  font-weight: 800;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .GlobalChatbot .rcb-options:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 28px rgba(236, 72, 153, 0.12);
+    border-color: rgba(236, 72, 153, 0.26);
+  }
+}
+
+.GlobalChatbot .rcb-options:focus-visible {
+  outline: 3px solid var(--digibot-focus);
+  outline-offset: 3px;
+}
+
+/* Send button: ensure it matches theme and is visible */
+.GlobalChatbot .rcb-send-button {
+  background: linear-gradient(90deg, var(--digibot-primary), var(--digibot-secondary));
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .GlobalChatbot .rcb-send-button:hover {
+    filter: saturate(1.06);
+  }
+}
+
+.GlobalChatbot .rcb-send-button:focus-visible {
+  outline: 3px solid var(--digibot-focus);
+  outline-offset: 3px;
+}
+
+/* Footer links should feel consistent */
+.GlobalChatbot .rcb-chat-footer-container,
+.GlobalChatbot .rcb-chat-footer {
+  background: rgba(255, 255, 255, 0.65);
+  color: rgba(55, 65, 81, 0.82);
+}
+
+.GlobalChatbot .rcb-chat-footer a {
+  color: rgba(55, 65, 81, 0.9);
+  text-decoration: none;
+  border-bottom: 2px solid rgba(139, 92, 246, 0.22);
+}
+
+.GlobalChatbot .rcb-chat-footer a:focus-visible {
+  outline: 3px solid var(--digibot-focus);
+  outline-offset: 3px;
+  border-bottom-color: transparent;
+}
