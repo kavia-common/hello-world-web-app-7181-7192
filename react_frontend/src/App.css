@@ -1,23 +1,48 @@
-/* Ocean Professional / Playful theme
-   Palette:
-   - Primary:   #EC4899
-   - Secondary: #8B5CF6
-   - Background:#FDF2F8
-   - Text:      #374151
+/* Tailwind-like Cool / Playful theme
+   Goal:
+   - Use a cool palette inspired by Tailwind defaults (sky/indigo/slate)
+   - Apply via global CSS variables so components consistently theme
+   - Preserve playful rounded aesthetics and subtle gradients
 */
 
 :root {
-  --color-primary: #ec4899;
-  --color-secondary: #8b5cf6;
-  --color-bg: #fdf2f8;
-  --color-surface: #ffffff;
-  --color-text: #374151;
+  /* Core palette (Tailwind-ish) */
+  --color-primary: #0ea5e9; /* sky-500 */
+  --color-primary-600: #0284c7; /* sky-600 */
+  --color-secondary: #6366f1; /* indigo-500 */
+  --color-secondary-600: #4f46e5; /* indigo-600 */
 
-  --shadow-elev-1: 0 10px 30px rgba(17, 24, 39, 0.12);
-  --shadow-elev-2: 0 18px 45px rgba(17, 24, 39, 0.16);
+  --color-bg: #f8fafc; /* slate-50 */
+  --color-surface: #ffffff; /* white */
+  --color-surface-2: rgba(255, 255, 255, 0.72);
+  --color-text: #0f172a; /* slate-900 */
+  --color-text-muted: rgba(15, 23, 42, 0.72);
+
+  /* Lines / borders */
+  --color-border: rgba(99, 102, 241, 0.18); /* indigo-ish */
+  --color-border-strong: rgba(14, 165, 233, 0.28); /* sky-ish */
+
+  /* Accents / states */
+  --color-success: #10b981; /* emerald-500 */
+  --color-danger: #ef4444; /* red-500 */
+  --color-warning: #f59e0b; /* amber-500 */
+
+  /* Effects */
+  --shadow-elev-1: 0 10px 30px rgba(2, 6, 23, 0.10);
+  --shadow-elev-2: 0 18px 45px rgba(2, 6, 23, 0.14);
 
   --radius-lg: 22px;
   --radius-md: 16px;
+
+  /* Shared focus ring */
+  --focus-ring: rgba(14, 165, 233, 0.28);
+
+  /* ---------- Digi Bot theme tokens (derived from global palette) ---------- */
+  --digibot-primary: var(--color-primary);
+  --digibot-secondary: var(--color-secondary);
+  --digibot-bg: var(--color-bg);
+  --digibot-text: var(--color-text);
+  --digibot-focus: var(--focus-ring);
 }
 
 /* App shell */
@@ -25,10 +50,10 @@
   min-height: 100vh;
   color: var(--color-text);
   background:
-    radial-gradient(900px circle at 20% 15%, rgba(236, 72, 153, 0.22), transparent 60%),
-    radial-gradient(900px circle at 80% 10%, rgba(139, 92, 246, 0.22), transparent 55%),
-    radial-gradient(900px circle at 70% 85%, rgba(59, 130, 246, 0.14), transparent 55%),
-    linear-gradient(135deg, #fce7f3 0%, #ede9fe 45%, #dbeafe 100%);
+    radial-gradient(900px circle at 20% 15%, rgba(14, 165, 233, 0.18), transparent 60%),
+    radial-gradient(900px circle at 80% 10%, rgba(99, 102, 241, 0.16), transparent 55%),
+    radial-gradient(900px circle at 70% 85%, rgba(56, 189, 248, 0.12), transparent 55%),
+    linear-gradient(135deg, #f8fafc 0%, #eef2ff 45%, #e0f2fe 100%);
   display: flex;
   flex-direction: column;
 }
@@ -41,7 +66,7 @@
   width: 100%;
   background: rgba(255, 255, 255, 0.62);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(139, 92, 246, 0.16);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .TopBar-inner {
@@ -73,7 +98,7 @@
   border-radius: 12px;
   color: #fff;
   background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
-  box-shadow: 0 12px 24px rgba(139, 92, 246, 0.16);
+  box-shadow: 0 12px 24px rgba(2, 132, 199, 0.18);
 }
 
 .TopBar-brandText {
@@ -84,7 +109,7 @@
   display: none;
   appearance: none;
   background: transparent;
-  border: 1px solid rgba(139, 92, 246, 0.24);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 8px 10px;
   cursor: pointer;
@@ -92,7 +117,7 @@
 }
 
 .TopBar-toggle:focus-visible {
-  outline: 3px solid rgba(139, 92, 246, 0.35);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
@@ -122,9 +147,9 @@
   padding: 10px 12px;
   border-radius: 999px;
   text-decoration: none;
-  color: rgba(55, 65, 81, 0.9);
+  color: rgba(15, 23, 42, 0.86);
   font-weight: 700;
-  border: 1px solid rgba(139, 92, 246, 0.14);
+  border: 1px solid var(--color-border);
   background: rgba(255, 255, 255, 0.55);
   transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
 }
@@ -132,13 +157,13 @@
 @media (hover: hover) and (pointer: fine) {
   .TopBar-link:hover {
     transform: translateY(-1px);
-    box-shadow: 0 14px 28px rgba(236, 72, 153, 0.12);
-    border-color: rgba(236, 72, 153, 0.28);
+    box-shadow: 0 14px 28px rgba(2, 132, 199, 0.12);
+    border-color: var(--color-border-strong);
   }
 }
 
 .TopBar-link:focus-visible {
-  outline: 3px solid rgba(236, 72, 153, 0.28);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
@@ -146,7 +171,7 @@
   color: #fff;
   border-color: rgba(255, 255, 255, 0.25);
   background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
-  box-shadow: 0 16px 32px rgba(139, 92, 246, 0.18);
+  box-shadow: 0 16px 32px rgba(79, 70, 229, 0.18);
 }
 
 /* Centered layout */
@@ -172,7 +197,7 @@
     top: 100%;
     padding: 10px 18px 14px;
     background: rgba(255, 255, 255, 0.82);
-    border-bottom: 1px solid rgba(139, 92, 246, 0.16);
+    border-bottom: 1px solid var(--color-border);
     backdrop-filter: blur(10px);
 
     display: none;
@@ -197,7 +222,7 @@
 .HelloCard {
   width: min(680px, 92vw);
   background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(139, 92, 246, 0.18);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-elev-1);
   backdrop-filter: blur(10px);
@@ -217,7 +242,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(55, 65, 81, 0.75);
+  color: var(--color-text-muted);
 }
 
 .HelloTitle {
@@ -237,7 +262,7 @@
   margin: 0;
   font-size: 1.05rem;
   line-height: 1.6;
-  color: rgba(55, 65, 81, 0.86);
+  color: rgba(15, 23, 42, 0.82);
 }
 
 .HelloCTA {
@@ -254,7 +279,7 @@
 
   color: #ffffff;
   background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
-  box-shadow: 0 14px 28px rgba(236, 72, 153, 0.24);
+  box-shadow: 0 14px 28px rgba(2, 132, 199, 0.20);
   border: 1px solid rgba(255, 255, 255, 0.22);
 
   transform: translateY(0);
@@ -264,13 +289,13 @@
 @media (hover: hover) and (pointer: fine) {
   .HelloCTA:hover {
     transform: translateY(-1px);
-    box-shadow: 0 18px 40px rgba(139, 92, 246, 0.22);
+    box-shadow: 0 18px 40px rgba(79, 70, 229, 0.18);
     filter: saturate(1.06);
   }
 }
 
 .HelloCTA:focus-visible {
-  outline: 3px solid rgba(139, 92, 246, 0.35);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
@@ -334,14 +359,14 @@
   padding: 16px 16px;
   border-radius: 18px;
   text-decoration: none;
-  color: rgba(55, 65, 81, 0.94);
+  color: rgba(15, 23, 42, 0.92);
 
-  border: 1px solid rgba(139, 92, 246, 0.18);
+  border: 1px solid var(--color-border);
   background:
-    radial-gradient(500px circle at 25% 20%, rgba(236, 72, 153, 0.18), transparent 55%),
-    radial-gradient(600px circle at 90% 10%, rgba(139, 92, 246, 0.18), transparent 55%),
+    radial-gradient(500px circle at 25% 20%, rgba(14, 165, 233, 0.14), transparent 55%),
+    radial-gradient(600px circle at 90% 10%, rgba(99, 102, 241, 0.14), transparent 55%),
     rgba(255, 255, 255, 0.72);
-  box-shadow: 0 16px 34px rgba(17, 24, 39, 0.1);
+  box-shadow: 0 16px 34px rgba(2, 6, 23, 0.10);
   backdrop-filter: blur(10px);
 
   transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
@@ -350,13 +375,13 @@
 @media (hover: hover) and (pointer: fine) {
   .MetricCard:hover {
     transform: translateY(-2px);
-    box-shadow: 0 22px 50px rgba(17, 24, 39, 0.14);
-    border-color: rgba(236, 72, 153, 0.26);
+    box-shadow: 0 22px 50px rgba(2, 6, 23, 0.14);
+    border-color: var(--color-border-strong);
   }
 }
 
 .MetricCard:focus-visible {
-  outline: 3px solid rgba(236, 72, 153, 0.28);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
@@ -365,7 +390,7 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-weight: 900;
-  color: rgba(55, 65, 81, 0.62);
+  color: rgba(15, 23, 42, 0.62);
 }
 
 .MetricCard-title {
@@ -399,7 +424,7 @@
 
 .MetricCard-label {
   font-weight: 900;
-  color: rgba(55, 65, 81, 0.72);
+  color: rgba(15, 23, 42, 0.68);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-size: 0.72rem;
@@ -413,25 +438,25 @@
 
   padding: 10px 12px;
   border-radius: 14px;
-  border: 1px solid rgba(139, 92, 246, 0.16);
+  border: 1px solid rgba(99, 102, 241, 0.16);
   background: rgba(255, 255, 255, 0.62);
 }
 
 .MetricCard-subLabel {
   font-weight: 900;
-  color: rgba(55, 65, 81, 0.74);
+  color: rgba(15, 23, 42, 0.70);
 }
 
 .MetricCard-subValue {
   font-weight: 950;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
     "Courier New", monospace;
-  color: rgba(55, 65, 81, 0.88);
+  color: rgba(15, 23, 42, 0.84);
 }
 
 .MetricCard-footer {
   font-weight: 900;
-  color: rgba(55, 65, 81, 0.78);
+  color: rgba(15, 23, 42, 0.76);
 }
 
 /* ---------- RMG Tracker (table + states) ---------- */
@@ -451,8 +476,8 @@
 
 .RmgButton {
   appearance: none;
-  border: 1px solid rgba(139, 92, 246, 0.22);
-  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(99, 102, 241, 0.20);
+  background: rgba(255, 255, 255, 0.70);
   color: var(--color-text);
   font-weight: 800;
   border-radius: 999px;
@@ -464,8 +489,8 @@
 @media (hover: hover) and (pointer: fine) {
   .RmgButton:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 14px 28px rgba(236, 72, 153, 0.12);
-    border-color: rgba(236, 72, 153, 0.28);
+    box-shadow: 0 14px 28px rgba(2, 132, 199, 0.12);
+    border-color: var(--color-border-strong);
   }
 }
 
@@ -475,7 +500,7 @@
 }
 
 .RmgButton:focus-visible {
-  outline: 3px solid rgba(236, 72, 153, 0.28);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
@@ -485,14 +510,14 @@
 
 .RmgLink {
   font-weight: 800;
-  color: rgba(55, 65, 81, 0.92);
+  color: rgba(15, 23, 42, 0.90);
   text-decoration: none;
-  border-bottom: 2px solid rgba(139, 92, 246, 0.25);
+  border-bottom: 2px solid rgba(99, 102, 241, 0.26);
   padding-bottom: 2px;
 }
 
 .RmgLink:focus-visible {
-  outline: 3px solid rgba(139, 92, 246, 0.35);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
   border-bottom-color: transparent;
 }
@@ -504,16 +529,16 @@
   gap: 10px;
   padding: 12px 14px;
   border-radius: 14px;
-  border: 1px solid rgba(139, 92, 246, 0.18);
-  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.70);
 }
 
 .RmgSpinner {
   width: 18px;
   height: 18px;
   border-radius: 999px;
-  border: 3px solid rgba(139, 92, 246, 0.22);
-  border-top-color: rgba(236, 72, 153, 0.8);
+  border: 3px solid rgba(99, 102, 241, 0.22);
+  border-top-color: rgba(14, 165, 233, 0.90);
   animation: rmg-spin 900ms linear infinite;
 }
 
@@ -543,14 +568,14 @@
 }
 
 .RmgErrorMessage {
-  color: rgba(55, 65, 81, 0.86);
+  color: rgba(15, 23, 42, 0.82);
   margin-bottom: 12px;
 }
 
 .RmgTableWrap {
   margin-top: 18px;
   border-radius: 18px;
-  border: 1px solid rgba(139, 92, 246, 0.18);
+  border: 1px solid var(--color-border);
   background: rgba(255, 255, 255, 0.72);
   overflow: auto;
 }
@@ -567,8 +592,8 @@
   top: 0;
   background: linear-gradient(
     90deg,
-    rgba(236, 72, 153, 0.12),
-    rgba(139, 92, 246, 0.12)
+    rgba(14, 165, 233, 0.10),
+    rgba(99, 102, 241, 0.10)
   );
   backdrop-filter: blur(10px);
   text-align: left;
@@ -576,24 +601,24 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   padding: 12px 12px;
-  border-bottom: 1px solid rgba(139, 92, 246, 0.18);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .RmgTable tbody td {
   padding: 12px 12px;
-  border-bottom: 1px solid rgba(139, 92, 246, 0.12);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.12);
   vertical-align: top;
   font-size: 0.95rem;
 }
 
 .RmgTable tbody tr:hover td {
-  background: rgba(236, 72, 153, 0.05);
+  background: rgba(14, 165, 233, 0.05);
 }
 
 .RmgEmptyCell {
   text-align: center;
   padding: 18px 12px;
-  color: rgba(55, 65, 81, 0.75);
+  color: rgba(15, 23, 42, 0.70);
 }
 
 .RmgMono {
@@ -609,23 +634,32 @@
   border-radius: 999px;
   font-weight: 900;
   font-size: 0.85rem;
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  background: rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.20);
+  background: rgba(99, 102, 241, 0.10);
 }
 
+/* RMG status pills (existing classes retained) */
 .RmgPill--billable {
-  border-color: rgba(16, 185, 129, 0.3);
+  border-color: rgba(16, 185, 129, 0.30);
   background: rgba(16, 185, 129, 0.12);
 }
 
 .RmgPill--partial {
-  border-color: rgba(236, 72, 153, 0.3);
-  background: rgba(236, 72, 153, 0.12);
+  border-color: rgba(14, 165, 233, 0.28);
+  background: rgba(14, 165, 233, 0.12);
 }
 
 .RmgPill--bench {
-  border-color: rgba(107, 114, 128, 0.28);
-  background: rgba(107, 114, 128, 0.12);
+  border-color: rgba(100, 116, 139, 0.26);
+  background: rgba(100, 116, 139, 0.12);
+}
+
+/* Generic assessment status pills (keep safe default look) */
+.RmgPill--assigned,
+.RmgPill--in-review,
+.RmgPill--completed {
+  border-color: rgba(14, 165, 233, 0.22);
+  background: rgba(14, 165, 233, 0.10);
 }
 
 .RmgChips {
@@ -641,7 +675,7 @@
   border-radius: 999px;
   font-weight: 800;
   font-size: 0.85rem;
-  border: 1px solid rgba(139, 92, 246, 0.18);
+  border: 1px solid rgba(99, 102, 241, 0.18);
   background: rgba(255, 255, 255, 0.65);
 }
 
@@ -650,7 +684,7 @@
 .HomeSection {
   margin-top: 22px;
   padding-top: 18px;
-  border-top: 1px solid rgba(139, 92, 246, 0.16);
+  border-top: 1px solid rgba(99, 102, 241, 0.16);
 }
 
 /* New: cards layout for Learning Path metrics (replaces chart) */
@@ -678,12 +712,12 @@
 
 .HomeLpMetricCard {
   border-radius: 18px;
-  border: 1px solid rgba(139, 92, 246, 0.18);
+  border: 1px solid var(--color-border);
   background:
-    radial-gradient(650px circle at 20% 15%, rgba(236, 72, 153, 0.14), transparent 55%),
-    radial-gradient(700px circle at 88% 18%, rgba(139, 92, 246, 0.14), transparent 55%),
+    radial-gradient(650px circle at 20% 15%, rgba(14, 165, 233, 0.12), transparent 55%),
+    radial-gradient(700px circle at 88% 18%, rgba(99, 102, 241, 0.12), transparent 55%),
     rgba(255, 255, 255, 0.72);
-  box-shadow: 0 16px 34px rgba(17, 24, 39, 0.1);
+  box-shadow: 0 16px 34px rgba(2, 6, 23, 0.10);
   backdrop-filter: blur(10px);
   padding: 14px 14px;
   display: grid;
@@ -694,13 +728,13 @@
 @media (hover: hover) and (pointer: fine) {
   .HomeLpMetricCard:hover {
     transform: translateY(-2px);
-    box-shadow: 0 22px 50px rgba(17, 24, 39, 0.14);
-    border-color: rgba(236, 72, 153, 0.26);
+    box-shadow: 0 22px 50px rgba(2, 6, 23, 0.14);
+    border-color: var(--color-border-strong);
   }
 }
 
 .HomeLpMetricCard:focus-visible {
-  outline: 3px solid rgba(236, 72, 153, 0.28);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
@@ -728,14 +762,14 @@
 }
 
 .HomeLpMetricCardSub {
-  color: rgba(55, 65, 81, 0.78);
+  color: rgba(15, 23, 42, 0.76);
   font-weight: 800;
   font-size: 0.92rem;
 }
 
 .HomeLpMetricCardCta {
   font-weight: 900;
-  color: rgba(55, 65, 81, 0.78);
+  color: rgba(15, 23, 42, 0.76);
 }
 
 /* (Chart CSS kept below, in case it's reused elsewhere in the future.) */
@@ -744,12 +778,12 @@
 .HomeLpChart {
   margin: 0;
   border-radius: 18px;
-  border: 1px solid rgba(139, 92, 246, 0.18);
+  border: 1px solid var(--color-border);
   background:
-    radial-gradient(650px circle at 20% 10%, rgba(236, 72, 153, 0.14), transparent 55%),
-    radial-gradient(700px circle at 90% 20%, rgba(139, 92, 246, 0.14), transparent 55%),
+    radial-gradient(650px circle at 20% 10%, rgba(14, 165, 233, 0.12), transparent 55%),
+    radial-gradient(700px circle at 90% 20%, rgba(99, 102, 241, 0.12), transparent 55%),
     rgba(255, 255, 255, 0.72);
-  box-shadow: 0 16px 34px rgba(17, 24, 39, 0.1);
+  box-shadow: 0 16px 34px rgba(2, 6, 23, 0.10);
   backdrop-filter: blur(10px);
   padding: 14px 14px;
 }
@@ -767,7 +801,7 @@
 }
 
 .HomeLpChartSub {
-  color: rgba(55, 65, 81, 0.78);
+  color: rgba(15, 23, 42, 0.76);
   font-weight: 700;
   font-size: 0.92rem;
   line-height: 1.4;
@@ -794,7 +828,7 @@
   align-items: center;
   padding: 10px 10px;
   border-radius: 14px;
-  border: 1px solid rgba(139, 92, 246, 0.16);
+  border: 1px solid rgba(99, 102, 241, 0.16);
   background: rgba(255, 255, 255, 0.62);
 }
 
@@ -803,7 +837,7 @@
   gap: 6px;
   padding: 10px 10px;
   border-radius: 14px;
-  border: 1px solid rgba(139, 92, 246, 0.16);
+  border: 1px solid rgba(99, 102, 241, 0.16);
   background: rgba(255, 255, 255, 0.62);
   min-width: 200px;
 }
@@ -812,14 +846,14 @@
   font-size: 0.82rem;
   font-weight: 950;
   letter-spacing: 0.03em;
-  color: rgba(55, 65, 81, 0.78);
+  color: rgba(15, 23, 42, 0.74);
   text-transform: uppercase;
 }
 
 .HomeLpChartToggle {
   display: inline-flex;
   border-radius: 999px;
-  border: 1px solid rgba(139, 92, 246, 0.18);
+  border: 1px solid rgba(99, 102, 241, 0.18);
   background: rgba(255, 255, 255, 0.72);
   overflow: hidden;
 }
@@ -828,7 +862,7 @@
   appearance: none;
   border: 0;
   background: transparent;
-  color: rgba(55, 65, 81, 0.86);
+  color: rgba(15, 23, 42, 0.82);
   font-weight: 950;
   padding: 8px 12px;
   cursor: pointer;
@@ -836,13 +870,13 @@
 }
 
 .HomeLpChartToggleBtn:focus-visible {
-  outline: 3px solid rgba(236, 72, 153, 0.26);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .HomeLpChartToggleBtn:hover {
-    background: rgba(236, 72, 153, 0.08);
+    background: rgba(14, 165, 233, 0.08);
   }
 }
 
@@ -856,10 +890,10 @@
   max-width: min(320px, 85vw);
   padding: 10px 12px;
   border-radius: 14px;
-  border: 1px solid rgba(139, 92, 246, 0.22);
+  border: 1px solid rgba(99, 102, 241, 0.22);
   background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 18px 45px rgba(17, 24, 39, 0.16);
-  color: rgba(55, 65, 81, 0.92);
+  box-shadow: 0 18px 45px rgba(2, 6, 23, 0.14);
+  color: rgba(15, 23, 42, 0.92);
   font-weight: 800;
   font-size: 0.9rem;
   line-height: 1.35;
@@ -871,7 +905,7 @@
 }
 
 .HomeLpChartSeg:focus-visible {
-  outline: 3px solid rgba(236, 72, 153, 0.35);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -890,11 +924,11 @@
   font-weight: 950;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: rgba(55, 65, 81, 0.74);
+  color: rgba(15, 23, 42, 0.72);
 }
 
 .HomeLpChartHint {
-  color: rgba(55, 65, 81, 0.74);
+  color: rgba(15, 23, 42, 0.72);
   font-weight: 700;
   font-size: 0.88rem;
   line-height: 1.35;
@@ -905,7 +939,7 @@
   align-items: center;
   gap: 8px;
   font-weight: 900;
-  color: rgba(55, 65, 81, 0.82);
+  color: rgba(15, 23, 42, 0.80);
   font-size: 0.82rem;
   letter-spacing: 0.03em;
   text-transform: uppercase;
@@ -915,7 +949,7 @@
   width: 12px;
   height: 12px;
   border-radius: 4px;
-  border: 1px solid rgba(139, 92, 246, 0.18);
+  border: 1px solid rgba(99, 102, 241, 0.18);
 }
 
 .HomeLpLegendSwatch--completed {
@@ -923,11 +957,11 @@
 }
 
 .HomeLpLegendSwatch--inprogress {
-  background: rgba(236, 72, 153, 0.82);
+  background: rgba(14, 165, 233, 0.82);
 }
 
 .HomeLpLegendSwatch--remaining {
-  background: rgba(139, 92, 246, 0.32);
+  background: rgba(99, 102, 241, 0.32);
 }
 
 .HomeLpChartList {
@@ -940,7 +974,7 @@
 
 .HomeLpChartRow {
   border-radius: 16px;
-  border: 1px solid rgba(139, 92, 246, 0.16);
+  border: 1px solid rgba(99, 102, 241, 0.16);
   background: rgba(255, 255, 255, 0.66);
   padding: 12px 12px;
   display: grid;
@@ -967,7 +1001,7 @@
   display: inline-flex;
   gap: 10px;
   flex-wrap: wrap;
-  color: rgba(55, 65, 81, 0.78);
+  color: rgba(15, 23, 42, 0.74);
   font-weight: 800;
   font-size: 0.9rem;
 }
@@ -979,8 +1013,8 @@
 }
 
 .HomeLpChartTrack {
-  fill: rgba(139, 92, 246, 0.12);
-  stroke: rgba(139, 92, 246, 0.18);
+  fill: rgba(99, 102, 241, 0.10);
+  stroke: rgba(99, 102, 241, 0.18);
 }
 
 .HomeLpChartSeg--completed {
@@ -988,18 +1022,18 @@
 }
 
 .HomeLpChartSeg--inprogress {
-  fill: rgba(236, 72, 153, 0.82);
+  fill: rgba(14, 165, 233, 0.82);
 }
 
 .HomeLpChartSeg--remaining {
-  fill: rgba(139, 92, 246, 0.32);
+  fill: rgba(99, 102, 241, 0.32);
 }
 
 .HomeLpChartNumbers {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  color: rgba(55, 65, 81, 0.8);
+  color: rgba(15, 23, 42, 0.76);
   font-weight: 900;
   font-size: 0.85rem;
   text-transform: uppercase;
@@ -1012,7 +1046,7 @@
   gap: 8px;
   padding: 6px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(139, 92, 246, 0.16);
+  border: 1px solid rgba(99, 102, 241, 0.16);
   background: rgba(255, 255, 255, 0.62);
 }
 
@@ -1021,21 +1055,21 @@
 }
 
 .HomeLpChartNum--inprogress {
-  border-color: rgba(236, 72, 153, 0.28);
+  border-color: rgba(14, 165, 233, 0.28);
 }
 
 .HomeLpChartNum--remaining {
-  border-color: rgba(139, 92, 246, 0.22);
+  border-color: rgba(99, 102, 241, 0.22);
 }
 
 .HomeLpChartEmpty {
   margin-top: 6px;
   padding: 12px 12px;
   border-radius: 14px;
-  border: 1px solid rgba(139, 92, 246, 0.18);
+  border: 1px solid var(--color-border);
   background: rgba(255, 255, 255, 0.7);
   font-weight: 800;
-  color: rgba(55, 65, 81, 0.8);
+  color: rgba(15, 23, 42, 0.78);
 }
 
 /* ---------- Home: Skill Factory metrics section ---------- */
@@ -1049,12 +1083,12 @@
 
 .SfMetricsCard {
   border-radius: 18px;
-  border: 1px solid rgba(139, 92, 246, 0.18);
+  border: 1px solid var(--color-border);
   background:
-    radial-gradient(700px circle at 15% 15%, rgba(236, 72, 153, 0.14), transparent 55%),
-    radial-gradient(700px circle at 85% 20%, rgba(139, 92, 246, 0.14), transparent 55%),
+    radial-gradient(700px circle at 15% 15%, rgba(14, 165, 233, 0.12), transparent 55%),
+    radial-gradient(700px circle at 85% 20%, rgba(99, 102, 241, 0.12), transparent 55%),
     rgba(255, 255, 255, 0.72);
-  box-shadow: 0 16px 34px rgba(17, 24, 39, 0.1);
+  box-shadow: 0 16px 34px rgba(2, 6, 23, 0.10);
   backdrop-filter: blur(10px);
   padding: 14px 14px;
 }
@@ -1083,7 +1117,7 @@
 
 .SfMetricsCardMeta {
   font-weight: 900;
-  color: rgba(55, 65, 81, 0.7);
+  color: rgba(15, 23, 42, 0.66);
 }
 
 .SfMetricsCardGrid {
@@ -1106,7 +1140,7 @@
 
 .SfMetricMiniCard {
   border-radius: 16px;
-  border: 1px solid rgba(139, 92, 246, 0.16);
+  border: 1px solid rgba(99, 102, 241, 0.16);
   background: rgba(255, 255, 255, 0.66);
   padding: 12px 12px;
   display: grid;
@@ -1125,7 +1159,7 @@
 
 .SfMetricMiniLabel {
   font-weight: 900;
-  color: rgba(55, 65, 81, 0.74);
+  color: rgba(15, 23, 42, 0.70);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-size: 0.72rem;
@@ -1148,7 +1182,7 @@
 
 .HomeSectionSubtitle {
   margin: 8px 0 0;
-  color: rgba(55, 65, 81, 0.82);
+  color: rgba(15, 23, 42, 0.80);
   font-weight: 700;
 }
 
@@ -1158,10 +1192,10 @@
   gap: 8px;
   padding: 8px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(139, 92, 246, 0.18);
+  border: 1px solid rgba(99, 102, 241, 0.18);
   background: rgba(255, 255, 255, 0.6);
   font-weight: 900;
-  color: rgba(55, 65, 81, 0.88);
+  color: rgba(15, 23, 42, 0.86);
 }
 
 .HomeLpGrid {
@@ -1174,7 +1208,7 @@
 .HomeLpTableWrap {
   margin-top: 14px;
   border-radius: 18px;
-  border: 1px solid rgba(139, 92, 246, 0.18);
+  border: 1px solid var(--color-border);
   background: rgba(255, 255, 255, 0.72);
   overflow: auto;
 }
@@ -1191,8 +1225,8 @@
   top: 0;
   background: linear-gradient(
     90deg,
-    rgba(236, 72, 153, 0.12),
-    rgba(139, 92, 246, 0.12)
+    rgba(14, 165, 233, 0.10),
+    rgba(99, 102, 241, 0.10)
   );
   backdrop-filter: blur(10px);
   text-align: left;
@@ -1200,19 +1234,19 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   padding: 12px 12px;
-  border-bottom: 1px solid rgba(139, 92, 246, 0.18);
+  border-bottom: 1px solid var(--color-border);
   white-space: nowrap;
 }
 
 .HomeLpTable tbody td {
   padding: 12px 12px;
-  border-bottom: 1px solid rgba(139, 92, 246, 0.12);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.12);
   vertical-align: top;
   font-size: 0.95rem;
 }
 
 .HomeLpTable tbody tr:hover td {
-  background: rgba(236, 72, 153, 0.05);
+  background: rgba(14, 165, 233, 0.05);
 }
 
 .HomeLpName {
@@ -1227,8 +1261,8 @@
   border-radius: 999px;
   font-weight: 950;
   font-size: 0.85rem;
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  background: rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.20);
+  background: rgba(99, 102, 241, 0.10);
   white-space: nowrap;
 }
 
@@ -1238,8 +1272,8 @@
 }
 
 .HomeLpRatePill--low {
-  border-color: rgba(236, 72, 153, 0.28);
-  background: rgba(236, 72, 153, 0.12);
+  border-color: rgba(14, 165, 233, 0.28);
+  background: rgba(14, 165, 233, 0.12);
 }
 
 /* ---------- RMG Tracker (options + pagination + columns panel) ---------- */
@@ -1248,7 +1282,7 @@
   margin-top: 16px;
   padding: 14px 14px;
   border-radius: 18px;
-  border: 1px solid rgba(139, 92, 246, 0.18);
+  border: 1px solid var(--color-border);
   background: rgba(255, 255, 255, 0.68);
 }
 
@@ -1279,7 +1313,7 @@
   font-size: 0.82rem;
   font-weight: 900;
   letter-spacing: 0.03em;
-  color: rgba(55, 65, 81, 0.78);
+  color: rgba(15, 23, 42, 0.74);
   text-transform: uppercase;
 }
 
@@ -1287,23 +1321,23 @@
 .RmgSelect {
   appearance: none;
   border-radius: 14px;
-  border: 1px solid rgba(139, 92, 246, 0.22);
+  border: 1px solid rgba(99, 102, 241, 0.20);
   background: rgba(255, 255, 255, 0.78);
   padding: 10px 12px;
   font-weight: 700;
-  color: rgba(55, 65, 81, 0.92);
-  box-shadow: 0 10px 22px rgba(17, 24, 39, 0.06);
+  color: rgba(15, 23, 42, 0.92);
+  box-shadow: 0 10px 22px rgba(2, 6, 23, 0.06);
 }
 
 .RmgInput:focus-visible,
 .RmgSelect:focus-visible {
-  outline: 3px solid rgba(236, 72, 153, 0.26);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
 .RmgMetaText {
   font-weight: 800;
-  color: rgba(55, 65, 81, 0.86);
+  color: rgba(15, 23, 42, 0.82);
 }
 
 .RmgPager {
@@ -1315,7 +1349,7 @@
 
 .RmgPagerText {
   font-weight: 800;
-  color: rgba(55, 65, 81, 0.82);
+  color: rgba(15, 23, 42, 0.78);
 }
 
 .RmgButton--small {
@@ -1326,11 +1360,11 @@
 .RmgColumnPanel {
   margin-top: 12px;
   border-radius: 18px;
-  border: 1px solid rgba(139, 92, 246, 0.18);
+  border: 1px solid var(--color-border);
   background: linear-gradient(
     90deg,
-    rgba(236, 72, 153, 0.08),
-    rgba(139, 92, 246, 0.08)
+    rgba(14, 165, 233, 0.08),
+    rgba(99, 102, 241, 0.08)
   );
   padding: 12px 12px;
 }
@@ -1360,7 +1394,7 @@
   gap: 10px;
   padding: 10px 10px;
   border-radius: 14px;
-  border: 1px solid rgba(139, 92, 246, 0.18);
+  border: 1px solid rgba(99, 102, 241, 0.18);
   background: rgba(255, 255, 255, 0.62);
   font-weight: 800;
 }
@@ -1372,7 +1406,7 @@
 
 .RmgHint {
   margin-top: 10px;
-  color: rgba(55, 65, 81, 0.82);
+  color: rgba(15, 23, 42, 0.78);
   font-weight: 700;
 }
 
@@ -1418,28 +1452,12 @@
 
 /* ---------- Digi Bot (react-chatbotify) theme overrides ----------
    We keep flow/logic unchanged and only override visuals.
-   Palette:
-   - Primary:   #EC4899
-   - Secondary: #8B5CF6
-   - Background:#FDF2F8
-   - Text:      #374151
 */
 
-:root {
-  --digibot-primary: #ec4899;
-  --digibot-secondary: #8b5cf6;
-  --digibot-bg: #fdf2f8;
-  --digibot-text: #374151;
-
-  /* Accessible focus ring color (pink + alpha) */
-  --digibot-focus: rgba(236, 72, 153, 0.32);
-}
-
-/* Chat window shell */
 .GlobalChatbot .rcb-chat-window {
   border-radius: 22px;
-  border: 1px solid rgba(139, 92, 246, 0.18);
-  box-shadow: 0 18px 45px rgba(17, 24, 39, 0.16);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 18px 45px rgba(2, 6, 23, 0.14);
   overflow: hidden;
 }
 
@@ -1463,14 +1481,14 @@
   border-radius: 999px;
   background: linear-gradient(90deg, var(--digibot-primary), var(--digibot-secondary));
   border: 1px solid rgba(255, 255, 255, 0.22);
-  box-shadow: 0 16px 34px rgba(236, 72, 153, 0.22);
+  box-shadow: 0 16px 34px rgba(2, 132, 199, 0.20);
   transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .GlobalChatbot .rcb-toggle-button:hover {
     transform: translateY(-1px);
-    box-shadow: 0 22px 50px rgba(139, 92, 246, 0.22);
+    box-shadow: 0 22px 50px rgba(79, 70, 229, 0.18);
     filter: saturate(1.06);
   }
 }
@@ -1487,25 +1505,25 @@
 
 /* Bot and user bubbles */
 .GlobalChatbot .rcb-bot-message {
-  background: rgba(236, 72, 153, 0.12);
-  border: 1px solid rgba(236, 72, 153, 0.18);
+  background: rgba(14, 165, 233, 0.12);
+  border: 1px solid rgba(14, 165, 233, 0.18);
   color: var(--digibot-text);
 }
 
 .GlobalChatbot .rcb-user-message {
-  background: rgba(139, 92, 246, 0.14);
-  border: 1px solid rgba(139, 92, 246, 0.18);
+  background: rgba(99, 102, 241, 0.14);
+  border: 1px solid rgba(99, 102, 241, 0.18);
   color: var(--digibot-text);
 }
 
 /* Typing indicator dots to match theme */
 .GlobalChatbot .rcb-dot {
-  background: rgba(236, 72, 153, 0.75);
+  background: rgba(14, 165, 233, 0.75);
 }
 
 /* Input bar */
 .GlobalChatbot .rcb-chat-input {
-  border-top: 1px solid rgba(139, 92, 246, 0.16);
+  border-top: 1px solid rgba(99, 102, 241, 0.16);
   background: rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(10px);
 }
@@ -1515,7 +1533,7 @@
 }
 
 .GlobalChatbot .rcb-chat-input-textarea::placeholder {
-  color: rgba(55, 65, 81, 0.6);
+  color: rgba(15, 23, 42, 0.58);
 }
 
 .GlobalChatbot .rcb-chat-input-textarea:focus-visible {
@@ -1526,9 +1544,9 @@
 /* Quick reply options */
 .GlobalChatbot .rcb-options {
   border-radius: 999px;
-  border: 1px solid rgba(139, 92, 246, 0.18);
+  border: 1px solid rgba(99, 102, 241, 0.18);
   background: rgba(255, 255, 255, 0.72);
-  color: rgba(55, 65, 81, 0.9);
+  color: rgba(15, 23, 42, 0.88);
   font-weight: 800;
   transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
 }
@@ -1536,8 +1554,8 @@
 @media (hover: hover) and (pointer: fine) {
   .GlobalChatbot .rcb-options:hover {
     transform: translateY(-1px);
-    box-shadow: 0 14px 28px rgba(236, 72, 153, 0.12);
-    border-color: rgba(236, 72, 153, 0.26);
+    box-shadow: 0 14px 28px rgba(2, 132, 199, 0.12);
+    border-color: rgba(14, 165, 233, 0.22);
   }
 }
 
@@ -1567,13 +1585,13 @@
 .GlobalChatbot .rcb-chat-footer-container,
 .GlobalChatbot .rcb-chat-footer {
   background: rgba(255, 255, 255, 0.65);
-  color: rgba(55, 65, 81, 0.82);
+  color: rgba(15, 23, 42, 0.78);
 }
 
 .GlobalChatbot .rcb-chat-footer a {
-  color: rgba(55, 65, 81, 0.9);
+  color: rgba(15, 23, 42, 0.9);
   text-decoration: none;
-  border-bottom: 2px solid rgba(139, 92, 246, 0.22);
+  border-bottom: 2px solid rgba(99, 102, 241, 0.22);
 }
 
 .GlobalChatbot .rcb-chat-footer a:focus-visible {

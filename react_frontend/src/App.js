@@ -211,9 +211,9 @@ function App() {
            */
           settings={{
             general: {
-              // Ocean Professional / Playful vibe to match existing UI
-              primaryColor: "#EC4899",
-              secondaryColor: "#8B5CF6",
+              // Tailwind-like cool palette to match the updated UI
+              primaryColor: "#0EA5E9", // sky-500
+              secondaryColor: "#6366F1", // indigo-500
               fontFamily:
                 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif',
             },
@@ -229,11 +229,11 @@ function App() {
           }}
           styles={{
             /**
-             * Keep bubble colors aligned with the existing palette.
+             * Keep bubble colors aligned with the updated palette.
              * (v2 supports style overrides for fine-grained control; these are safe and non-breaking.)
              */
-            botBubbleStyle: { backgroundColor: "#EC4899" },
-            userBubbleStyle: { backgroundColor: "#8B5CF6" },
+            botBubbleStyle: { backgroundColor: "#0EA5E9" },
+            userBubbleStyle: { backgroundColor: "#6366F1" },
           }}
         />
       </div>

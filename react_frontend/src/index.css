@@ -10,8 +10,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
 
   /* Fallback background in case App CSS doesn't load */
-  background: #fdf2f8;
-  color: #374151;
+  background: #f8fafc;
+  color: #0f172a;
 }
 
 code {
