@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 /**
  * Simple pages used by the app router.
@@ -129,9 +129,26 @@ function getMetricCardA11yText({ title, mainValue, mainLabel, secondary }) {
   return parts.join(". ");
 }
 
+function buildLearningPathsQuery({ q, status }) {
+  const params = new URLSearchParams();
+  if (q) params.set("q", q);
+  if (status) params.set("status", status);
+  const qs = params.toString();
+  return qs ? `/learning-paths?${qs}` : "/learning-paths";
+}
+
+function isInteractiveElement(target) {
+  if (!target) return false;
+  const el = target;
+  const tag = String(el.tagName || "").toLowerCase();
+  return tag === "a" || tag === "button" || tag === "input" || tag === "select" || tag === "textarea";
+}
+
 // PUBLIC_INTERFACE
 export function HomePage() {
   /** Home page that renders a dashboard-style overview using mocked API metrics. */
+  const navigate = useNavigate();
+
   const [metrics, setMetrics] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [errorMessage, setErrorMessage] = React.useState("");
@@ -176,20 +193,12 @@ export function HomePage() {
     try {
       const response = await fetchHomeLearningPathMetricsMock({ signal: controller.signal });
 
-      if (
-        !response ||
-        response.status !== "success" ||
-        !Array.isArray(response.data)
-      ) {
+      if (!response || response.status !== "success" || !Array.isArray(response.data)) {
         throw new Error("Unexpected API response format.");
       }
 
       setLpMetricsRows(response.data);
-      setLpMetricsCount(
-        typeof response.count === "number" && Number.isFinite(response.count)
-          ? response.count
-          : null
-      );
+      setLpMetricsCount(typeof response.count === "number" && Number.isFinite(response.count) ? response.count : null);
     } catch (err) {
       if (err?.name !== "AbortError") {
         setLpMetricsError(err?.message || "Something went wrong while loading data.");
@@ -276,9 +285,9 @@ export function HomePage() {
             {loading ? "Loading…" : "Refresh"}
           </button>
 
-          <a className="RmgLink" href="/learning-paths">
+          <Link className="RmgLink" to="/learning-paths">
             Explore Learning Paths
-          </a>
+          </Link>
         </div>
 
         {loading && (
@@ -301,10 +310,10 @@ export function HomePage() {
         {!loading && !errorMessage && (
           <div className="HomeDashboard" role="region" aria-label="Key metrics">
             {cards.map((c) => (
-              <a
+              <Link
                 key={c.key}
                 className="MetricCard"
-                href={c.href}
+                to={c.href}
                 aria-label={getMetricCardA11yText({
                   title: c.title,
                   mainValue: c.main.value,
@@ -330,7 +339,7 @@ export function HomePage() {
                 </div>
 
                 <div className="MetricCard-footer">View details →</div>
-              </a>
+              </Link>
             ))}
           </div>
         )}
@@ -340,9 +349,7 @@ export function HomePage() {
           <div className="HomeSectionHeader">
             <div>
               <h2 className="HomeSectionTitle">Learning Path metrics</h2>
-              <p className="HomeSectionSubtitle">
-                Enrollment and progress snapshot (mocked API response).
-              </p>
+              <p className="HomeSectionSubtitle">Enrollment and progress snapshot (mocked API response).</p>
             </div>
 
             <div className="RmgToolbar" aria-label="Learning Path metrics actions" style={{ marginTop: 0 }}>
@@ -373,11 +380,7 @@ export function HomePage() {
             <div className="RmgError" role="alert">
               <div className="RmgErrorTitle">Couldn’t load Learning Path metrics</div>
               <div className="RmgErrorMessage">{lpMetricsError}</div>
-              <button
-                type="button"
-                className="RmgButton RmgButton--danger"
-                onClick={loadLearningPathMetrics}
-              >
+              <button type="button" className="RmgButton RmgButton--danger" onClick={loadLearningPathMetrics}>
                 Try again
               </button>
             </div>
@@ -409,32 +412,82 @@ export function HomePage() {
                       </td>
                     </tr>
                   ) : (
-                    lpMetricsRows.map((row) => (
-                      <tr key={row.learningPathName}>
-                        <td>
-                          <span className="HomeLpName">
-                            {row.learningPathName || "—"}
-                          </span>
-                        </td>
-                        <td style={{ textAlign: "right" }}>
-                          <span className="RmgMono">{metricLabelOrDash(row.enrolled)}</span>
-                        </td>
-                        <td style={{ textAlign: "right" }}>
-                          <span className="RmgMono">{metricLabelOrDash(row.completed)}</span>
-                        </td>
-                        <td style={{ textAlign: "right" }}>
-                          <span className="RmgMono">{metricLabelOrDash(row.inProgress)}</span>
-                        </td>
-                        <td>
-                          <span
-                            className={`HomeLpRatePill ${rateToneClass(row.completionRate)}`}
-                            title={`Completion rate: ${formatPercentOrDash(row.completionRate, { digits: 0 })}`}
-                          >
-                            {formatPercentOrDash(row.completionRate, { digits: 0 })}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
+                    lpMetricsRows.map((row) => {
+                      const lpName = row.learningPathName || "";
+                      const baseTo = buildLearningPathsQuery({ q: lpName });
+
+                      return (
+                        <tr
+                          key={row.learningPathName}
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`View learning path: ${lpName || "Unknown"}`}
+                          onClick={(e) => {
+                            // If user clicks a nested interactive element (like the pills), let it handle navigation.
+                            if (isInteractiveElement(e.target)) return;
+                            navigate(baseTo);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              navigate(baseTo);
+                            }
+                          }}
+                          style={{ cursor: "pointer" }}
+                          title="Open Learning Paths with this Learning Path name pre-filtered"
+                        >
+                          <td>
+                            <span className="HomeLpName">{row.learningPathName || "—"}</span>
+                          </td>
+                          <td style={{ textAlign: "right" }}>
+                            <span className="RmgMono">{metricLabelOrDash(row.enrolled)}</span>
+                          </td>
+                          <td style={{ textAlign: "right" }}>
+                            {/* Clickable: filter by q + status=completed */}
+                            <Link
+                              className="RmgMono"
+                              to={buildLearningPathsQuery({ q: lpName, status: "completed" })}
+                              aria-label={`Filter Learning Paths by ${lpName} and status completed`}
+                              title="Open Learning Paths filtered to completed"
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => e.stopPropagation()}
+                            >
+                              {metricLabelOrDash(row.completed)}
+                            </Link>
+                          </td>
+                          <td style={{ textAlign: "right" }}>
+                            {/* Clickable: filter by q + status=inProgress */}
+                            <Link
+                              className="RmgMono"
+                              to={buildLearningPathsQuery({ q: lpName, status: "inProgress" })}
+                              aria-label={`Filter Learning Paths by ${lpName} and status in progress`}
+                              title="Open Learning Paths filtered to in progress"
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => e.stopPropagation()}
+                            >
+                              {metricLabelOrDash(row.inProgress)}
+                            </Link>
+                          </td>
+                          <td>
+                            {/* Clickable pill: filter by q only */}
+                            <Link
+                              to={baseTo}
+                              className={`HomeLpRatePill ${rateToneClass(row.completionRate)}`}
+                              aria-label={`Filter Learning Paths by ${lpName} (completion rate ${formatPercentOrDash(
+                                row.completionRate,
+                                { digits: 0 }
+                              )})`}
+                              title={`Completion rate: ${formatPercentOrDash(row.completionRate, { digits: 0 })}. Click to filter by learning path name.`}
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => e.stopPropagation()}
+                              style={{ textDecoration: "none", color: "inherit" }}
+                            >
+                              {formatPercentOrDash(row.completionRate, { digits: 0 })}
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -682,10 +735,7 @@ export function RmgTrackerPage() {
       if (filters.employeeType && normalizeText(r.employeeType) !== filters.employeeType) {
         return false;
       }
-      if (
-        filters.currentStatus &&
-        normalizeText(r.currentStatus) !== filters.currentStatus
-      ) {
+      if (filters.currentStatus && normalizeText(r.currentStatus) !== filters.currentStatus) {
         return false;
       }
       if (filters.location && normalizeText(r.location) !== filters.location) {
@@ -919,8 +969,7 @@ export function RmgTrackerPage() {
 
             <div className="RmgOptionsRow RmgOptionsRow--meta" aria-label="RMG table meta">
               <div className="RmgMetaText" aria-live="polite">
-                Showing <strong>{totalRows === 0 ? 0 : start + 1}</strong>–
-                <strong>{Math.min(end, totalRows)}</strong> of{" "}
+                Showing <strong>{totalRows === 0 ? 0 : start + 1}</strong>–<strong>{Math.min(end, totalRows)}</strong> of{" "}
                 <strong>{totalRows}</strong>
               </div>
 
@@ -964,12 +1013,7 @@ export function RmgTrackerPage() {
             </div>
 
             {columnPanelOpen && (
-              <div
-                id="rmg-column-panel"
-                className="RmgColumnPanel"
-                role="region"
-                aria-label="Column visibility"
-              >
+              <div id="rmg-column-panel" className="RmgColumnPanel" role="region" aria-label="Column visibility">
                 <div className="RmgColumnPanelHeader">
                   <div className="RmgColumnPanelTitle">Visible columns</div>
                   <button
@@ -1035,11 +1079,7 @@ export function RmgTrackerPage() {
               <thead>
                 <tr>
                   {visibleColumns.map((c) => (
-                    <th
-                      key={c.id}
-                      scope="col"
-                      style={c.id === "allocationPct" ? { textAlign: "right" } : undefined}
-                    >
+                    <th key={c.id} scope="col" style={c.id === "allocationPct" ? { textAlign: "right" } : undefined}>
                       {c.label}
                     </th>
                   ))}
@@ -1057,10 +1097,7 @@ export function RmgTrackerPage() {
                   pagedRows.map((r) => (
                     <tr key={r.empId}>
                       {visibleColumns.map((c) => (
-                        <td
-                          key={`${r.empId}-${c.id}`}
-                          style={c.id === "allocationPct" ? { textAlign: "right" } : undefined}
-                        >
+                        <td key={`${r.empId}-${c.id}`} style={c.id === "allocationPct" ? { textAlign: "right" } : undefined}>
                           {renderCell(r, c.id)}
                         </td>
                       ))}
@@ -1232,9 +1269,7 @@ export function SkillFactoriesPage() {
     [ALL_COLUMNS]
   );
 
-  const [visibleColumnIds, setVisibleColumnIds] = React.useState(
-    DEFAULT_VISIBLE_COLUMN_IDS
-  );
+  const [visibleColumnIds, setVisibleColumnIds] = React.useState(DEFAULT_VISIBLE_COLUMN_IDS);
   const [columnPanelOpen, setColumnPanelOpen] = React.useState(false);
 
   // Pagination
@@ -1328,10 +1363,7 @@ export function SkillFactoriesPage() {
           case "mentors":
             return Array.isArray(sf.mentors)
               ? sf.mentors
-                  .map(
-                    (m) =>
-                      `${m?.mentorName || ""} ${m?.mentorEmail || ""} ${yesNo(m?.isInPool)}`
-                  )
+                  .map((m) => `${m?.mentorName || ""} ${m?.mentorEmail || ""} ${yesNo(m?.isInPool)}`)
                   .join(" ")
                   .toLowerCase()
                   .includes(query)
@@ -1471,18 +1503,10 @@ export function SkillFactoriesPage() {
       <section className="HelloCard HelloCard--wide" aria-label="Skill Factories content">
         <p className="HelloEyebrow">Digi Portal</p>
         <h1 className="HelloTitle">Skill Factories</h1>
-        <p className="HelloSubtitle">
-          Skill Factory overview fetched from an API (mocked response for now).
-        </p>
+        <p className="HelloSubtitle">Skill Factory overview fetched from an API (mocked response for now).</p>
 
         <div className="RmgToolbar" aria-label="Skill Factories actions">
-          <button
-            type="button"
-            className="RmgButton"
-            onClick={load}
-            disabled={loading}
-            aria-disabled={loading ? "true" : "false"}
-          >
+          <button type="button" className="RmgButton" onClick={load} disabled={loading} aria-disabled={loading ? "true" : "false"}>
             {loading ? "Loading…" : "Refresh"}
           </button>
 
@@ -1497,12 +1521,7 @@ export function SkillFactoriesPage() {
             Columns
           </button>
 
-          <button
-            type="button"
-            className="RmgButton"
-            onClick={clearFilters}
-            disabled={loading}
-          >
+          <button type="button" className="RmgButton" onClick={clearFilters} disabled={loading}>
             Reset
           </button>
 
@@ -1532,9 +1551,7 @@ export function SkillFactoriesPage() {
                 <select
                   className="RmgSelect"
                   value={filters.skillFactoryName}
-                  onChange={(e) =>
-                    setFilters((f) => ({ ...f, skillFactoryName: e.target.value }))
-                  }
+                  onChange={(e) => setFilters((f) => ({ ...f, skillFactoryName: e.target.value }))}
                   aria-label="Filter by skill factory name"
                 >
                   <option value="">All</option>
@@ -1551,9 +1568,7 @@ export function SkillFactoriesPage() {
                 <select
                   className="RmgSelect"
                   value={filters.mentorPoolStatus}
-                  onChange={(e) =>
-                    setFilters((f) => ({ ...f, mentorPoolStatus: e.target.value }))
-                  }
+                  onChange={(e) => setFilters((f) => ({ ...f, mentorPoolStatus: e.target.value }))}
                   aria-label="Filter by mentors pool status"
                 >
                   <option value="">All</option>
@@ -1570,9 +1585,7 @@ export function SkillFactoriesPage() {
                 <select
                   className="RmgSelect"
                   value={filters.employeePoolStatus}
-                  onChange={(e) =>
-                    setFilters((f) => ({ ...f, employeePoolStatus: e.target.value }))
-                  }
+                  onChange={(e) => setFilters((f) => ({ ...f, employeePoolStatus: e.target.value }))}
                   aria-label="Filter by employees pool status"
                 >
                   <option value="">All</option>
@@ -1585,24 +1598,15 @@ export function SkillFactoriesPage() {
               </label>
             </div>
 
-            <div
-              className="RmgOptionsRow RmgOptionsRow--meta"
-              aria-label="Skill Factories table meta"
-            >
+            <div className="RmgOptionsRow RmgOptionsRow--meta" aria-label="Skill Factories table meta">
               <div className="RmgMetaText" aria-live="polite">
-                Showing <strong>{totalRows === 0 ? 0 : start + 1}</strong>–
-                <strong>{Math.min(end, totalRows)}</strong> of{" "}
+                Showing <strong>{totalRows === 0 ? 0 : start + 1}</strong>–<strong>{Math.min(end, totalRows)}</strong> of{" "}
                 <strong>{totalRows}</strong>
               </div>
 
               <label className="RmgField RmgField--inline">
                 <span className="RmgFieldLabel">Page size</span>
-                <select
-                  className="RmgSelect"
-                  value={pageSize}
-                  onChange={(e) => setPageSize(Number(e.target.value))}
-                  aria-label="Select page size"
-                >
+                <select className="RmgSelect" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} aria-label="Select page size">
                   {PAGE_SIZES.map((s) => (
                     <option key={`pageSize-sf-${s}`} value={s}>
                       {s}
@@ -1612,12 +1616,7 @@ export function SkillFactoriesPage() {
               </label>
 
               <div className="RmgPager" aria-label="Pagination controls">
-                <button
-                  type="button"
-                  className="RmgButton RmgButton--small"
-                  onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
-                  disabled={safePageIndex <= 0}
-                >
+                <button type="button" className="RmgButton RmgButton--small" onClick={() => setPageIndex((p) => Math.max(0, p - 1))} disabled={safePageIndex <= 0}>
                   Prev
                 </button>
                 <span className="RmgPagerText" aria-label="Current page">
@@ -1635,20 +1634,10 @@ export function SkillFactoriesPage() {
             </div>
 
             {columnPanelOpen && (
-              <div
-                id="skillfactories-column-panel"
-                className="RmgColumnPanel"
-                role="region"
-                aria-label="Column visibility"
-              >
+              <div id="skillfactories-column-panel" className="RmgColumnPanel" role="region" aria-label="Column visibility">
                 <div className="RmgColumnPanelHeader">
                   <div className="RmgColumnPanelTitle">Visible columns</div>
-                  <button
-                    type="button"
-                    className="RmgButton RmgButton--small"
-                    onClick={() => setColumnPanelOpen(false)}
-                    aria-label="Close column visibility panel"
-                  >
+                  <button type="button" className="RmgButton RmgButton--small" onClick={() => setColumnPanelOpen(false)} aria-label="Close column visibility panel">
                     Close
                   </button>
                 </div>
@@ -1660,13 +1649,7 @@ export function SkillFactoriesPage() {
 
                     return (
                       <label key={c.id} className="RmgCheckbox">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleColumn(c.id)}
-                          disabled={isLastVisible}
-                          aria-label={`Toggle column ${c.label}`}
-                        />
+                        <input type="checkbox" checked={checked} onChange={() => toggleColumn(c.id)} disabled={isLastVisible} aria-label={`Toggle column ${c.label}`} />
                         <span>{c.label}</span>
                       </label>
                     );
@@ -1804,9 +1787,27 @@ function safeNumberOrDash(value) {
   return Number.isFinite(num) ? String(num) : "—";
 }
 
+function parseLearningPathsQuery(locationSearch) {
+  const params = new URLSearchParams(locationSearch || "");
+  const q = (params.get("q") || "").trim();
+  const status = (params.get("status") || "").trim();
+  return { q, status };
+}
+
+function normalizeLpStatusFilter(value) {
+  // Accept a couple spellings, keep it simple.
+  const v = String(value || "").trim().toLowerCase();
+  if (v === "completed") return "completed";
+  if (v === "inprogress" || v === "in_progress" || v === "in-progress") return "inProgress";
+  if (v === "inprogresscount") return "inProgress";
+  return "";
+}
+
 // PUBLIC_INTERFACE
 export function LearningPathsPage() {
   /** Learning Paths page that fetches (mocked) data and renders a table with loading and error states + client-side table UX. */
+  const location = useLocation();
+
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [errorMessage, setErrorMessage] = React.useState("");
@@ -1816,6 +1817,8 @@ export function LearningPathsPage() {
   const [filters, setFilters] = React.useState({
     duration: "",
     tag: "",
+    // New: filter results by status derived from counts (completed / inProgress)
+    status: "",
   });
 
   const ALL_COLUMNS = React.useMemo(
@@ -1834,20 +1837,44 @@ export function LearningPathsPage() {
     []
   );
 
-  const DEFAULT_VISIBLE_COLUMN_IDS = React.useMemo(
-    () => ALL_COLUMNS.map((c) => c.id),
-    [ALL_COLUMNS]
-  );
+  const DEFAULT_VISIBLE_COLUMN_IDS = React.useMemo(() => ALL_COLUMNS.map((c) => c.id), [ALL_COLUMNS]);
 
-  const [visibleColumnIds, setVisibleColumnIds] = React.useState(
-    DEFAULT_VISIBLE_COLUMN_IDS
-  );
+  const [visibleColumnIds, setVisibleColumnIds] = React.useState(DEFAULT_VISIBLE_COLUMN_IDS);
   const [columnPanelOpen, setColumnPanelOpen] = React.useState(false);
 
   // Pagination
   const PAGE_SIZES = React.useMemo(() => [3, 5, 10, 20], []);
   const [pageSize, setPageSize] = React.useState(5);
   const [pageIndex, setPageIndex] = React.useState(0);
+
+  // Apply URL query parameters to pre-populate controls.
+  // We only set duration/tag/status if they're valid once options exist (post-load), but q can be set immediately.
+  const hasAppliedQueryRef = React.useRef(false);
+  React.useEffect(() => {
+    const { q, status } = parseLearningPathsQuery(location.search);
+
+    // Always set q to keep input in sync with URL (also supports manual edits of the URL).
+    setSearchText(q);
+
+    // Only apply status once (avoid stomping user changes on subsequent rerenders),
+    // but still respond if URL changes while on the page (new navigation).
+    const normalized = normalizeLpStatusFilter(status);
+    if (!hasAppliedQueryRef.current) {
+      if (normalized) {
+        setFilters((f) => ({ ...f, status: normalized }));
+      }
+      hasAppliedQueryRef.current = true;
+      return;
+    }
+
+    // If the URL changes and differs from current, update accordingly.
+    if (normalized) {
+      setFilters((f) => ({ ...f, status: normalized }));
+    } else if (status === "") {
+      // Clear status if URL explicitly removed it.
+      setFilters((f) => ({ ...f, status: "" }));
+    }
+  }, [location.search]);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -1896,7 +1923,14 @@ export function LearningPathsPage() {
     }
     const tag = uniqueSorted(allTags);
 
-    return { duration, tag };
+    // New: status options correspond to Home metrics deep-links
+    const status = [
+      { value: "", label: "All" },
+      { value: "completed", label: "Completed" },
+      { value: "inProgress", label: "In Progress" },
+    ];
+
+    return { duration, tag, status };
   }, [rows]);
 
   const filteredRows = React.useMemo(() => {
@@ -1912,24 +1946,28 @@ export function LearningPathsPage() {
         if (!tags.includes(filters.tag)) return false;
       }
 
+      // New: status filter derived from counts.
+      if (filters.status === "completed") {
+        const n = Number(lp?.completedCount);
+        if (!(Number.isFinite(n) && n > 0)) return false;
+      }
+      if (filters.status === "inProgress") {
+        const n = Number(lp?.inProgressCount);
+        if (!(Number.isFinite(n) && n > 0)) return false;
+      }
+
       // Global search across all columns (not only visible ones)
       if (!query) return true;
 
       const anyMatch = ALL_COLUMNS.some((c) => {
         switch (c.id) {
           case "tags":
-            return Array.isArray(lp.tags)
-              ? lp.tags.join(" ").toLowerCase().includes(query)
-              : false;
+            return Array.isArray(lp.tags) ? lp.tags.join(" ").toLowerCase().includes(query) : false;
           case "courseLinks":
-            return Array.isArray(lp.courseLinks)
-              ? lp.courseLinks.join(" ").toLowerCase().includes(query)
-              : false;
+            return Array.isArray(lp.courseLinks) ? lp.courseLinks.join(" ").toLowerCase().includes(query) : false;
           case "createdAt":
           case "updatedAt":
-            return normalizeText(formatLearningPathsIsoDateTimeOrDash(lp[c.id]))
-              .toLowerCase()
-              .includes(query);
+            return normalizeText(formatLearningPathsIsoDateTimeOrDash(lp[c.id])).toLowerCase().includes(query);
           default:
             return normalizeText(lp[c.id]).toLowerCase().includes(query);
         }
@@ -1942,7 +1980,7 @@ export function LearningPathsPage() {
   // Reset pagination when data set changes (search/filters/pageSize), matching existing pages
   React.useEffect(() => {
     setPageIndex(0);
-  }, [searchText, filters.duration, filters.tag, pageSize]);
+  }, [searchText, filters.duration, filters.tag, filters.status, pageSize]);
 
   const totalRows = filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
@@ -1969,18 +2007,14 @@ export function LearningPathsPage() {
   }
 
   function clearFilters() {
-    setFilters({ duration: "", tag: "" });
+    setFilters({ duration: "", tag: "", status: "" });
     setSearchText("");
   }
 
   function renderCell(lp, colId) {
     switch (colId) {
       case "learningPathName":
-        return (
-          <span style={{ fontWeight: 900 }}>
-            {normalizeText(lp.learningPathName) || "—"}
-          </span>
-        );
+        return <span style={{ fontWeight: 900 }}>{normalizeText(lp.learningPathName) || "—"}</span>;
       case "description":
         return normalizeText(lp.description) || "—";
       case "tags":
@@ -1999,13 +2033,7 @@ export function LearningPathsPage() {
         return Array.isArray(lp.courseLinks) && lp.courseLinks.length ? (
           <div className="RmgChips" aria-label={`${lp.learningPathName} course links`}>
             {lp.courseLinks.map((href, idx) => (
-              <a
-                key={`${lp.learningPathName}-course-${idx}`}
-                className="RmgLink"
-                href={href}
-                target="_blank"
-                rel="noreferrer"
-              >
+              <a key={`${lp.learningPathName}-course-${idx}`} className="RmgLink" href={href} target="_blank" rel="noreferrer">
                 Course {idx + 1}
               </a>
             ))}
@@ -2021,11 +2049,7 @@ export function LearningPathsPage() {
         return <span className="RmgMono">{safeNumberOrDash(lp[colId])}</span>;
       case "createdAt":
       case "updatedAt":
-        return (
-          <span className="RmgMono">
-            {formatLearningPathsIsoDateTimeOrDash(lp[colId])}
-          </span>
-        );
+        return <span className="RmgMono">{formatLearningPathsIsoDateTimeOrDash(lp[colId])}</span>;
       default:
         return normalizeText(lp[colId]) || "—";
     }
@@ -2036,18 +2060,10 @@ export function LearningPathsPage() {
       <section className="HelloCard HelloCard--wide" aria-label="Learning Paths content">
         <p className="HelloEyebrow">Digi Portal</p>
         <h1 className="HelloTitle">Learning Paths</h1>
-        <p className="HelloSubtitle">
-          Explore structured learning plans. Data is currently loaded from a mocked API response.
-        </p>
+        <p className="HelloSubtitle">Explore structured learning plans. Data is currently loaded from a mocked API response.</p>
 
         <div className="RmgToolbar" aria-label="Learning Paths actions">
-          <button
-            type="button"
-            className="RmgButton"
-            onClick={load}
-            disabled={loading}
-            aria-disabled={loading ? "true" : "false"}
-          >
+          <button type="button" className="RmgButton" onClick={load} disabled={loading} aria-disabled={loading ? "true" : "false"}>
             {loading ? "Loading…" : "Refresh"}
           </button>
 
@@ -2062,12 +2078,7 @@ export function LearningPathsPage() {
             Columns
           </button>
 
-          <button
-            type="button"
-            className="RmgButton"
-            onClick={clearFilters}
-            disabled={loading}
-          >
+          <button type="button" className="RmgButton" onClick={clearFilters} disabled={loading}>
             Reset
           </button>
 
@@ -2125,22 +2136,33 @@ export function LearningPathsPage() {
                   ))}
                 </select>
               </label>
+
+              <label className="RmgField">
+                <span className="RmgFieldLabel">Status</span>
+                <select
+                  className="RmgSelect"
+                  value={filters.status}
+                  onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
+                  aria-label="Filter by status"
+                >
+                  {filterOptions.status.map((opt) => (
+                    <option key={`lp-status-${opt.value || "all"}`} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
 
             <div className="RmgOptionsRow RmgOptionsRow--meta" aria-label="Learning Paths table meta">
               <div className="RmgMetaText" aria-live="polite">
-                Showing <strong>{totalRows === 0 ? 0 : start + 1}</strong>–
-                <strong>{Math.min(end, totalRows)}</strong> of <strong>{totalRows}</strong>
+                Showing <strong>{totalRows === 0 ? 0 : start + 1}</strong>–<strong>{Math.min(end, totalRows)}</strong> of{" "}
+                <strong>{totalRows}</strong>
               </div>
 
               <label className="RmgField RmgField--inline">
                 <span className="RmgFieldLabel">Page size</span>
-                <select
-                  className="RmgSelect"
-                  value={pageSize}
-                  onChange={(e) => setPageSize(Number(e.target.value))}
-                  aria-label="Select page size"
-                >
+                <select className="RmgSelect" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} aria-label="Select page size">
                   {PAGE_SIZES.map((s) => (
                     <option key={`pageSize-lp-${s}`} value={s}>
                       {s}
@@ -2150,43 +2172,23 @@ export function LearningPathsPage() {
               </label>
 
               <div className="RmgPager" aria-label="Pagination controls">
-                <button
-                  type="button"
-                  className="RmgButton RmgButton--small"
-                  onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
-                  disabled={safePageIndex <= 0}
-                >
+                <button type="button" className="RmgButton RmgButton--small" onClick={() => setPageIndex((p) => Math.max(0, p - 1))} disabled={safePageIndex <= 0}>
                   Prev
                 </button>
                 <span className="RmgPagerText" aria-label="Current page">
                   Page <strong>{safePageIndex + 1}</strong> of <strong>{totalPages}</strong>
                 </span>
-                <button
-                  type="button"
-                  className="RmgButton RmgButton--small"
-                  onClick={() => setPageIndex((p) => Math.min(totalPages - 1, p + 1))}
-                  disabled={safePageIndex >= totalPages - 1}
-                >
+                <button type="button" className="RmgButton RmgButton--small" onClick={() => setPageIndex((p) => Math.min(totalPages - 1, p + 1))} disabled={safePageIndex >= totalPages - 1}>
                   Next
                 </button>
               </div>
             </div>
 
             {columnPanelOpen && (
-              <div
-                id="learningpaths-column-panel"
-                className="RmgColumnPanel"
-                role="region"
-                aria-label="Column visibility"
-              >
+              <div id="learningpaths-column-panel" className="RmgColumnPanel" role="region" aria-label="Column visibility">
                 <div className="RmgColumnPanelHeader">
                   <div className="RmgColumnPanelTitle">Visible columns</div>
-                  <button
-                    type="button"
-                    className="RmgButton RmgButton--small"
-                    onClick={() => setColumnPanelOpen(false)}
-                    aria-label="Close column visibility panel"
-                  >
+                  <button type="button" className="RmgButton RmgButton--small" onClick={() => setColumnPanelOpen(false)} aria-label="Close column visibility panel">
                     Close
                   </button>
                 </div>
@@ -2198,13 +2200,7 @@ export function LearningPathsPage() {
 
                     return (
                       <label key={c.id} className="RmgCheckbox">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleColumn(c.id)}
-                          disabled={isLastVisible}
-                          aria-label={`Toggle column ${c.label}`}
-                        />
+                        <input type="checkbox" checked={checked} onChange={() => toggleColumn(c.id)} disabled={isLastVisible} aria-label={`Toggle column ${c.label}`} />
                         <span>{c.label}</span>
                       </label>
                     );
@@ -2404,14 +2400,9 @@ export function AssessmentsPage() {
     []
   );
 
-  const DEFAULT_VISIBLE_COLUMN_IDS = React.useMemo(
-    () => ALL_COLUMNS.map((c) => c.id),
-    [ALL_COLUMNS]
-  );
+  const DEFAULT_VISIBLE_COLUMN_IDS = React.useMemo(() => ALL_COLUMNS.map((c) => c.id), [ALL_COLUMNS]);
 
-  const [visibleColumnIds, setVisibleColumnIds] = React.useState(
-    DEFAULT_VISIBLE_COLUMN_IDS
-  );
+  const [visibleColumnIds, setVisibleColumnIds] = React.useState(DEFAULT_VISIBLE_COLUMN_IDS);
   const [columnPanelOpen, setColumnPanelOpen] = React.useState(false);
 
   // Pagination
@@ -2486,9 +2477,10 @@ export function AssessmentsPage() {
       }
       if (filters.dueMonth) {
         const d = a?.dueDate ? new Date(a.dueDate) : null;
-        const month = d && !Number.isNaN(d.getTime())
-          ? `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`
-          : "";
+        const month =
+          d && !Number.isNaN(d.getTime())
+            ? `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`
+            : "";
         if (month !== filters.dueMonth) return false;
       }
 
@@ -2498,19 +2490,13 @@ export function AssessmentsPage() {
       const anyMatch = ALL_COLUMNS.some((c) => {
         switch (c.id) {
           case "assignedTo":
-            return normalizeText(firstAssigneeOrDash(a.assignedTo))
-              .toLowerCase()
-              .includes(query);
+            return normalizeText(firstAssigneeOrDash(a.assignedTo)).toLowerCase().includes(query);
           case "assigneeContact":
-            return normalizeText(assigneeContactOrDash(a.assignedTo))
-              .toLowerCase()
-              .includes(query);
+            return normalizeText(assigneeContactOrDash(a.assignedTo)).toLowerCase().includes(query);
           case "dueDate":
           case "createdAt":
           case "updatedAt":
-            return normalizeText(formatAssessmentsIsoDateTimeOrDash(a[c.id]))
-              .toLowerCase()
-              .includes(query);
+            return normalizeText(formatAssessmentsIsoDateTimeOrDash(a[c.id])).toLowerCase().includes(query);
           case "marks":
             return String(formatMarkOrDash(a.marks)).toLowerCase().includes(query);
           default:
@@ -2563,11 +2549,7 @@ export function AssessmentsPage() {
       case "title":
         return <span style={{ fontWeight: 900 }}>{normalizeText(a.title) || "—"}</span>;
       case "assignedTo":
-        return (
-          <span title={assigneeContactOrDash(a.assignedTo)}>
-            {firstAssigneeOrDash(a.assignedTo)}
-          </span>
-        );
+        return <span title={assigneeContactOrDash(a.assignedTo)}>{firstAssigneeOrDash(a.assignedTo)}</span>;
       case "assigneeContact":
         return <span className="RmgMono">{assigneeContactOrDash(a.assignedTo)}</span>;
       case "dueDate":
@@ -2578,11 +2560,7 @@ export function AssessmentsPage() {
       case "marks":
         return <span className="RmgMono">{formatMarkOrDash(a.marks)}</span>;
       case "status":
-        return (
-          <span className={`RmgPill RmgPill--${normalizeAssessmentStatus(a.status)}`}>
-            {normalizeText(a.status) || "—"}
-          </span>
-        );
+        return <span className={`RmgPill RmgPill--${normalizeAssessmentStatus(a.status)}`}>{normalizeText(a.status) || "—"}</span>;
       default:
         return normalizeText(a[colId]) || "—";
     }
@@ -2593,18 +2571,10 @@ export function AssessmentsPage() {
       <section className="HelloCard HelloCard--wide" aria-label="Assessments content">
         <p className="HelloEyebrow">Digi Portal</p>
         <h1 className="HelloTitle">Assessments</h1>
-        <p className="HelloSubtitle">
-          Assessments loaded from a mocked API response (for now).
-        </p>
+        <p className="HelloSubtitle">Assessments loaded from a mocked API response (for now).</p>
 
         <div className="RmgToolbar" aria-label="Assessments actions">
-          <button
-            type="button"
-            className="RmgButton"
-            onClick={load}
-            disabled={loading}
-            aria-disabled={loading ? "true" : "false"}
-          >
+          <button type="button" className="RmgButton" onClick={load} disabled={loading} aria-disabled={loading ? "true" : "false"}>
             {loading ? "Loading…" : "Refresh"}
           </button>
 
@@ -2619,12 +2589,7 @@ export function AssessmentsPage() {
             Columns
           </button>
 
-          <button
-            type="button"
-            className="RmgButton"
-            onClick={clearFilters}
-            disabled={loading}
-          >
+          <button type="button" className="RmgButton" onClick={clearFilters} disabled={loading}>
             Reset
           </button>
 
@@ -2686,18 +2651,13 @@ export function AssessmentsPage() {
 
             <div className="RmgOptionsRow RmgOptionsRow--meta" aria-label="Assessments table meta">
               <div className="RmgMetaText" aria-live="polite">
-                Showing <strong>{totalRows === 0 ? 0 : start + 1}</strong>–
-                <strong>{Math.min(end, totalRows)}</strong> of <strong>{totalRows}</strong>
+                Showing <strong>{totalRows === 0 ? 0 : start + 1}</strong>–<strong>{Math.min(end, totalRows)}</strong> of{" "}
+                <strong>{totalRows}</strong>
               </div>
 
               <label className="RmgField RmgField--inline">
                 <span className="RmgFieldLabel">Page size</span>
-                <select
-                  className="RmgSelect"
-                  value={pageSize}
-                  onChange={(e) => setPageSize(Number(e.target.value))}
-                  aria-label="Select page size"
-                >
+                <select className="RmgSelect" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} aria-label="Select page size">
                   {PAGE_SIZES.map((s) => (
                     <option key={`pageSize-assessments-${s}`} value={s}>
                       {s}
@@ -2707,43 +2667,23 @@ export function AssessmentsPage() {
               </label>
 
               <div className="RmgPager" aria-label="Pagination controls">
-                <button
-                  type="button"
-                  className="RmgButton RmgButton--small"
-                  onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
-                  disabled={safePageIndex <= 0}
-                >
+                <button type="button" className="RmgButton RmgButton--small" onClick={() => setPageIndex((p) => Math.max(0, p - 1))} disabled={safePageIndex <= 0}>
                   Prev
                 </button>
                 <span className="RmgPagerText" aria-label="Current page">
                   Page <strong>{safePageIndex + 1}</strong> of <strong>{totalPages}</strong>
                 </span>
-                <button
-                  type="button"
-                  className="RmgButton RmgButton--small"
-                  onClick={() => setPageIndex((p) => Math.min(totalPages - 1, p + 1))}
-                  disabled={safePageIndex >= totalPages - 1}
-                >
+                <button type="button" className="RmgButton RmgButton--small" onClick={() => setPageIndex((p) => Math.min(totalPages - 1, p + 1))} disabled={safePageIndex >= totalPages - 1}>
                   Next
                 </button>
               </div>
             </div>
 
             {columnPanelOpen && (
-              <div
-                id="assessments-column-panel"
-                className="RmgColumnPanel"
-                role="region"
-                aria-label="Column visibility"
-              >
+              <div id="assessments-column-panel" className="RmgColumnPanel" role="region" aria-label="Column visibility">
                 <div className="RmgColumnPanelHeader">
                   <div className="RmgColumnPanelTitle">Visible columns</div>
-                  <button
-                    type="button"
-                    className="RmgButton RmgButton--small"
-                    onClick={() => setColumnPanelOpen(false)}
-                    aria-label="Close column visibility panel"
-                  >
+                  <button type="button" className="RmgButton RmgButton--small" onClick={() => setColumnPanelOpen(false)} aria-label="Close column visibility panel">
                     Close
                   </button>
                 </div>
@@ -2755,13 +2695,7 @@ export function AssessmentsPage() {
 
                     return (
                       <label key={c.id} className="RmgCheckbox">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleColumn(c.id)}
-                          disabled={isLastVisible}
-                          aria-label={`Toggle column ${c.label}`}
-                        />
+                        <input type="checkbox" checked={checked} onChange={() => toggleColumn(c.id)} disabled={isLastVisible} aria-label={`Toggle column ${c.label}`} />
                         <span>{c.label}</span>
                       </label>
                     );
