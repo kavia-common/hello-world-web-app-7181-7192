@@ -2,375 +2,6 @@ import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 /**
- * Lightweight, dependency-free SVG chart for Learning Path metrics.
- * Renders a stacked bar per learning path (completed/inProgress/remaining).
- */
-function clampNonNegativeNumber(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return 0;
-  return Math.max(0, n);
-}
-
-function withDefault(value, fallback) {
-  return value === null || value === undefined ? fallback : value;
-}
-
-function toPercent(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n) || n <= 0) return 0;
-  return Math.max(0, Math.min(1, n));
-}
-
-function getLpTotals(row) {
-  const enrolled = clampNonNegativeNumber(row?.enrolled);
-  const completed = clampNonNegativeNumber(row?.completed);
-  const inProgress = clampNonNegativeNumber(row?.inProgress);
-  const remaining = Math.max(0, enrolled - completed - inProgress);
-  const total = Math.max(0, completed + inProgress + remaining);
-  return { enrolled, completed, inProgress, remaining, total };
-}
-
-function generateChartId(prefix = "lpchart") {
-  // Stable-enough unique id for aria-labelledby linking.
-  return `${prefix}-${Math.random().toString(16).slice(2)}`;
-}
-
-function formatSeriesLabel(seriesKey) {
-  if (seriesKey === "completed") return "Completed";
-  if (seriesKey === "inProgress") return "In progress";
-  if (seriesKey === "remaining") return "Remaining";
-  if (seriesKey === "enrolled") return "Enrolled";
-  return String(seriesKey || "—");
-}
-
-function formatTooltipText({ name, seriesKey, value, enrolled }) {
-  const pct = enrolled > 0 ? toPercent(value / enrolled) : 0;
-  const pctLabel = enrolled > 0 ? ` (${Math.round(pct * 100)}%)` : "";
-  return `${name} • ${formatSeriesLabel(seriesKey)}: ${value}${pctLabel} • Enrolled: ${enrolled}`;
-}
-
-function getClientXY(evt) {
-  // Supports mouse and keyboard focus events
-  const e = evt?.nativeEvent || evt;
-  if (!e) return { x: 0, y: 0 };
-
-  if (typeof e.clientX === "number" && typeof e.clientY === "number") {
-    return { x: e.clientX, y: e.clientY };
-  }
-
-  // Fallback: position tooltip near element center
-  const el = evt?.currentTarget;
-  const rect = el?.getBoundingClientRect?.();
-  if (rect) return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-
-  return { x: 0, y: 0 };
-}
-
-function getSeriesMeta(seriesKey) {
-  // Centralized mapping so legend + chart stay consistent.
-  switch (seriesKey) {
-    case "completed":
-      return {
-        key: "completed",
-        label: "Completed",
-        swatchClass: "HomeLpLegendSwatch--completed",
-        segClass: "HomeLpChartSeg--completed",
-      };
-    case "inProgress":
-      return {
-        key: "inProgress",
-        label: "In progress",
-        swatchClass: "HomeLpLegendSwatch--inprogress",
-        segClass: "HomeLpChartSeg--inprogress",
-      };
-    case "remaining":
-      return {
-        key: "remaining",
-        label: "Remaining",
-        swatchClass: "HomeLpLegendSwatch--remaining",
-        segClass: "HomeLpChartSeg--remaining",
-      };
-    default:
-      return { key: seriesKey, label: formatSeriesLabel(seriesKey), swatchClass: "", segClass: "" };
-  }
-}
-
-function LpMetricsStackedBarChart({ rows }) {
-  const safeRows = Array.isArray(rows) ? rows : [];
-  const titleId = React.useMemo(() => generateChartId("lpchart-title"), []);
-  const descId = React.useMemo(() => generateChartId("lpchart-desc"), []);
-  const controlsId = React.useMemo(() => generateChartId("lpchart-controls"), []);
-  const tooltipId = React.useMemo(() => generateChartId("lpchart-tooltip"), []);
-
-  const [chartType, setChartType] = React.useState("grouped"); // "stacked" | "grouped"
-  const [tooltip, setTooltip] = React.useState(null); // { x, y, text, rowName, seriesKey }
-
-  // Use max enrolled for scaling bar widths (consistent across types).
-  const maxEnrolled = React.useMemo(() => {
-    let max = 0;
-    for (const r of safeRows) {
-      const { enrolled } = getLpTotals(r);
-      max = Math.max(max, enrolled);
-    }
-    return max;
-  }, [safeRows]);
-
-  const hasData = safeRows.length > 0 && maxEnrolled > 0;
-
-  const seriesKeys = React.useMemo(() => ["completed", "inProgress", "remaining"], []);
-
-  function showTooltip(evt, { rowName, seriesKey, value, enrolled }) {
-    const { x, y } = getClientXY(evt);
-
-    // Place tooltip slightly above cursor/focus point.
-    setTooltip({
-      x,
-      y,
-      rowName,
-      seriesKey,
-      text: formatTooltipText({ name: rowName, seriesKey, value, enrolled }),
-    });
-  }
-
-  function hideTooltip() {
-    setTooltip(null);
-  }
-
-  return (
-    <figure className="HomeLpChart" aria-labelledby={titleId} aria-describedby={descId}>
-      <figcaption className="HomeLpChartCaption">
-        <div className="HomeLpChartTitle" id={titleId}>
-          Progress snapshot
-        </div>
-        <div className="HomeLpChartSub" id={descId}>
-          Use the chart type switcher to view Stacked vs Grouped bars. Hover or focus a segment for details.
-        </div>
-      </figcaption>
-
-      {!hasData ? (
-        <div className="HomeLpChartEmpty" role="status" aria-live="polite">
-          No chart data available.
-        </div>
-      ) : (
-        <div className="HomeLpChartBody" aria-label="Learning Path progress chart">
-          <div className="HomeLpChartHeaderRow">
-            <div className="HomeLpChartLegend" aria-label="Chart legend">
-              {seriesKeys.map((k) => {
-                const meta = getSeriesMeta(k);
-                return (
-                  <span key={k} className="HomeLpLegendItem">
-                    <span className={`HomeLpLegendSwatch ${meta.swatchClass}`} aria-hidden="true" />
-                    {meta.label}
-                  </span>
-                );
-              })}
-            </div>
-
-            <div className="HomeLpChartControls" id={controlsId} aria-label="Chart type switcher">
-              <span className="HomeLpChartControlsLabel">Chart type</span>
-              <div className="HomeLpChartToggle" role="radiogroup" aria-label="Select chart type">
-                <button
-                  type="button"
-                  className={`HomeLpChartToggleBtn ${chartType === "stacked" ? "HomeLpChartToggleBtn--active" : ""}`}
-                  onClick={() => setChartType("stacked")}
-                  aria-pressed={chartType === "stacked" ? "true" : "false"}
-                >
-                  Stacked
-                </button>
-                <button
-                  type="button"
-                  className={`HomeLpChartToggleBtn ${chartType === "grouped" ? "HomeLpChartToggleBtn--active" : ""}`}
-                  onClick={() => setChartType("grouped")}
-                  aria-pressed={chartType === "grouped" ? "true" : "false"}
-                >
-                  Grouped
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Tooltip (positioned in a portal-like overlay inside the chart container) */}
-          {tooltip && (
-            <div
-              id={tooltipId}
-              className="HomeLpTooltip"
-              role="tooltip"
-              style={{
-                // Use fixed positioning so it follows pointer even if inside scroll containers.
-                position: "fixed",
-                left: tooltip.x + 12,
-                top: tooltip.y - 14,
-              }}
-            >
-              {tooltip.text}
-            </div>
-          )}
-
-          <ul className="HomeLpChartList" aria-label="Learning paths chart rows">
-            {safeRows.map((row) => {
-              const name = row?.learningPathName || "—";
-              const { enrolled, completed, inProgress, remaining } = getLpTotals(row);
-
-              const barW = 240;
-              const barH = 12;
-              const pad = 2;
-
-              const scale = maxEnrolled > 0 ? barW / maxEnrolled : 0;
-
-              const a11yRow = `${name}. Enrolled ${enrolled}. Completed ${completed}. In progress ${inProgress}. Remaining ${remaining}.`;
-
-              const segments = [
-                { key: "completed", value: completed },
-                { key: "inProgress", value: inProgress },
-                { key: "remaining", value: remaining },
-              ];
-
-              // Precompute widths (rounded) with a final clamp to prevent overflow.
-              const widths = segments.map((s) => Math.max(0, Math.round(s.value * scale)));
-              const sumWidths = widths.reduce((acc, n) => acc + n, 0);
-              const overflow = Math.max(0, sumWidths - barW);
-              const widthsClamped = widths.map((w, idx) => (idx === widths.length - 1 ? Math.max(0, w - overflow) : w));
-
-              return (
-                <li key={name} className="HomeLpChartRow" aria-label={a11yRow}>
-                  <div className="HomeLpChartRowTop">
-                    <div className="HomeLpChartRowName" title={name}>
-                      {name}
-                    </div>
-                    <div className="HomeLpChartRowMeta">
-                      <span className="HomeLpChartRowMetaItem">
-                        Enrolled: <span className="RmgMono">{enrolled}</span>
-                      </span>
-                    </div>
-                  </div>
-
-                  {chartType === "stacked" ? (
-                    <svg
-                      className="HomeLpChartSvg"
-                      width="100%"
-                      viewBox={`0 0 ${barW + pad * 2} ${barH + pad * 2}`}
-                      role="img"
-                      aria-label={a11yRow}
-                      focusable="false"
-                    >
-                      <title>{name}</title>
-                      <desc>{a11yRow}</desc>
-
-                      {/* Track */}
-                      <rect x={pad} y={pad} width={barW} height={barH} rx="999" ry="999" className="HomeLpChartTrack" />
-
-                      {segments.reduce((acc, s, idx) => {
-                        const priorX = acc.x;
-                        const w = widthsClamped[idx];
-                        const meta = getSeriesMeta(s.key);
-
-                        acc.nodes.push(
-                          <rect
-                            key={`${name}-${s.key}`}
-                            x={pad + priorX}
-                            y={pad}
-                            width={w}
-                            height={barH}
-                            rx={idx === 0 ? "999" : "0"}
-                            ry={idx === 0 ? "999" : "0"}
-                            className={`HomeLpChartSeg ${meta.segClass}`}
-                            tabIndex={0}
-                            role="img"
-                            aria-label={formatTooltipText({ name, seriesKey: s.key, value: s.value, enrolled })}
-                            aria-describedby={tooltipId}
-                            onMouseEnter={(e) => showTooltip(e, { rowName: name, seriesKey: s.key, value: s.value, enrolled })}
-                            onMouseMove={(e) => showTooltip(e, { rowName: name, seriesKey: s.key, value: s.value, enrolled })}
-                            onMouseLeave={hideTooltip}
-                            onFocus={(e) => showTooltip(e, { rowName: name, seriesKey: s.key, value: s.value, enrolled })}
-                            onBlur={hideTooltip}
-                            onKeyDown={(e) => {
-                              if (e.key === "Escape") hideTooltip();
-                            }}
-                          />
-                        );
-
-                        acc.x += w;
-                        return acc;
-                      }, { x: 0, nodes: [] }).nodes}
-                    </svg>
-                  ) : (
-                    // Grouped: three bars per row, each scaled to enrolled (not independent),
-                    // to preserve the same “out of enrolled” meaning as stacked.
-                    <div className="HomeLpGroupedWrap" role="img" aria-label={a11yRow}>
-                      {segments.map((s, idx) => {
-                        const meta = getSeriesMeta(s.key);
-                        const w = Math.max(0, Math.round(s.value * scale));
-
-                        return (
-                          <div key={`${name}-${s.key}`} className="HomeLpGroupedItem">
-                            <div className="HomeLpGroupedLabel">{meta.label}</div>
-                            <svg
-                              className="HomeLpChartSvg"
-                              width="100%"
-                              viewBox={`0 0 ${barW + pad * 2} ${barH + pad * 2}`}
-                              role="img"
-                              aria-label={formatTooltipText({ name, seriesKey: s.key, value: s.value, enrolled })}
-                              focusable="false"
-                            >
-                              <title>{`${name} - ${meta.label}`}</title>
-                              <desc>{formatTooltipText({ name, seriesKey: s.key, value: s.value, enrolled })}</desc>
-
-                              <rect x={pad} y={pad} width={barW} height={barH} rx="999" ry="999" className="HomeLpChartTrack" />
-
-                              <rect
-                                x={pad}
-                                y={pad}
-                                width={Math.min(barW, w)}
-                                height={barH}
-                                rx="999"
-                                ry="999"
-                                className={`HomeLpChartSeg ${meta.segClass}`}
-                                tabIndex={0}
-                                role="img"
-                                aria-label={formatTooltipText({ name, seriesKey: s.key, value: s.value, enrolled })}
-                                aria-describedby={tooltipId}
-                                onMouseEnter={(e) => showTooltip(e, { rowName: name, seriesKey: s.key, value: s.value, enrolled })}
-                                onMouseMove={(e) => showTooltip(e, { rowName: name, seriesKey: s.key, value: s.value, enrolled })}
-                                onMouseLeave={hideTooltip}
-                                onFocus={(e) => showTooltip(e, { rowName: name, seriesKey: s.key, value: s.value, enrolled })}
-                                onBlur={hideTooltip}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Escape") hideTooltip();
-                                }}
-                              />
-                            </svg>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  <div className="HomeLpChartNumbers" aria-hidden="true">
-                    <span className="HomeLpChartNum HomeLpChartNum--completed">
-                      C <span className="RmgMono">{completed}</span>
-                    </span>
-                    <span className="HomeLpChartNum HomeLpChartNum--inprogress">
-                      IP <span className="RmgMono">{inProgress}</span>
-                    </span>
-                    <span className="HomeLpChartNum HomeLpChartNum--remaining">
-                      R <span className="RmgMono">{remaining}</span>
-                    </span>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-
-          <div className="HomeLpChartHint" role="note">
-            Tip: Use Tab to focus chart segments. Press Escape to dismiss the tooltip.
-          </div>
-        </div>
-      )}
-    </figure>
-  );
-}
-
-/**
  * Simple pages used by the app router.
  * Kept lightweight and styled via existing App.css utility-ish classes.
  */
@@ -553,6 +184,24 @@ function buildLearningPathsQuery({ q, status }) {
   if (status) params.set("status", status);
   const qs = params.toString();
   return qs ? `/learning-paths?${qs}` : "/learning-paths";
+}
+
+function safeNumberOrZero(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function aggregateHomeLearningPathMetrics(rows) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  return safeRows.reduce(
+    (acc, r) => {
+      acc.enrolled += safeNumberOrZero(r?.enrolled);
+      acc.completed += safeNumberOrZero(r?.completed);
+      acc.inProgress += safeNumberOrZero(r?.inProgress);
+      return acc;
+    },
+    { enrolled: 0, completed: 0, inProgress: 0 }
+  );
 }
 
 /**
@@ -994,8 +643,75 @@ export function HomePage() {
           )}
 
           {!lpMetricsLoading && !lpMetricsError && (
-            <div className="HomeLpMetricsLayout HomeLpMetricsLayout--chartOnly" role="region" aria-label="Learning Path metrics">
-              <LpMetricsStackedBarChart rows={lpMetricsRows} />
+            <div className="HomeLpMetricCardsWrap" role="region" aria-label="Learning Path metric cards">
+              {lpMetricsRows.length === 0 ? (
+                <div className="RmgState" role="status" aria-live="polite">
+                  <span>No Learning Path metrics available.</span>
+                </div>
+              ) : (
+                (() => {
+                  const agg = aggregateHomeLearningPathMetrics(lpMetricsRows);
+                  const completionRate = agg.enrolled > 0 ? agg.completed / agg.enrolled : null;
+
+                  const cards = [
+                    {
+                      key: "enrolled",
+                      title: "Enrolled",
+                      value: String(agg.enrolled),
+                      subtitle: "All enrollments",
+                      to: buildLearningPathsQuery({}),
+                      hint: "Open Learning Paths (no status filter)",
+                    },
+                    {
+                      key: "completed",
+                      title: "Completed",
+                      value: String(agg.completed),
+                      subtitle: "Paths with completions",
+                      to: buildLearningPathsQuery({ status: "completed" }),
+                      hint: "Open Learning Paths filtered to Completed",
+                    },
+                    {
+                      key: "inProgress",
+                      title: "In Progress",
+                      value: String(agg.inProgress),
+                      subtitle: "Paths with learners in progress",
+                      to: buildLearningPathsQuery({ status: "inProgress" }),
+                      hint: "Open Learning Paths filtered to In Progress",
+                    },
+                    {
+                      key: "completionRate",
+                      title: "Completion Rate",
+                      value: completionRate === null ? "—" : `${(completionRate * 100).toFixed(0)}%`,
+                      subtitle: "Completed / Enrolled",
+                      to: buildLearningPathsQuery({}),
+                      hint: "Open Learning Paths (no status filter)",
+                    },
+                  ];
+
+                  return (
+                    <div className="HomeLpMetricCardsGrid" role="list" aria-label="Learning Path metric cards">
+                      {cards.map((c) => (
+                        <Link
+                          key={c.key}
+                          className="HomeLpMetricCard"
+                          role="listitem"
+                          to={c.to}
+                          aria-label={`${c.title} ${c.value}. ${c.subtitle}. ${c.hint}.`}
+                          title={c.hint}
+                          style={{ textDecoration: "none", color: "inherit" }}
+                        >
+                          <div className="HomeLpMetricCardTop">
+                            <div className="HomeLpMetricCardTitle">{c.title}</div>
+                            <div className="HomeLpMetricCardValue RmgMono">{c.value}</div>
+                          </div>
+                          <div className="HomeLpMetricCardSub">{c.subtitle}</div>
+                          <div className="HomeLpMetricCardCta">View Learning Paths →</div>
+                        </Link>
+                      ))}
+                    </div>
+                  );
+                })()
+              )}
             </div>
           )}
         </section>
