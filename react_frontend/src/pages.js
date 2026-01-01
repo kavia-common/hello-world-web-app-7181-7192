@@ -721,7 +721,7 @@ async function fetchSkillFactoriesMock({ signal } = {}) {
   return DUMMY_SKILL_FACTORIES_RESPONSE;
 }
 
-function formatIsoDateTimeOrDash(value) {
+function formatLearningPathsIsoDateTimeOrDash(value) {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
@@ -1313,14 +1313,263 @@ export function SkillFactoriesPage() {
   );
 }
 
+/**
+ * Mocked response used for the Learning Paths table.
+ * Replace this with a real fetch() call when backend is ready.
+ */
+const DUMMY_LEARNING_PATHS_RESPONSE = {
+  status: "success",
+  data: [
+    {
+      learningPathName: "Cloud Fundamentals",
+      description: "Start-to-finish introduction to cloud concepts.",
+      tags: ["cloud", "foundations"],
+      courseLinks: ["https://example.com/course-1", "https://example.com/course-2"],
+      duration: "6h",
+      enrolledCount: 100,
+      completedCount: 40,
+      inProgressCount: 50,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    },
+  ],
+  count: 1,
+};
+
+/**
+ * Simulates an API call with loading/error states.
+ * This is where a real request will live later:
+ *   fetch(`${process.env.REACT_APP_API_BASE}/learning-paths`, ...)
+ */
+async function fetchLearningPathsMock({ signal } = {}) {
+  // Simulate network latency
+  await new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(resolve, 650);
+    if (signal) {
+      signal.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(timeoutId);
+          reject(new DOMException("Request aborted", "AbortError"));
+        },
+        { once: true }
+      );
+    }
+  });
+
+  // Toggle to validate error UI if needed.
+  const shouldFail = false;
+  if (shouldFail) {
+    throw new Error("Failed to load Learning Paths. Please try again.");
+  }
+
+  return DUMMY_LEARNING_PATHS_RESPONSE;
+}
+
+function formatIsoDateTimeOrDash(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toISOString().replace(".000Z", "Z");
+}
+
+function safeNumberOrDash(value) {
+  if (value === null || value === undefined) return "—";
+  const num = Number(value);
+  return Number.isFinite(num) ? String(num) : "—";
+}
+
 // PUBLIC_INTERFACE
 export function LearningPathsPage() {
-  /** Placeholder page for Learning Paths route. */
+  /** Learning Paths page that fetches (mocked) data and renders a table with loading and error states. */
+  const [rows, setRows] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [errorMessage, setErrorMessage] = React.useState("");
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    setErrorMessage("");
+
+    const controller = new AbortController();
+
+    try {
+      const response = await fetchLearningPathsMock({ signal: controller.signal });
+
+      if (!response || response.status !== "success" || !Array.isArray(response.data)) {
+        throw new Error("Unexpected API response format.");
+      }
+
+      setRows(response.data);
+    } catch (err) {
+      if (err?.name !== "AbortError") {
+        setErrorMessage(err?.message || "Something went wrong while loading data.");
+      }
+    } finally {
+      setLoading(false);
+    }
+
+    return () => controller.abort();
+  }, []);
+
+  React.useEffect(() => {
+    let cleanup = null;
+
+    (async () => {
+      cleanup = await load();
+    })();
+
+    return () => {
+      if (typeof cleanup === "function") cleanup();
+    };
+  }, [load]);
+
+  const columns = React.useMemo(
+    () => [
+      { id: "learningPathName", label: "Learning Path Name" },
+      { id: "description", label: "Description" },
+      { id: "tags", label: "Tags" },
+      { id: "courseLinks", label: "Course Links" },
+      { id: "duration", label: "Duration" },
+      { id: "enrolledCount", label: "Enrolled" },
+      { id: "completedCount", label: "Completed" },
+      { id: "inProgressCount", label: "In Progress" },
+      { id: "createdAt", label: "Created At" },
+      { id: "updatedAt", label: "Updated At" },
+    ],
+    []
+  );
+
+  function renderCell(lp, colId) {
+    switch (colId) {
+      case "learningPathName":
+        return <span style={{ fontWeight: 900 }}>{normalizeText(lp.learningPathName) || "—"}</span>;
+      case "description":
+        return normalizeText(lp.description) || "—";
+      case "tags":
+        return Array.isArray(lp.tags) && lp.tags.length ? (
+          <div className="RmgChips" aria-label={`${lp.learningPathName} tags`}>
+            {lp.tags.map((t) => (
+              <span key={`${lp.learningPathName}-${t}`} className="RmgChip">
+                {t}
+              </span>
+            ))}
+          </div>
+        ) : (
+          "—"
+        );
+      case "courseLinks":
+        return Array.isArray(lp.courseLinks) && lp.courseLinks.length ? (
+          <div className="RmgChips" aria-label={`${lp.learningPathName} course links`}>
+            {lp.courseLinks.map((href, idx) => (
+              <a
+                key={`${lp.learningPathName}-course-${idx}`}
+                className="RmgLink"
+                href={href}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Course {idx + 1}
+              </a>
+            ))}
+          </div>
+        ) : (
+          "—"
+        );
+      case "duration":
+        return <span className="RmgMono">{normalizeText(lp.duration) || "—"}</span>;
+      case "enrolledCount":
+      case "completedCount":
+      case "inProgressCount":
+        return <span className="RmgMono">{safeNumberOrDash(lp[colId])}</span>;
+      case "createdAt":
+      case "updatedAt":
+        return (
+          <span className="RmgMono">
+            {formatLearningPathsIsoDateTimeOrDash(lp[colId])}
+          </span>
+        );
+      default:
+        return normalizeText(lp[colId]) || "—";
+    }
+  }
+
   return (
-    <PlaceholderPage
-      title="Learning Paths"
-      description="Follow structured learning paths here. (Placeholder)"
-    />
+    <main className="App-main" aria-label="Learning Paths page">
+      <section className="HelloCard HelloCard--wide" aria-label="Learning Paths content">
+        <p className="HelloEyebrow">Digi Portal</p>
+        <h1 className="HelloTitle">Learning Paths</h1>
+        <p className="HelloSubtitle">
+          Explore structured learning plans. Data is currently loaded from a mocked API response.
+        </p>
+
+        <div className="RmgToolbar" aria-label="Learning Paths actions">
+          <button
+            type="button"
+            className="RmgButton"
+            onClick={load}
+            disabled={loading}
+            aria-disabled={loading ? "true" : "false"}
+          >
+            {loading ? "Loading…" : "Refresh"}
+          </button>
+
+          <Link className="RmgLink" to="/">
+            Back to Home
+          </Link>
+        </div>
+
+        {loading && (
+          <div className="RmgState" role="status" aria-live="polite">
+            <div className="RmgSpinner" aria-hidden="true" />
+            <span>Fetching Learning Paths…</span>
+          </div>
+        )}
+
+        {!loading && errorMessage && (
+          <div className="RmgError" role="alert">
+            <div className="RmgErrorTitle">Couldn’t load data</div>
+            <div className="RmgErrorMessage">{errorMessage}</div>
+            <button type="button" className="RmgButton RmgButton--danger" onClick={load}>
+              Try again
+            </button>
+          </div>
+        )}
+
+        {!loading && !errorMessage && (
+          <div className="RmgTableWrap" role="region" aria-label="Learning Paths table">
+            <table className="RmgTable">
+              <thead>
+                <tr>
+                  {columns.map((c) => (
+                    <th key={c.id} scope="col">
+                      {c.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+
+              <tbody>
+                {rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={columns.length} className="RmgEmptyCell">
+                      No learning paths found.
+                    </td>
+                  </tr>
+                ) : (
+                  rows.map((lp) => (
+                    <tr key={lp.learningPathName}>
+                      {columns.map((c) => (
+                        <td key={`${lp.learningPathName}-${c.id}`}>{renderCell(lp, c.id)}</td>
+                      ))}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </main>
   );
 }
 
