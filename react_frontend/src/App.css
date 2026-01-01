@@ -661,6 +661,11 @@
   align-items: start;
 }
 
+/* Chart-only variant: chart should occupy full available width in this section */
+.HomeLpMetricsLayout--chartOnly {
+  grid-template-columns: 1fr;
+}
+
 @media (max-width: 980px) {
   .HomeLpMetricsLayout {
     grid-template-columns: 1fr;
