@@ -648,14 +648,268 @@ export function RmgTrackerPage() {
   );
 }
 
+/**
+ * Mocked response used for the Skill Factories table.
+ * Replace this with a real fetch() call when backend is ready.
+ */
+const DUMMY_SKILL_FACTORIES_RESPONSE = {
+  status: "success",
+  data: [
+    {
+      skillFactoryId: "SF-PLATFORM-001",
+      skillFactoryName: "Platform Engineering",
+      mentors: [
+        {
+          mentorId: "M-001",
+          mentorName: "Mentor A",
+          mentorEmail: "mentor.a@example.com",
+          isInPool: true,
+        },
+        {
+          mentorId: "M-002",
+          mentorName: "Mentor B",
+          mentorEmail: "mentor.b@example.com",
+          isInPool: false,
+        },
+      ],
+      employees: [
+        {
+          id: "E12345",
+          name: "Jane Doe",
+          email: "jane.doe@example.com",
+          initialRating: 3.5,
+          currentRating: 4.2,
+          startDate: "2026-01-01",
+          endDate: "2026-06-30",
+          isInPool: true,
+        },
+      ],
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    },
+  ],
+  count: 1,
+};
+
+/**
+ * Simulates an API call with loading/error states.
+ * This is where a real request will live later:
+ *   fetch(`${process.env.REACT_APP_API_BASE}/skill-factories`, ...)
+ */
+async function fetchSkillFactoriesMock({ signal } = {}) {
+  // Simulate network latency
+  await new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(resolve, 650);
+    if (signal) {
+      signal.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(timeoutId);
+          reject(new DOMException("Request aborted", "AbortError"));
+        },
+        { once: true }
+      );
+    }
+  });
+
+  // Toggle to validate error UI if needed.
+  const shouldFail = false;
+  if (shouldFail) {
+    throw new Error("Failed to load Skill Factories. Please try again.");
+  }
+
+  return DUMMY_SKILL_FACTORIES_RESPONSE;
+}
+
+function formatIsoDateTimeOrDash(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toISOString().replace(".000Z", "Z");
+}
+
+function formatRatingOrDash(value) {
+  if (value === null || value === undefined) return "—";
+  const num = Number(value);
+  if (Number.isNaN(num)) return "—";
+  return num.toFixed(1);
+}
+
 // PUBLIC_INTERFACE
 export function SkillFactoriesPage() {
-  /** Placeholder page for Skill Factories route. */
+  /** Skill Factories page that fetches (mocked) data and renders a table with loading and error states. */
+  const [rows, setRows] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [errorMessage, setErrorMessage] = React.useState("");
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    setErrorMessage("");
+
+    const controller = new AbortController();
+
+    try {
+      const response = await fetchSkillFactoriesMock({ signal: controller.signal });
+
+      if (
+        !response ||
+        response.status !== "success" ||
+        !Array.isArray(response.data)
+      ) {
+        throw new Error("Unexpected API response format.");
+      }
+
+      setRows(response.data);
+    } catch (err) {
+      if (err?.name !== "AbortError") {
+        setErrorMessage(err?.message || "Something went wrong while loading data.");
+      }
+    } finally {
+      setLoading(false);
+    }
+
+    return () => controller.abort();
+  }, []);
+
+  React.useEffect(() => {
+    let cleanup = null;
+
+    // Avoid making useEffect callback async directly.
+    (async () => {
+      cleanup = await load();
+    })();
+
+    return () => {
+      if (typeof cleanup === "function") cleanup();
+    };
+  }, [load]);
+
   return (
-    <PlaceholderPage
-      title="Skill Factories"
-      description="Explore curated skill-building programs here. (Placeholder)"
-    />
+    <main className="App-main" aria-label="Skill Factories page">
+      <section className="HelloCard HelloCard--wide" aria-label="Skill Factories content">
+        <p className="HelloEyebrow">Digi Portal</p>
+        <h1 className="HelloTitle">Skill Factories</h1>
+        <p className="HelloSubtitle">
+          Skill Factory overview fetched from an API (mocked response for now).
+        </p>
+
+        <div className="RmgToolbar" aria-label="Skill Factories actions">
+          <button
+            type="button"
+            className="RmgButton"
+            onClick={load}
+            disabled={loading}
+            aria-disabled={loading ? "true" : "false"}
+          >
+            {loading ? "Loading…" : "Refresh"}
+          </button>
+
+          <Link className="RmgLink" to="/">
+            Back to Home
+          </Link>
+        </div>
+
+        {loading && (
+          <div className="RmgState" role="status" aria-live="polite">
+            <div className="RmgSpinner" aria-hidden="true" />
+            <span>Fetching Skill Factories…</span>
+          </div>
+        )}
+
+        {!loading && errorMessage && (
+          <div className="RmgError" role="alert">
+            <div className="RmgErrorTitle">Couldn’t load data</div>
+            <div className="RmgErrorMessage">{errorMessage}</div>
+            <button type="button" className="RmgButton RmgButton--danger" onClick={load}>
+              Try again
+            </button>
+          </div>
+        )}
+
+        {!loading && !errorMessage && (
+          <div className="RmgTableWrap" role="region" aria-label="Skill Factories table">
+            <table className="RmgTable">
+              <thead>
+                <tr>
+                  <th scope="col">Skill Factory ID</th>
+                  <th scope="col">Skill Factory Name</th>
+                  <th scope="col">Mentors</th>
+                  <th scope="col">Employees</th>
+                  <th scope="col">Created At</th>
+                  <th scope="col">Updated At</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="RmgEmptyCell">
+                      No records found.
+                    </td>
+                  </tr>
+                ) : (
+                  rows.map((sf) => (
+                    <tr key={sf.skillFactoryId}>
+                      <td>
+                        <span className="RmgMono">{sf.skillFactoryId}</span>
+                      </td>
+                      <td>{sf.skillFactoryName || "—"}</td>
+                      <td>
+                        {Array.isArray(sf.mentors) && sf.mentors.length > 0 ? (
+                          <div className="RmgChips" aria-label={`${sf.skillFactoryName} mentors`}>
+                            {sf.mentors.map((m) => (
+                              <span
+                                key={m.mentorId}
+                                className="RmgChip"
+                                title={`${m.mentorEmail} • ${m.isInPool ? "In pool" : "Not in pool"}`}
+                              >
+                                {m.mentorName}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td>
+                        {Array.isArray(sf.employees) && sf.employees.length > 0 ? (
+                          <div className="RmgChips" aria-label={`${sf.skillFactoryName} employees`}>
+                            {sf.employees.map((e) => (
+                              <span
+                                key={e.id}
+                                className="RmgChip"
+                                title={`${e.email} • Initial ${formatRatingOrDash(
+                                  e.initialRating
+                                )} • Current ${formatRatingOrDash(e.currentRating)} • ${
+                                  e.isInPool ? "In pool" : "Not in pool"
+                                }`}
+                              >
+                                <span className="RmgMono" style={{ marginRight: 8 }}>
+                                  {e.id}
+                                </span>
+                                {e.name}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td>
+                        <span className="RmgMono">{formatIsoDateTimeOrDash(sf.createdAt)}</span>
+                      </td>
+                      <td>
+                        <span className="RmgMono">{formatIsoDateTimeOrDash(sf.updatedAt)}</span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </main>
   );
 }
 
