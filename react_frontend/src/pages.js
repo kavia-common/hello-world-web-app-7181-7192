@@ -735,12 +735,84 @@ function formatRatingOrDash(value) {
   return num.toFixed(1);
 }
 
+function yesNo(value) {
+  if (value === true) return "Yes";
+  if (value === false) return "No";
+  return "—";
+}
+
+function flattenPoolFlags(sf) {
+  const flags = [];
+  if (Array.isArray(sf.mentors)) {
+    flags.push(...sf.mentors.map((m) => m?.isInPool));
+  }
+  if (Array.isArray(sf.employees)) {
+    flags.push(...sf.employees.map((e) => e?.isInPool));
+  }
+  return flags.some(Boolean);
+}
+
+function getMentorPoolStatus(sf) {
+  if (!Array.isArray(sf.mentors) || sf.mentors.length === 0) return "—";
+  return sf.mentors.some((m) => m?.isInPool) ? "In pool" : "Not in pool";
+}
+
+function getEmployeePoolStatus(sf) {
+  if (!Array.isArray(sf.employees) || sf.employees.length === 0) return "—";
+  return sf.employees.some((e) => e?.isInPool) ? "In pool" : "Not in pool";
+}
+
+function safeArrayCount(value) {
+  if (!Array.isArray(value)) return 0;
+  return value.length;
+}
+
 // PUBLIC_INTERFACE
 export function SkillFactoriesPage() {
-  /** Skill Factories page that fetches (mocked) data and renders a table with loading and error states. */
+  /** Skill Factories page that fetches (mocked) data and renders a table with loading and error states + client-side table UX. */
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [errorMessage, setErrorMessage] = React.useState("");
+
+  // Table options (match RMG Tracker UX)
+  const [searchText, setSearchText] = React.useState("");
+  const [filters, setFilters] = React.useState({
+    skillFactoryName: "",
+    mentorPoolStatus: "",
+    employeePoolStatus: "",
+  });
+
+  const ALL_COLUMNS = React.useMemo(
+    () => [
+      { id: "skillFactoryId", label: "Skill Factory ID" },
+      { id: "skillFactoryName", label: "Skill Factory Name" },
+      { id: "mentorCount", label: "Mentors (#)" },
+      { id: "employeeCount", label: "Employees (#)" },
+      { id: "mentorPoolStatus", label: "Mentors Pool" },
+      { id: "employeePoolStatus", label: "Employees Pool" },
+      { id: "hasAnyPoolMembers", label: "Any In Pool" },
+      { id: "mentors", label: "Mentors" },
+      { id: "employees", label: "Employees" },
+      { id: "createdAt", label: "Created At" },
+      { id: "updatedAt", label: "Updated At" },
+    ],
+    []
+  );
+
+  const DEFAULT_VISIBLE_COLUMN_IDS = React.useMemo(
+    () => ALL_COLUMNS.map((c) => c.id),
+    [ALL_COLUMNS]
+  );
+
+  const [visibleColumnIds, setVisibleColumnIds] = React.useState(
+    DEFAULT_VISIBLE_COLUMN_IDS
+  );
+  const [columnPanelOpen, setColumnPanelOpen] = React.useState(false);
+
+  // Pagination
+  const PAGE_SIZES = React.useMemo(() => [3, 5, 10, 20], []);
+  const [pageSize, setPageSize] = React.useState(5);
+  const [pageIndex, setPageIndex] = React.useState(0);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -751,11 +823,7 @@ export function SkillFactoriesPage() {
     try {
       const response = await fetchSkillFactoriesMock({ signal: controller.signal });
 
-      if (
-        !response ||
-        response.status !== "success" ||
-        !Array.isArray(response.data)
-      ) {
+      if (!response || response.status !== "success" || !Array.isArray(response.data)) {
         throw new Error("Unexpected API response format.");
       }
 
@@ -784,6 +852,195 @@ export function SkillFactoriesPage() {
     };
   }, [load]);
 
+  const filterOptions = React.useMemo(() => {
+    const skillFactoryName = uniqueSorted(rows.map((r) => r.skillFactoryName));
+
+    // Keep the dropdowns very clear (and consistent with RMG Tracker “All” UX)
+    const mentorPoolStatus = ["In pool", "Not in pool"];
+    const employeePoolStatus = ["In pool", "Not in pool"];
+
+    return { skillFactoryName, mentorPoolStatus, employeePoolStatus };
+  }, [rows]);
+
+  const filteredRows = React.useMemo(() => {
+    const query = searchText.trim().toLowerCase();
+
+    return rows.filter((sf) => {
+      const sfName = normalizeText(sf.skillFactoryName);
+
+      if (filters.skillFactoryName && sfName !== filters.skillFactoryName) {
+        return false;
+      }
+
+      const mentorsPool = getMentorPoolStatus(sf);
+      if (filters.mentorPoolStatus && mentorsPool !== filters.mentorPoolStatus) {
+        return false;
+      }
+
+      const employeesPool = getEmployeePoolStatus(sf);
+      if (filters.employeePoolStatus && employeesPool !== filters.employeePoolStatus) {
+        return false;
+      }
+
+      // Global search across all columns (not only visible ones)
+      if (!query) return true;
+
+      const anyMatch = ALL_COLUMNS.some((c) => {
+        switch (c.id) {
+          case "mentorCount":
+            return String(safeArrayCount(sf.mentors)).toLowerCase().includes(query);
+          case "employeeCount":
+            return String(safeArrayCount(sf.employees)).toLowerCase().includes(query);
+          case "mentorPoolStatus":
+            return getMentorPoolStatus(sf).toLowerCase().includes(query);
+          case "employeePoolStatus":
+            return getEmployeePoolStatus(sf).toLowerCase().includes(query);
+          case "hasAnyPoolMembers":
+            return yesNo(flattenPoolFlags(sf)).toLowerCase().includes(query);
+          case "mentors":
+            return Array.isArray(sf.mentors)
+              ? sf.mentors
+                  .map((m) => `${m?.mentorName || ""} ${m?.mentorEmail || ""} ${yesNo(m?.isInPool)}`)
+                  .join(" ")
+                  .toLowerCase()
+                  .includes(query)
+              : false;
+          case "employees":
+            return Array.isArray(sf.employees)
+              ? sf.employees
+                  .map(
+                    (e) =>
+                      `${e?.id || ""} ${e?.name || ""} ${e?.email || ""} ${formatRatingOrDash(
+                        e?.initialRating
+                      )} ${formatRatingOrDash(e?.currentRating)} ${yesNo(e?.isInPool)}`
+                  )
+                  .join(" ")
+                  .toLowerCase()
+                  .includes(query)
+              : false;
+          case "createdAt":
+            return normalizeText(formatIsoDateTimeOrDash(sf.createdAt))
+              .toLowerCase()
+              .includes(query);
+          case "updatedAt":
+            return normalizeText(formatIsoDateTimeOrDash(sf.updatedAt))
+              .toLowerCase()
+              .includes(query);
+          default:
+            return normalizeText(sf[c.id]).toLowerCase().includes(query);
+        }
+      });
+
+      return anyMatch;
+    });
+  }, [rows, filters, searchText, ALL_COLUMNS]);
+
+  // Reset pagination when data set changes (search/filters/pageSize), matching RMG Tracker behavior
+  React.useEffect(() => {
+    setPageIndex(0);
+  }, [searchText, filters.skillFactoryName, filters.mentorPoolStatus, filters.employeePoolStatus, pageSize]);
+
+  const totalRows = filteredRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+  const safePageIndex = Math.min(pageIndex, totalPages - 1);
+  const start = safePageIndex * pageSize;
+  const end = start + pageSize;
+  const pagedRows = filteredRows.slice(start, end);
+
+  const visibleColumns = React.useMemo(() => {
+    const set = new Set(visibleColumnIds);
+    return ALL_COLUMNS.filter((c) => set.has(c.id));
+  }, [ALL_COLUMNS, visibleColumnIds]);
+
+  function toggleColumn(colId) {
+    setVisibleColumnIds((prev) => {
+      const set = new Set(prev);
+      if (set.has(colId)) set.delete(colId);
+      else set.add(colId);
+
+      // Ensure at least 1 column is always visible for usability.
+      if (set.size === 0) return prev;
+      return Array.from(set);
+    });
+  }
+
+  function clearFilters() {
+    setFilters({ skillFactoryName: "", mentorPoolStatus: "", employeePoolStatus: "" });
+    setSearchText("");
+  }
+
+  function renderMentorChips(sf) {
+    if (!Array.isArray(sf.mentors) || sf.mentors.length === 0) return "—";
+    return (
+      <div className="RmgChips" aria-label={`${sf.skillFactoryName} mentors`}>
+        {sf.mentors.map((m) => (
+          <span
+            key={m.mentorId}
+            className="RmgChip"
+            title={`${m.mentorEmail} • ${m.isInPool ? "In pool" : "Not in pool"}`}
+          >
+            {m.mentorName}
+          </span>
+        ))}
+      </div>
+    );
+  }
+
+  function renderEmployeeChips(sf) {
+    if (!Array.isArray(sf.employees) || sf.employees.length === 0) return "—";
+    return (
+      <div className="RmgChips" aria-label={`${sf.skillFactoryName} employees`}>
+        {sf.employees.map((e) => (
+          <span
+            key={e.id}
+            className="RmgChip"
+            title={`${e.email} • Initial ${formatRatingOrDash(e.initialRating)} • Current ${formatRatingOrDash(
+              e.currentRating
+            )} • ${e.isInPool ? "In pool" : "Not in pool"}`}
+          >
+            <span className="RmgMono" style={{ marginRight: 8 }}>
+              {e.id}
+            </span>
+            {e.name}
+          </span>
+        ))}
+      </div>
+    );
+  }
+
+  function renderCell(sf, colId) {
+    switch (colId) {
+      case "skillFactoryId":
+        return <span className="RmgMono">{sf.skillFactoryId}</span>;
+      case "skillFactoryName":
+        return normalizeText(sf.skillFactoryName) || "—";
+      case "mentorCount":
+        return <span className="RmgMono">{safeArrayCount(sf.mentors)}</span>;
+      case "employeeCount":
+        return <span className="RmgMono">{safeArrayCount(sf.employees)}</span>;
+      case "mentorPoolStatus":
+        return getMentorPoolStatus(sf);
+      case "employeePoolStatus":
+        return getEmployeePoolStatus(sf);
+      case "hasAnyPoolMembers":
+        return (
+          <span className={`RmgPill ${flattenPoolFlags(sf) ? "RmgPill--billable" : "RmgPill--bench"}`}>
+            {yesNo(flattenPoolFlags(sf))}
+          </span>
+        );
+      case "mentors":
+        return renderMentorChips(sf);
+      case "employees":
+        return renderEmployeeChips(sf);
+      case "createdAt":
+        return <span className="RmgMono">{formatIsoDateTimeOrDash(sf.createdAt)}</span>;
+      case "updatedAt":
+        return <span className="RmgMono">{formatIsoDateTimeOrDash(sf.updatedAt)}</span>;
+      default:
+        return normalizeText(sf[colId]) || "—";
+    }
+  }
+
   return (
     <main className="App-main" aria-label="Skill Factories page">
       <section className="HelloCard HelloCard--wide" aria-label="Skill Factories content">
@@ -804,10 +1061,202 @@ export function SkillFactoriesPage() {
             {loading ? "Loading…" : "Refresh"}
           </button>
 
+          <button
+            type="button"
+            className="RmgButton"
+            onClick={() => setColumnPanelOpen((v) => !v)}
+            aria-expanded={columnPanelOpen ? "true" : "false"}
+            aria-controls="skillfactories-column-panel"
+            disabled={loading}
+          >
+            Columns
+          </button>
+
+          <button
+            type="button"
+            className="RmgButton"
+            onClick={clearFilters}
+            disabled={loading}
+          >
+            Reset
+          </button>
+
           <Link className="RmgLink" to="/">
             Back to Home
           </Link>
         </div>
+
+        {/* Controls */}
+        {!loading && !errorMessage && (
+          <div className="RmgOptions" aria-label="Skill Factories table options">
+            <div className="RmgOptionsRow">
+              <label className="RmgField">
+                <span className="RmgFieldLabel">Search</span>
+                <input
+                  className="RmgInput"
+                  type="search"
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  placeholder="Search any field…"
+                  aria-label="Global search"
+                />
+              </label>
+
+              <label className="RmgField">
+                <span className="RmgFieldLabel">Skill Factory</span>
+                <select
+                  className="RmgSelect"
+                  value={filters.skillFactoryName}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, skillFactoryName: e.target.value }))
+                  }
+                  aria-label="Filter by skill factory name"
+                >
+                  <option value="">All</option>
+                  {filterOptions.skillFactoryName.map((v) => (
+                    <option key={`skillFactoryName-${v}`} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="RmgField">
+                <span className="RmgFieldLabel">Mentors Pool</span>
+                <select
+                  className="RmgSelect"
+                  value={filters.mentorPoolStatus}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, mentorPoolStatus: e.target.value }))
+                  }
+                  aria-label="Filter by mentors pool status"
+                >
+                  <option value="">All</option>
+                  {filterOptions.mentorPoolStatus.map((v) => (
+                    <option key={`mentorPool-${v}`} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="RmgField">
+                <span className="RmgFieldLabel">Employees Pool</span>
+                <select
+                  className="RmgSelect"
+                  value={filters.employeePoolStatus}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, employeePoolStatus: e.target.value }))
+                  }
+                  aria-label="Filter by employees pool status"
+                >
+                  <option value="">All</option>
+                  {filterOptions.employeePoolStatus.map((v) => (
+                    <option key={`employeePool-${v}`} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div
+              className="RmgOptionsRow RmgOptionsRow--meta"
+              aria-label="Skill Factories table meta"
+            >
+              <div className="RmgMetaText" aria-live="polite">
+                Showing <strong>{totalRows === 0 ? 0 : start + 1}</strong>–
+                <strong>{Math.min(end, totalRows)}</strong> of{" "}
+                <strong>{totalRows}</strong>
+              </div>
+
+              <label className="RmgField RmgField--inline">
+                <span className="RmgFieldLabel">Page size</span>
+                <select
+                  className="RmgSelect"
+                  value={pageSize}
+                  onChange={(e) => setPageSize(Number(e.target.value))}
+                  aria-label="Select page size"
+                >
+                  {PAGE_SIZES.map((s) => (
+                    <option key={`pageSize-sf-${s}`} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="RmgPager" aria-label="Pagination controls">
+                <button
+                  type="button"
+                  className="RmgButton RmgButton--small"
+                  onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+                  disabled={safePageIndex <= 0}
+                >
+                  Prev
+                </button>
+                <span className="RmgPagerText" aria-label="Current page">
+                  Page <strong>{safePageIndex + 1}</strong> of <strong>{totalPages}</strong>
+                </span>
+                <button
+                  type="button"
+                  className="RmgButton RmgButton--small"
+                  onClick={() => setPageIndex((p) => Math.min(totalPages - 1, p + 1))}
+                  disabled={safePageIndex >= totalPages - 1}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+
+            {columnPanelOpen && (
+              <div
+                id="skillfactories-column-panel"
+                className="RmgColumnPanel"
+                role="region"
+                aria-label="Column visibility"
+              >
+                <div className="RmgColumnPanelHeader">
+                  <div className="RmgColumnPanelTitle">Visible columns</div>
+                  <button
+                    type="button"
+                    className="RmgButton RmgButton--small"
+                    onClick={() => setColumnPanelOpen(false)}
+                    aria-label="Close column visibility panel"
+                  >
+                    Close
+                  </button>
+                </div>
+
+                <div className="RmgColumnGrid">
+                  {ALL_COLUMNS.map((c) => {
+                    const checked = visibleColumnIds.includes(c.id);
+                    const isLastVisible = checked && visibleColumnIds.length === 1;
+
+                    return (
+                      <label key={c.id} className="RmgCheckbox">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleColumn(c.id)}
+                          disabled={isLastVisible}
+                          aria-label={`Toggle column ${c.label}`}
+                        />
+                        <span>{c.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                {visibleColumnIds.length === 1 && (
+                  <div className="RmgHint" role="note">
+                    At least one column must remain visible.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {loading && (
           <div className="RmgState" role="status" aria-live="polite">
@@ -831,76 +1280,27 @@ export function SkillFactoriesPage() {
             <table className="RmgTable">
               <thead>
                 <tr>
-                  <th scope="col">Skill Factory ID</th>
-                  <th scope="col">Skill Factory Name</th>
-                  <th scope="col">Mentors</th>
-                  <th scope="col">Employees</th>
-                  <th scope="col">Created At</th>
-                  <th scope="col">Updated At</th>
+                  {visibleColumns.map((c) => (
+                    <th key={c.id} scope="col">
+                      {c.label}
+                    </th>
+                  ))}
                 </tr>
               </thead>
 
               <tbody>
-                {rows.length === 0 ? (
+                {pagedRows.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="RmgEmptyCell">
+                    <td colSpan={Math.max(1, visibleColumns.length)} className="RmgEmptyCell">
                       No records found.
                     </td>
                   </tr>
                 ) : (
-                  rows.map((sf) => (
+                  pagedRows.map((sf) => (
                     <tr key={sf.skillFactoryId}>
-                      <td>
-                        <span className="RmgMono">{sf.skillFactoryId}</span>
-                      </td>
-                      <td>{sf.skillFactoryName || "—"}</td>
-                      <td>
-                        {Array.isArray(sf.mentors) && sf.mentors.length > 0 ? (
-                          <div className="RmgChips" aria-label={`${sf.skillFactoryName} mentors`}>
-                            {sf.mentors.map((m) => (
-                              <span
-                                key={m.mentorId}
-                                className="RmgChip"
-                                title={`${m.mentorEmail} • ${m.isInPool ? "In pool" : "Not in pool"}`}
-                              >
-                                {m.mentorName}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td>
-                        {Array.isArray(sf.employees) && sf.employees.length > 0 ? (
-                          <div className="RmgChips" aria-label={`${sf.skillFactoryName} employees`}>
-                            {sf.employees.map((e) => (
-                              <span
-                                key={e.id}
-                                className="RmgChip"
-                                title={`${e.email} • Initial ${formatRatingOrDash(
-                                  e.initialRating
-                                )} • Current ${formatRatingOrDash(e.currentRating)} • ${
-                                  e.isInPool ? "In pool" : "Not in pool"
-                                }`}
-                              >
-                                <span className="RmgMono" style={{ marginRight: 8 }}>
-                                  {e.id}
-                                </span>
-                                {e.name}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td>
-                        <span className="RmgMono">{formatIsoDateTimeOrDash(sf.createdAt)}</span>
-                      </td>
-                      <td>
-                        <span className="RmgMono">{formatIsoDateTimeOrDash(sf.updatedAt)}</span>
-                      </td>
+                      {visibleColumns.map((c) => (
+                        <td key={`${sf.skillFactoryId}-${c.id}`}>{renderCell(sf, c.id)}</td>
+                      ))}
                     </tr>
                   ))
                 )}
