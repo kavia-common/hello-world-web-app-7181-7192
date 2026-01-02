@@ -942,9 +942,16 @@ function SortableTh({ col, sortState, onToggle, alignRight }) {
 }
 
 function ColumnFilterCell({ col, facets, value, onChange, disabled }) {
-  // Render nothing for columns without filtering.
+  // Dedicated filter row cell: always renders a stable-height container to avoid overlap/shift.
+  const cellKey = `${col.id}-filter`;
+
+  // Render an "empty" stable cell for columns without filtering.
   if (!col.filterType) {
-    return <th key={`${col.id}-filter`} scope="col" />;
+    return (
+      <th key={cellKey} scope="col" aria-hidden="true">
+        <div className="RmgFilterControl" />
+      </th>
+    );
   }
 
   const commonProps = { disabled };
@@ -952,7 +959,7 @@ function ColumnFilterCell({ col, facets, value, onChange, disabled }) {
   if (col.filterType === "select") {
     const options = facets?.[col.id] || [];
     return (
-      <th key={`${col.id}-filter`} scope="col">
+      <th key={cellKey} scope="col">
         <div className="RmgFilterControl">
           <select
             className="RmgFilterSelect"
@@ -977,7 +984,7 @@ function ColumnFilterCell({ col, facets, value, onChange, disabled }) {
     const options = facets?.[col.id] || [];
     const selected = Array.isArray(value?.values) ? value.values : [];
     return (
-      <th key={`${col.id}-filter`} scope="col">
+      <th key={cellKey} scope="col">
         <div className="RmgFilterControl">
           <select
             multiple
@@ -1003,7 +1010,7 @@ function ColumnFilterCell({ col, facets, value, onChange, disabled }) {
 
   if (col.filterType === "text") {
     return (
-      <th key={`${col.id}-filter`} scope="col">
+      <th key={cellKey} scope="col">
         <div className="RmgFilterControl">
           <input
             className="RmgFilterInput"
@@ -1021,14 +1028,16 @@ function ColumnFilterCell({ col, facets, value, onChange, disabled }) {
 
   if (col.filterType === "numberRange") {
     return (
-      <th key={`${col.id}-filter`} scope="col">
+      <th key={cellKey} scope="col">
         <div className="RmgFilterControl RmgFilterControl--range">
           <input
             className="RmgFilterInput"
             type="number"
             inputMode="numeric"
             value={value?.min || ""}
-            onChange={(e) => onChange(col.id, { type: "numberRange", min: e.target.value, max: value?.max || "" })}
+            onChange={(e) =>
+              onChange(col.id, { type: "numberRange", min: e.target.value, max: value?.max || "" })
+            }
             placeholder="Min"
             aria-label={`Filter ${col.label} min`}
             {...commonProps}
@@ -1038,7 +1047,9 @@ function ColumnFilterCell({ col, facets, value, onChange, disabled }) {
             type="number"
             inputMode="numeric"
             value={value?.max || ""}
-            onChange={(e) => onChange(col.id, { type: "numberRange", min: value?.min || "", max: e.target.value })}
+            onChange={(e) =>
+              onChange(col.id, { type: "numberRange", min: value?.min || "", max: e.target.value })
+            }
             placeholder="Max"
             aria-label={`Filter ${col.label} max`}
             {...commonProps}
@@ -1050,7 +1061,7 @@ function ColumnFilterCell({ col, facets, value, onChange, disabled }) {
 
   if (col.filterType === "dateRange") {
     return (
-      <th key={`${col.id}-filter`} scope="col">
+      <th key={cellKey} scope="col">
         <div className="RmgFilterControl RmgFilterControl--range">
           <input
             className="RmgFilterInput"
@@ -1073,7 +1084,11 @@ function ColumnFilterCell({ col, facets, value, onChange, disabled }) {
     );
   }
 
-  return <th key={`${col.id}-filter`} scope="col" />;
+  return (
+    <th key={cellKey} scope="col" aria-hidden="true">
+      <div className="RmgFilterControl" />
+    </th>
+  );
 }
 
 // PUBLIC_INTERFACE

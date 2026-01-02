@@ -240,3 +240,23 @@ export function buildFacetOptions(rows, columns) {
 
   return out;
 }
+
+/**
+ * ---------------------------------------------------------------------------
+ * UI helpers (shared across tables)
+ * These are intentionally tiny, so pages remain free to render their own UI,
+ * but can share stable constants to avoid overlapping filter controls.
+ * ---------------------------------------------------------------------------
+ */
+
+// PUBLIC_INTERFACE
+export function getStableTableHeaderHeights() {
+  /** Returns the assumed sticky header + filter-row heights used in CSS. */
+  return { headerPx: 44, filterRowPx: 44 };
+}
+
+// PUBLIC_INTERFACE
+export function getTableFilterControlWidthBounds() {
+  /** Returns recommended min/max widths for column filter controls to prevent overlap. */
+  return { minPx: 140, maxPx: 320 };
+}
