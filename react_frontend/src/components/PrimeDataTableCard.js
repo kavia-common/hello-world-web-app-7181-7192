@@ -191,11 +191,12 @@ export default function PrimeDataTableCard({
           <Button
             type="button"
             icon="pi pi-search"
-            label="Search"
-            className="p-button-outlined RmgTableSearchBtn"
+            className="p-button-outlined p-button-icon-only RmgIconButton"
             onClick={applyGlobalSearch}
             disabled={loading}
             aria-label="Apply global search"
+            tooltip="Search"
+            tooltipOptions={{ position: "top" }}
           />
         </div>
 
@@ -203,11 +204,12 @@ export default function PrimeDataTableCard({
           <Button
             type="button"
             icon="pi pi-download"
-            label="Download CSV"
-            className="p-button-outlined"
+            className="p-button-outlined p-button-icon-only RmgIconButton"
             onClick={exportCsv}
             disabled={loading || !Array.isArray(rows) || rows.length === 0}
             aria-label="Download CSV"
+            tooltip="Download CSV"
+            tooltipOptions={{ position: "top" }}
           />
         </div>
       </div>

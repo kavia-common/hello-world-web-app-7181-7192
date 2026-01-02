@@ -375,8 +375,16 @@ export function HomePage() {
         <p className="HelloSubtitle">Build, assess, and grow your digital skills.</p>
 
         <div className="RmgToolbar" aria-label="Dashboard actions">
-          <button type="button" className="RmgButton" onClick={load} disabled={loading} aria-disabled={loading ? "true" : "false"}>
-            {loading ? "Loading…" : "Refresh"}
+          <button
+            type="button"
+            className="RmgButton RmgIconOnlyButton"
+            onClick={load}
+            disabled={loading}
+            aria-disabled={loading ? "true" : "false"}
+            aria-label="Refresh dashboard"
+            title="Refresh"
+          >
+            <span className="pi pi-refresh" aria-hidden="true" />
           </button>
 
           <Link className="RmgLink" to="/learning-paths">
@@ -395,8 +403,14 @@ export function HomePage() {
           <div className="RmgError" role="alert">
             <div className="RmgErrorTitle">Couldn’t load metrics</div>
             <div className="RmgErrorMessage">{errorMessage}</div>
-            <button type="button" className="RmgButton RmgButton--danger" onClick={load}>
-              Try again
+            <button
+              type="button"
+              className="RmgButton RmgButton--danger RmgIconOnlyButton"
+              onClick={load}
+              aria-label="Retry loading dashboard metrics"
+              title="Try again"
+            >
+              <span className="pi pi-refresh" aria-hidden="true" />
             </button>
           </div>
         )}
@@ -449,12 +463,14 @@ export function HomePage() {
             <div className="RmgToolbar" aria-label="Skill Factory metrics actions" style={{ marginTop: 0 }}>
               <button
                 type="button"
-                className="RmgButton"
+                className="RmgButton RmgIconOnlyButton"
                 onClick={loadSkillFactoryMetrics}
                 disabled={sfMetricsLoading}
                 aria-disabled={sfMetricsLoading ? "true" : "false"}
+                aria-label="Refresh Skill Factory metrics"
+                title="Refresh"
               >
-                {sfMetricsLoading ? "Loading…" : "Refresh"}
+                <span className="pi pi-refresh" aria-hidden="true" />
               </button>
 
               <span className="HomeMiniPill" aria-label="Skill Factory metrics count">
@@ -474,8 +490,14 @@ export function HomePage() {
             <div className="RmgError" role="alert">
               <div className="RmgErrorTitle">Couldn’t load Skill Factory metrics</div>
               <div className="RmgErrorMessage">{sfMetricsError}</div>
-              <button type="button" className="RmgButton RmgButton--danger" onClick={loadSkillFactoryMetrics}>
-                Try again
+              <button
+                type="button"
+                className="RmgButton RmgButton--danger RmgIconOnlyButton"
+                onClick={loadSkillFactoryMetrics}
+                aria-label="Retry loading Skill Factory metrics"
+                title="Try again"
+              >
+                <span className="pi pi-refresh" aria-hidden="true" />
               </button>
             </div>
           )}
@@ -559,12 +581,14 @@ export function HomePage() {
             <div className="RmgToolbar" aria-label="Learning Path metrics actions" style={{ marginTop: 0 }}>
               <button
                 type="button"
-                className="RmgButton"
+                className="RmgButton RmgIconOnlyButton"
                 onClick={loadLearningPathMetrics}
                 disabled={lpMetricsLoading}
                 aria-disabled={lpMetricsLoading ? "true" : "false"}
+                aria-label="Refresh Learning Path metrics"
+                title="Refresh"
               >
-                {lpMetricsLoading ? "Loading…" : "Refresh"}
+                <span className="pi pi-refresh" aria-hidden="true" />
               </button>
 
               <span className="HomeMiniPill" aria-label="Learning path metrics count">
@@ -584,8 +608,14 @@ export function HomePage() {
             <div className="RmgError" role="alert">
               <div className="RmgErrorTitle">Couldn’t load Learning Path metrics</div>
               <div className="RmgErrorMessage">{lpMetricsError}</div>
-              <button type="button" className="RmgButton RmgButton--danger" onClick={loadLearningPathMetrics}>
-                Try again
+              <button
+                type="button"
+                className="RmgButton RmgButton--danger RmgIconOnlyButton"
+                onClick={loadLearningPathMetrics}
+                aria-label="Retry loading Learning Path metrics"
+                title="Try again"
+              >
+                <span className="pi pi-refresh" aria-hidden="true" />
               </button>
             </div>
           )}
@@ -867,8 +897,16 @@ export function RmgTrackerPage() {
         <p className="HelloSubtitle">Resource overview fetched from an API (mocked response for now).</p>
 
         <div className="RmgToolbar" aria-label="RMG actions">
-          <button type="button" className="RmgButton" onClick={load} disabled={loading} aria-disabled={loading ? "true" : "false"}>
-            {loading ? "Loading…" : "Refresh"}
+          <button
+            type="button"
+            className="RmgButton RmgIconOnlyButton"
+            onClick={load}
+            disabled={loading}
+            aria-disabled={loading ? "true" : "false"}
+            aria-label="Refresh RMG Tracker"
+            title="Refresh"
+          >
+            <span className="pi pi-refresh" aria-hidden="true" />
           </button>
 
           <Link className="RmgLink" to="/">
@@ -929,8 +967,15 @@ export function RmgTrackerPage() {
 
               <label className="RmgField">
                 <span className="RmgFieldLabel">Quick reset</span>
-                <button type="button" className="RmgButton" onClick={() => setFilters({ employeeType: "", currentStatus: "", location: "", grade: "" })} disabled={loading}>
-                  Reset filters
+                <button
+                  type="button"
+                  className="RmgButton RmgIconOnlyButton"
+                  onClick={() => setFilters({ employeeType: "", currentStatus: "", location: "", grade: "" })}
+                  disabled={loading}
+                  aria-label="Reset RMG filters"
+                  title="Reset filters"
+                >
+                  <span className="pi pi-filter-slash" aria-hidden="true" />
                 </button>
               </label>
             </div>
@@ -948,8 +993,14 @@ export function RmgTrackerPage() {
           <div className="RmgError" role="alert">
             <div className="RmgErrorTitle">Couldn’t load data</div>
             <div className="RmgErrorMessage">{errorMessage}</div>
-            <button type="button" className="RmgButton RmgButton--danger" onClick={load}>
-              Try again
+            <button
+              type="button"
+              className="RmgButton RmgButton--danger RmgIconOnlyButton"
+              onClick={load}
+              aria-label="Retry loading RMG Tracker data"
+              title="Try again"
+            >
+              <span className="pi pi-refresh" aria-hidden="true" />
             </button>
           </div>
         )}
@@ -1274,8 +1325,16 @@ export function SkillFactoriesPage() {
         <p className="HelloSubtitle">Skill Factory overview fetched from an API (mocked response for now).</p>
 
         <div className="RmgToolbar" aria-label="Skill Factories actions">
-          <button type="button" className="RmgButton" onClick={load} disabled={loading} aria-disabled={loading ? "true" : "false"}>
-            {loading ? "Loading…" : "Refresh"}
+          <button
+            type="button"
+            className="RmgButton RmgIconOnlyButton"
+            onClick={load}
+            disabled={loading}
+            aria-disabled={loading ? "true" : "false"}
+            aria-label="Refresh Skill Factories"
+            title="Refresh"
+          >
+            <span className="pi pi-refresh" aria-hidden="true" />
           </button>
 
           <Link className="RmgLink" to="/">
@@ -1324,8 +1383,15 @@ export function SkillFactoriesPage() {
 
               <label className="RmgField">
                 <span className="RmgFieldLabel">Quick reset</span>
-                <button type="button" className="RmgButton" onClick={() => setFilters({ skillFactoryName: "", mentorPoolStatus: "", employeePoolStatus: "" })} disabled={loading}>
-                  Reset filters
+                <button
+                  type="button"
+                  className="RmgButton RmgIconOnlyButton"
+                  onClick={() => setFilters({ skillFactoryName: "", mentorPoolStatus: "", employeePoolStatus: "" })}
+                  disabled={loading}
+                  aria-label="Reset Skill Factories filters"
+                  title="Reset filters"
+                >
+                  <span className="pi pi-filter-slash" aria-hidden="true" />
                 </button>
               </label>
             </div>
@@ -1343,8 +1409,14 @@ export function SkillFactoriesPage() {
           <div className="RmgError" role="alert">
             <div className="RmgErrorTitle">Couldn’t load data</div>
             <div className="RmgErrorMessage">{errorMessage}</div>
-            <button type="button" className="RmgButton RmgButton--danger" onClick={load}>
-              Try again
+            <button
+              type="button"
+              className="RmgButton RmgButton--danger RmgIconOnlyButton"
+              onClick={load}
+              aria-label="Retry loading Skill Factories data"
+              title="Try again"
+            >
+              <span className="pi pi-refresh" aria-hidden="true" />
             </button>
           </div>
         )}
@@ -1597,8 +1669,16 @@ export function LearningPathsPage() {
         <p className="HelloSubtitle">Explore structured learning plans. Data is currently loaded from a mocked API response.</p>
 
         <div className="RmgToolbar" aria-label="Learning Paths actions">
-          <button type="button" className="RmgButton" onClick={load} disabled={loading} aria-disabled={loading ? "true" : "false"}>
-            {loading ? "Loading…" : "Refresh"}
+          <button
+            type="button"
+            className="RmgButton RmgIconOnlyButton"
+            onClick={load}
+            disabled={loading}
+            aria-disabled={loading ? "true" : "false"}
+            aria-label="Refresh Learning Paths"
+            title="Refresh"
+          >
+            <span className="pi pi-refresh" aria-hidden="true" />
           </button>
 
           <Link className="RmgLink" to="/">
@@ -1647,8 +1727,15 @@ export function LearningPathsPage() {
 
               <label className="RmgField">
                 <span className="RmgFieldLabel">Quick reset</span>
-                <button type="button" className="RmgButton" onClick={() => setFilters({ duration: "", tag: "", status: "" })} disabled={loading}>
-                  Reset filters
+                <button
+                  type="button"
+                  className="RmgButton RmgIconOnlyButton"
+                  onClick={() => setFilters({ duration: "", tag: "", status: "" })}
+                  disabled={loading}
+                  aria-label="Reset Learning Paths filters"
+                  title="Reset filters"
+                >
+                  <span className="pi pi-filter-slash" aria-hidden="true" />
                 </button>
               </label>
             </div>
@@ -1666,8 +1753,14 @@ export function LearningPathsPage() {
           <div className="RmgError" role="alert">
             <div className="RmgErrorTitle">Couldn’t load data</div>
             <div className="RmgErrorMessage">{errorMessage}</div>
-            <button type="button" className="RmgButton RmgButton--danger" onClick={load}>
-              Try again
+            <button
+              type="button"
+              className="RmgButton RmgButton--danger RmgIconOnlyButton"
+              onClick={load}
+              aria-label="Retry loading Learning Paths data"
+              title="Try again"
+            >
+              <span className="pi pi-refresh" aria-hidden="true" />
             </button>
           </div>
         )}
@@ -1903,8 +1996,16 @@ export function AssessmentsPage() {
         <p className="HelloSubtitle">Assessments loaded from a mocked API response (for now).</p>
 
         <div className="RmgToolbar" aria-label="Assessments actions">
-          <button type="button" className="RmgButton" onClick={load} disabled={loading} aria-disabled={loading ? "true" : "false"}>
-            {loading ? "Loading…" : "Refresh"}
+          <button
+            type="button"
+            className="RmgButton RmgIconOnlyButton"
+            onClick={load}
+            disabled={loading}
+            aria-disabled={loading ? "true" : "false"}
+            aria-label="Refresh Assessments"
+            title="Refresh"
+          >
+            <span className="pi pi-refresh" aria-hidden="true" />
           </button>
 
           <Link className="RmgLink" to="/">
@@ -1941,8 +2042,15 @@ export function AssessmentsPage() {
 
               <label className="RmgField">
                 <span className="RmgFieldLabel">Quick reset</span>
-                <button type="button" className="RmgButton" onClick={() => setFilters({ status: "", dueMonth: "" })} disabled={loading}>
-                  Reset filters
+                <button
+                  type="button"
+                  className="RmgButton RmgIconOnlyButton"
+                  onClick={() => setFilters({ status: "", dueMonth: "" })}
+                  disabled={loading}
+                  aria-label="Reset Assessments filters"
+                  title="Reset filters"
+                >
+                  <span className="pi pi-filter-slash" aria-hidden="true" />
                 </button>
               </label>
             </div>
@@ -1960,8 +2068,14 @@ export function AssessmentsPage() {
           <div className="RmgError" role="alert">
             <div className="RmgErrorTitle">Couldn’t load data</div>
             <div className="RmgErrorMessage">{errorMessage}</div>
-            <button type="button" className="RmgButton RmgButton--danger" onClick={load}>
-              Try again
+            <button
+              type="button"
+              className="RmgButton RmgButton--danger RmgIconOnlyButton"
+              onClick={load}
+              aria-label="Retry loading Assessments data"
+              title="Try again"
+            >
+              <span className="pi pi-refresh" aria-hidden="true" />
             </button>
           </div>
         )}

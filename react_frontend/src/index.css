@@ -409,9 +409,22 @@ body {
   pointer-events: none;
 }
 
-/* Make the "Search" button compact */
-.RmgTableWrap .RmgTableSearchBtn {
-  white-space: nowrap;
+/* Icon-only action buttons: consistent sizing across app (tables, toolbars, etc.) */
+.RmgIconButton.p-button.p-button-icon-only {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+}
+
+.RmgIconButton.p-button.p-button-icon-only .p-button-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* Tighten icon buttons inside the table control row so it stays compact */
+.RmgTableWrap .RmgTableControls .RmgIconButton.p-button.p-button-icon-only {
+  width: 40px;
+  height: 40px;
 }
 
 /* Mobile: stack controls nicely and allow full-width search */
@@ -451,6 +464,19 @@ body {
 .p-multiselect:focus-visible {
   outline: 3px solid rgba(197, 22, 140, 0.32);
   outline-offset: 2px;
+}
+
+/* Native (non-Prime) icon-only buttons used in toolbars/errors */
+.RmgIconOnlyButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+}
+
+.RmgIconOnlyButton .pi {
+  font-size: 1rem;
+  line-height: 1;
 }
 
 /* Paginator sizing + alignment (prevents footer row height jumps) */
