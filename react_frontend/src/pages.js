@@ -1,5 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faFilter, faSort, faSortDown, faSortUp } from "@fortawesome/free-solid-svg-icons";
 import MoreFiltersPopover from "./components/MoreFiltersPopover";
 import {
   applyColumnFilters,
@@ -819,9 +821,9 @@ async function fetchRmgTrackerDataMock({ signal } = {}) {
 }
 
 function sortIconFor(direction) {
-  if (direction === "asc") return "▲";
-  if (direction === "desc") return "▼";
-  return "↕";
+  if (direction === "asc") return faSortUp;
+  if (direction === "desc") return faSortDown;
+  return faSort;
 }
 
 function formatRatingOrDash(value) {
@@ -964,7 +966,7 @@ function ColumnHeaderTh({
         >
           <span>{col.label}</span>
           <span className={`RmgSortIcon${isSorted ? " RmgSortIcon--active" : ""}`} aria-hidden="true">
-            {icon}
+            <FontAwesomeIcon icon={icon} />
           </span>
         </button>
 
@@ -980,6 +982,7 @@ function ColumnHeaderTh({
               e.stopPropagation();
               headerDistinctFilter?.toggle(col.id);
             }}
+            // Keep the dropdown anchored to the icon-trigger button itself (consistent across all tables).
             ref={(el) => {
               if (!headerDistinctFilter?.triggerRefs?.current) return;
               headerDistinctFilter.triggerRefs.current[col.id] = el;
@@ -987,7 +990,7 @@ function ColumnHeaderTh({
             title="Filter"
           >
             <span className="RmgHeaderIconFunnel" aria-hidden="true">
-              ⌄
+              <FontAwesomeIcon icon={faFilter} />
             </span>
           </button>
         )}
