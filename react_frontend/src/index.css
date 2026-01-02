@@ -9,7 +9,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* Fallback background in case App CSS doesn't load */
+  /* Fallback (kept in sync with App.css theme) */
   background: #f8fafc;
   color: #0f172a;
 }
