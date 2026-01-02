@@ -80,6 +80,34 @@
   --card-bg: var(--card-surface);
   --card-bg-hover: var(--card-surface-hover);
 
+  /* ---------------- Glassmorphism tokens (metric cards) ---------------- */
+  /* Translucent frosted surface + blur, with a subtle gradient border and soft shadow */
+  --glass-surface: rgba(255, 255, 255, 0.56);
+  --glass-surface-hover: rgba(255, 255, 255, 0.64);
+
+  /* Prefer a slightly stronger blur for the glassy look; keep tokens so we can adjust globally */
+  --glass-blur: 14px;
+
+  /* Soft “glow” shadow that keeps the cool palette; separate from general card shadow */
+  --glass-shadow: 0 16px 42px rgba(2, 6, 23, 0.12);
+  --glass-shadow-hover: 0 24px 60px rgba(2, 6, 23, 0.16);
+
+  /* Gradient border (87deg theme) — rendered via background-clip trick */
+  --glass-border-gradient: linear-gradient(
+    87deg,
+    rgba(197, 22, 140, 0.42),
+    rgba(3, 78, 161, 0.42)
+  );
+  --glass-border-gradient-hover: linear-gradient(
+    87deg,
+    rgba(197, 22, 140, 0.56),
+    rgba(3, 78, 161, 0.56)
+  );
+
+  /* Subtle sheen overlay used for hover/focus accents */
+  --glass-sheen-opacity: 0.14;
+  --glass-sheen-opacity-focus: 0.18;
+
   /* A subtle “cool palette” wash for card surfaces, with brand gradient hints */
   --card-surface-wash:
     radial-gradient(680px circle at 18% 12%, rgba(14, 165, 233, 0.10), transparent 56%),
@@ -426,6 +454,81 @@
   }
 }
 
+/* ---------------------------------------------------------------------
+   Glassmorphism “metric card” style
+   - Apply to metric-like cards across the app without changing layout.
+   - Uses background-clip with a transparent border to render a subtle gradient border.
+   - Keeps accessible focus outlines and respects reduced-motion.
+------------------------------------------------------------------------ */
+
+.GlassCard {
+  /* Keep layout/flow defined by each specific card class */
+  position: relative;
+  overflow: hidden;
+
+  border-radius: 18px;
+  border: 1px solid transparent;
+
+  /* Two-layer background: inner frosted surface + gradient border */
+  background:
+    linear-gradient(var(--glass-surface), var(--glass-surface)) padding-box,
+    var(--glass-border-gradient) border-box;
+
+  /* Frosted blur */
+  backdrop-filter: blur(var(--glass-blur));
+
+  /* Soft shadow */
+  box-shadow: var(--glass-shadow);
+
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.GlassCard::after {
+  /* Subtle gradient sheen for hover/focus */
+  content: "";
+  position: absolute;
+  inset: -45%;
+  background: var(--bg-gradient);
+  opacity: 0;
+  transform: rotate(9deg);
+  filter: blur(26px);
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .GlassCard:hover {
+    background:
+      linear-gradient(var(--glass-surface-hover), var(--glass-surface-hover)) padding-box,
+      var(--glass-border-gradient-hover) border-box;
+    box-shadow: var(--glass-shadow-hover);
+  }
+
+  .GlassCard:hover::after {
+    opacity: var(--glass-sheen-opacity);
+  }
+}
+
+.GlassCard:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.GlassCard:focus-visible::after {
+  opacity: var(--glass-sheen-opacity-focus);
+}
+
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .GlassCard {
+    transition: none;
+  }
+
+  .GlassCard::after {
+    transition: none;
+  }
+}
+
 /* ---------- Home dashboard (metrics) ---------- */
 
 .HomeDashboard {
@@ -455,28 +558,30 @@
   text-decoration: none;
   color: rgba(15, 23, 42, 0.92);
 
-  border: 1px solid var(--card-border);
-  background: var(--card-surface-wash), var(--card-bg);
-  box-shadow: var(--card-shadow);
-  backdrop-filter: blur(10px);
+  /* Glassmorphism base */
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--glass-surface), var(--glass-surface)) padding-box,
+    var(--glass-border-gradient) border-box;
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(var(--glass-blur));
 
   /* Slightly stronger “metric” emphasis without losing readability */
   position: relative;
   overflow: hidden;
 
-  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease,
-    background-color 160ms ease;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
 
 .MetricCard::after {
-  /* Subtle gradient sheen (only visible a bit on hover) */
+  /* Subtle gradient sheen (only visible a bit on hover/focus) */
   content: "";
   position: absolute;
-  inset: -40%;
+  inset: -45%;
   background: var(--bg-gradient);
   opacity: 0;
-  transform: rotate(8deg);
-  filter: blur(24px);
+  transform: rotate(9deg);
+  filter: blur(26px);
   pointer-events: none;
   transition: opacity 160ms ease;
 }
@@ -484,13 +589,14 @@
 @media (hover: hover) and (pointer: fine) {
   .MetricCard:hover {
     transform: translateY(-2px);
-    box-shadow: var(--card-shadow-hover);
-    border-color: var(--card-border-strong);
-    background: var(--card-surface-wash), var(--card-bg-hover);
+    box-shadow: var(--glass-shadow-hover);
+    background:
+      linear-gradient(var(--glass-surface-hover), var(--glass-surface-hover)) padding-box,
+      var(--glass-border-gradient-hover) border-box;
   }
 
   .MetricCard:hover::after {
-    opacity: 0.14;
+    opacity: var(--glass-sheen-opacity);
   }
 }
 
@@ -500,7 +606,14 @@
 }
 
 .MetricCard:focus-visible::after {
-  opacity: 0.18;
+  opacity: var(--glass-sheen-opacity-focus);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .MetricCard,
+  .MetricCard::after {
+    transition: none;
+  }
 }
 
 .MetricCard-eyebrow {
@@ -883,15 +996,20 @@
 
 .HomeLpMetricCard {
   border-radius: 18px;
-  border: 1px solid var(--card-border);
-  background: var(--card-surface-wash), var(--card-bg);
-  box-shadow: var(--card-shadow);
-  backdrop-filter: blur(10px);
+
+  /* Glassmorphism base */
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--glass-surface), var(--glass-surface)) padding-box,
+    var(--glass-border-gradient) border-box;
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(var(--glass-blur));
+
   padding: 14px 14px;
   display: grid;
   gap: 10px;
-  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease,
-    background-color 160ms ease;
+
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
   position: relative;
   overflow: hidden;
 }
@@ -902,7 +1020,7 @@
   inset: -45%;
   background: var(--bg-gradient);
   opacity: 0;
-  transform: rotate(10deg);
+  transform: rotate(9deg);
   filter: blur(26px);
   pointer-events: none;
   transition: opacity 160ms ease;
@@ -911,13 +1029,14 @@
 @media (hover: hover) and (pointer: fine) {
   .HomeLpMetricCard:hover {
     transform: translateY(-2px);
-    box-shadow: var(--card-shadow-hover);
-    border-color: var(--card-border-strong);
-    background: var(--card-surface-wash), var(--card-bg-hover);
+    box-shadow: var(--glass-shadow-hover);
+    background:
+      linear-gradient(var(--glass-surface-hover), var(--glass-surface-hover)) padding-box,
+      var(--glass-border-gradient-hover) border-box;
   }
 
   .HomeLpMetricCard:hover::after {
-    opacity: 0.14;
+    opacity: var(--glass-sheen-opacity);
   }
 }
 
@@ -927,7 +1046,14 @@
 }
 
 .HomeLpMetricCard:focus-visible::after {
-  opacity: 0.18;
+  opacity: var(--glass-sheen-opacity-focus);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .HomeLpMetricCard,
+  .HomeLpMetricCard::after {
+    transition: none;
+  }
 }
 
 .HomeLpMetricCardTop {
@@ -1344,27 +1470,65 @@
 
 .SfMetricMiniCard {
   border-radius: 16px;
-  border: 1px solid var(--card-border);
-  background: rgba(255, 255, 255, 0.70);
+
+  /* Glassmorphism base (slightly tighter than full cards) */
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--glass-surface), var(--glass-surface)) padding-box,
+    var(--glass-border-gradient) border-box;
+  box-shadow: 0 14px 34px rgba(2, 6, 23, 0.10);
+  backdrop-filter: blur(var(--glass-blur));
+
   padding: 12px 12px;
   display: grid;
   gap: 6px;
-  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease,
-    background-color 160ms ease;
+
+  position: relative;
+  overflow: hidden;
+
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.SfMetricMiniCard::after {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  background: var(--bg-gradient);
+  opacity: 0;
+  transform: rotate(9deg);
+  filter: blur(26px);
+  pointer-events: none;
+  transition: opacity 160ms ease;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .SfMetricMiniCard:hover {
     transform: translateY(-1px);
-    border-color: var(--card-border-strong);
-    box-shadow: 0 16px 34px rgba(2, 6, 23, 0.12);
-    background: rgba(255, 255, 255, 0.80);
+    box-shadow: 0 18px 44px rgba(2, 6, 23, 0.14);
+    background:
+      linear-gradient(var(--glass-surface-hover), var(--glass-surface-hover)) padding-box,
+      var(--glass-border-gradient-hover) border-box;
+  }
+
+  .SfMetricMiniCard:hover::after {
+    opacity: var(--glass-sheen-opacity);
   }
 }
 
 .SfMetricMiniCard:focus-visible {
   outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
+}
+
+.SfMetricMiniCard:focus-visible::after {
+  opacity: var(--glass-sheen-opacity-focus);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .SfMetricMiniCard,
+  .SfMetricMiniCard::after {
+    transition: none;
+  }
 }
 
 .SfMetricMiniValue {
