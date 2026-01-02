@@ -1,16 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFilter, faSort, faSortDown, faSortUp } from "@fortawesome/free-solid-svg-icons";
-import MoreFiltersPopover from "./components/MoreFiltersPopover";
-import {
-  applyColumnFilters,
-  buildFacetOptions,
-  chooseVisibleFilterColumns,
-  sortRows,
-  useHeaderDistinctValueFilter,
-  useTableSorting,
-} from "./components/tableUtils";
+import { Dropdown } from "primereact/dropdown";
+import PrimeDataTableCard from "./components/PrimeDataTableCard";
 
 /**
  * Simple pages used by the app router.
@@ -68,92 +59,56 @@ const DUMMY_HOME_SKILL_FACTORY_METRICS_RESPONSE = {
   count: 1,
 };
 
+async function delay(ms, { signal } = {}) {
+  await new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(resolve, ms);
+    if (signal) {
+      signal.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(timeoutId);
+          reject(new DOMException("Request aborted", "AbortError"));
+        },
+        { once: true }
+      );
+    }
+  });
+}
+
 /**
  * Simulates an API call with loading/error states.
  * This is where a real request will live later:
  *   fetch(`${process.env.REACT_APP_API_BASE}/home/metrics`, ...)
  */
 async function fetchHomeMetricsMock({ signal } = {}) {
-  // Simulate network latency
-  await new Promise((resolve, reject) => {
-    const timeoutId = setTimeout(resolve, 650);
-    if (signal) {
-      signal.addEventListener(
-        "abort",
-        () => {
-          clearTimeout(timeoutId);
-          reject(new DOMException("Request aborted", "AbortError"));
-        },
-        { once: true }
-      );
-    }
-  });
+  await delay(650, { signal });
 
-  // Toggle to validate error UI if needed.
   const shouldFail = false;
-  if (shouldFail) {
-    throw new Error("Failed to load dashboard metrics. Please try again.");
-  }
+  if (shouldFail) throw new Error("Failed to load dashboard metrics. Please try again.");
 
   return DUMMY_HOME_METRICS_RESPONSE;
 }
 
 /**
  * Simulates an API call for Learning Path metrics with loading/error states.
- * This is where a real request will live later:
- *   fetch(`${process.env.REACT_APP_API_BASE}/home/learning-path-metrics`, ...)
  */
 async function fetchHomeLearningPathMetricsMock({ signal } = {}) {
-  // Simulate network latency (slightly staggered from the dashboard call)
-  await new Promise((resolve, reject) => {
-    const timeoutId = setTimeout(resolve, 720);
-    if (signal) {
-      signal.addEventListener(
-        "abort",
-        () => {
-          clearTimeout(timeoutId);
-          reject(new DOMException("Request aborted", "AbortError"));
-        },
-        { once: true }
-      );
-    }
-  });
+  await delay(720, { signal });
 
-  // Toggle to validate error UI if needed.
   const shouldFail = false;
-  if (shouldFail) {
-    throw new Error("Failed to load Learning Path metrics. Please try again.");
-  }
+  if (shouldFail) throw new Error("Failed to load Learning Path metrics. Please try again.");
 
   return DUMMY_HOME_LEARNING_PATH_METRICS_RESPONSE;
 }
 
 /**
  * Simulates an API call for Skill Factory metrics with loading/error states.
- * This is where a real request will live later:
- *   fetch(`${process.env.REACT_APP_API_BASE}/home/skill-factory-metrics`, ...)
  */
 async function fetchHomeSkillFactoryMetricsMock({ signal } = {}) {
-  // Simulate network latency (slightly staggered from other Home calls)
-  await new Promise((resolve, reject) => {
-    const timeoutId = setTimeout(resolve, 760);
-    if (signal) {
-      signal.addEventListener(
-        "abort",
-        () => {
-          clearTimeout(timeoutId);
-          reject(new DOMException("Request aborted", "AbortError"));
-        },
-        { once: true }
-      );
-    }
-  });
+  await delay(760, { signal });
 
-  // Toggle to validate error UI if needed.
   const shouldFail = false;
-  if (shouldFail) {
-    throw new Error("Failed to load Skill Factory metrics. Please try again.");
-  }
+  if (shouldFail) throw new Error("Failed to load Skill Factory metrics. Please try again.");
 
   return DUMMY_HOME_SKILL_FACTORY_METRICS_RESPONSE;
 }
@@ -204,9 +159,9 @@ function aggregateHomeLearningPathMetrics(rows) {
 
 /**
  * Skill Factories URL query parameters:
- * - q: global search term (we'll use this for skillFactoryName searches, but it searches across all columns)
- * - mentorPool: "in" | "not-in" (maps to Mentors Pool dropdown)
- * - employeePool: "in" | "not-in" (maps to Employees Pool dropdown)
+ * - q: global search term
+ * - mentorPool: "in" | "not-in"
+ * - employeePool: "in" | "not-in"
  */
 function buildSkillFactoriesQuery({ q, mentorPool, employeePool } = {}) {
   const params = new URLSearchParams();
@@ -238,11 +193,6 @@ function poolParamToLabel(param) {
   return "";
 }
 
-function formatDateOrDash(value) {
-  if (!value) return "—";
-  return value;
-}
-
 function normalizeText(value) {
   if (value === null || value === undefined) return "";
   if (Array.isArray(value)) return value.join(" ");
@@ -250,9 +200,7 @@ function normalizeText(value) {
 }
 
 function uniqueSorted(values) {
-  return Array.from(new Set(values.filter(Boolean))).sort((a, b) =>
-    String(a).localeCompare(String(b))
-  );
+  return Array.from(new Set(values.filter(Boolean))).sort((a, b) => String(a).localeCompare(String(b)));
 }
 
 function formatIsoDateTimeOrDash(value) {
@@ -427,13 +375,7 @@ export function HomePage() {
         <p className="HelloSubtitle">Build, assess, and grow your digital skills.</p>
 
         <div className="RmgToolbar" aria-label="Dashboard actions">
-          <button
-            type="button"
-            className="RmgButton"
-            onClick={load}
-            disabled={loading}
-            aria-disabled={loading ? "true" : "false"}
-          >
+          <button type="button" className="RmgButton" onClick={load} disabled={loading} aria-disabled={loading ? "true" : "false"}>
             {loading ? "Loading…" : "Refresh"}
           </button>
 
@@ -496,7 +438,7 @@ export function HomePage() {
           </div>
         )}
 
-        {/* New section: Skill Factory metrics (below existing dashboard) */}
+        {/* Skill Factory metrics */}
         <section className="HomeSection" aria-label="Skill Factory metrics">
           <div className="HomeSectionHeader">
             <div>
@@ -557,11 +499,7 @@ export function HomePage() {
                   ];
 
                   return (
-                    <article
-                      key={sf.skillFactoryId || sf.skillFactoryName}
-                      className="SfMetricsCard"
-                      aria-label={`${title} metrics`}
-                    >
+                    <article key={sf.skillFactoryId || sf.skillFactoryName} className="SfMetricsCard" aria-label={`${title} metrics`}>
                       <header className="SfMetricsCardHeader">
                         <div className="SfMetricsCardTitleRow">
                           <h3 className="SfMetricsCardTitle">{title}</h3>
@@ -610,7 +548,7 @@ export function HomePage() {
           )}
         </section>
 
-        {/* Existing section: Learning Path metrics (keep intact) */}
+        {/* Learning Path metrics */}
         <section className="HomeSection" aria-label="Learning Path metrics">
           <div className="HomeSectionHeader">
             <div>
@@ -731,10 +669,11 @@ export function HomePage() {
 }
 
 /**
- * Mocked/dummy response used for the RMG Tracker table.
- * This intentionally mimics a typical API payload shape.
- * Replace this with a real fetch() call when backend is ready.
+ * ---------------------------------------------------------------------------
+ * RMG Tracker
+ * ---------------------------------------------------------------------------
  */
+
 const DUMMY_RMG_RESPONSE = {
   status: "success",
   data: [
@@ -789,705 +728,26 @@ const DUMMY_RMG_RESPONSE = {
   ],
 };
 
-/**
- * Simulates an API call with loading/error states.
- * This is where a real request will live later:
- *   fetch(`${process.env.REACT_APP_API_BASE}/rmg`, ...)
- */
 async function fetchRmgTrackerDataMock({ signal } = {}) {
-  // Simulate network latency
-  await new Promise((resolve, reject) => {
-    const timeoutId = setTimeout(resolve, 650);
-    if (signal) {
-      signal.addEventListener(
-        "abort",
-        () => {
-          clearTimeout(timeoutId);
-          reject(new DOMException("Request aborted", "AbortError"));
-        },
-        { once: true }
-      );
-    }
-  });
-
-  // Simulate a rare failure to ensure error UI works.
+  await delay(650, { signal });
   const shouldFail = false;
-
-  if (shouldFail) {
-    throw new Error("Failed to load RMG Tracker data. Please try again.");
-  }
-
+  if (shouldFail) throw new Error("Failed to load RMG Tracker data. Please try again.");
   return DUMMY_RMG_RESPONSE;
 }
 
-function sortIconFor(direction) {
-  if (direction === "asc") return faSortUp;
-  if (direction === "desc") return faSortDown;
-  return faSort;
-}
-
-function formatRatingOrDash(value) {
-  if (value === null || value === undefined) return "—";
-  const num = Number(value);
-  if (Number.isNaN(num)) return "—";
-  return num.toFixed(1);
-}
-
-function yesNo(value) {
-  if (value === true) return "Yes";
-  if (value === false) return "No";
-  return "—";
-}
-
-function flattenPoolFlags(sf) {
-  const flags = [];
-  if (Array.isArray(sf.mentors)) {
-    flags.push(...sf.mentors.map((m) => m?.isInPool));
-  }
-  if (Array.isArray(sf.employees)) {
-    flags.push(...sf.employees.map((e) => e?.isInPool));
-  }
-  return flags.some(Boolean);
-}
-
-function getMentorPoolStatus(sf) {
-  if (!Array.isArray(sf.mentors) || sf.mentors.length === 0) return "—";
-  return sf.mentors.some((m) => m?.isInPool) ? "In pool" : "Not in pool";
-}
-
-function getEmployeePoolStatus(sf) {
-  if (!Array.isArray(sf.employees) || sf.employees.length === 0) return "—";
-  return sf.employees.some((e) => e?.isInPool) ? "In pool" : "Not in pool";
-}
-
-function safeArrayCount(value) {
-  if (!Array.isArray(value)) return 0;
-  return value.length;
-}
-
-function safeNumberOrDash(value) {
-  if (value === null || value === undefined) return "—";
-  const num = Number(value);
-  return Number.isFinite(num) ? String(num) : "—";
-}
-
-function parseLearningPathsQuery(locationSearch) {
-  const params = new URLSearchParams(locationSearch || "");
-  const q = (params.get("q") || "").trim();
-  const status = (params.get("status") || "").trim();
-  return { q, status };
-}
-
-function normalizeLpStatusFilter(value) {
-  const v = String(value || "").trim().toLowerCase();
-  if (v === "completed") return "completed";
-  if (v === "inprogress" || v === "in_progress" || v === "in-progress") return "inProgress";
-  if (v === "inprogresscount") return "inProgress";
-  return "";
-}
-
-function formatAssessmentsIsoDateTimeOrDash(value) {
+function formatDateOrDash(value) {
   if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return date.toISOString().replace(".000Z", "Z");
-}
-
-function formatMarkOrDash(value) {
-  if (value === null || value === undefined) return "—";
-  const num = Number(value);
-  return Number.isFinite(num) ? String(num) : "—";
-}
-
-function firstAssigneeOrDash(assignedTo) {
-  if (!Array.isArray(assignedTo) || assignedTo.length === 0) return "—";
-  const a = assignedTo[0];
-  const label = `${a?.employeeName || "—"} (${a?.employeeId || "—"})`;
-  return label;
-}
-
-function assigneeContactOrDash(assignedTo) {
-  if (!Array.isArray(assignedTo) || assignedTo.length === 0) return "—";
-  const a = assignedTo[0];
-  const parts = [a?.email, a?.employeeId].filter(Boolean);
-  return parts.length ? parts.join(" • ") : "—";
-}
-
-function normalizeAssessmentStatus(value) {
-  if (!value) return "";
-  return String(value).trim().toLowerCase().replace(/\s+/g, "-");
-}
-
-/**
- * Shared renderer for sortable column headers + distinct-values dropdown filter.
- * Uses real <button>s for keyboard accessibility.
- */
-function ColumnHeaderTh({
-  col,
-  sortState,
-  onToggleSort,
-  headerDistinctFilter,
-  alignRight,
-}) {
-  const isSorted = sortState.columnId === col.id && sortState.direction !== "none";
-  const dir = isSorted ? sortState.direction : "none";
-  const icon = sortIconFor(dir);
-
-  const hasFacetFilter = Boolean(col?.id);
-  const isFilterOpen = headerDistinctFilter?.openForColumnId === col.id;
-
-  const sortA11y =
-    dir === "asc"
-      ? `${col.label}. Sorted ascending. Activate to sort descending.`
-      : dir === "desc"
-        ? `${col.label}. Sorted descending. Activate to clear sorting.`
-        : `${col.label}. Not sorted. Activate to sort ascending.`;
-
-  const selected = headerDistinctFilter?.activeColumn?.id === col.id ? headerDistinctFilter.activeSelected : [];
-  const selectedCount = Array.isArray(selected) ? selected.length : 0;
-
-  const filterA11y = selectedCount
-    ? `${col.label}. Filtered by ${selectedCount} value${selectedCount === 1 ? "" : "s"}. Activate to edit filter.`
-    : `${col.label}. Not filtered. Activate to filter by distinct values.`;
-
-  return (
-    <th
-      key={col.id}
-      scope="col"
-      style={alignRight ? { textAlign: "right" } : undefined}
-      className="RmgTh"
-    >
-      <div className="RmgThInner">
-        <button
-          type="button"
-          className="RmgThButton"
-          onClick={() => onToggleSort(col.id)}
-          aria-label={sortA11y}
-        >
-          <span>{col.label}</span>
-          <span className={`RmgSortIcon${isSorted ? " RmgSortIcon--active" : ""}`} aria-hidden="true">
-            <FontAwesomeIcon icon={icon} />
-          </span>
-        </button>
-
-        {hasFacetFilter && (
-          <button
-            type="button"
-            className={`RmgHeaderIconBtn${selectedCount ? " RmgHeaderIconBtn--active" : ""}`}
-            aria-label={filterA11y}
-            aria-haspopup="menu"
-            aria-expanded={isFilterOpen ? "true" : "false"}
-            onClick={(e) => {
-              // Prevent header click interactions from fighting with other controls
-              e.stopPropagation();
-              headerDistinctFilter?.toggle(col.id);
-            }}
-            // Keep the dropdown anchored to the icon-trigger button itself (consistent across all tables).
-            ref={(el) => {
-              if (!headerDistinctFilter?.triggerRefs?.current) return;
-              headerDistinctFilter.triggerRefs.current[col.id] = el;
-            }}
-            title="Filter"
-          >
-            <span className="RmgHeaderIconFunnel" aria-hidden="true">
-              <FontAwesomeIcon icon={faFilter} />
-            </span>
-          </button>
-        )}
-      </div>
-    </th>
-  );
-}
-
-function HeaderDistinctFilterMenu({ headerDistinctFilter }) {
-  const col = headerDistinctFilter?.activeColumn;
-  const openFor = headerDistinctFilter?.openForColumnId;
-  const options = headerDistinctFilter?.activeOptions || [];
-  const selected = headerDistinctFilter?.activeSelected || [];
-  const pos = headerDistinctFilter?.menuPosition || null;
-
-  if (!col || !openFor) return null;
-
-  const selectedSet = new Set(selected.map((v) => String(v)));
-  const allValues = options.map((v) => String(v));
-  const allCount = allValues.length;
-  const selectedCount = selectedSet.size;
-
-  // "Select all" states:
-  // - checked when every option is selected
-  // - indeterminate when some (but not all) are selected
-  const isAllSelected = allCount > 0 && selectedCount === allCount;
-  const isIndeterminate = selectedCount > 0 && selectedCount < allCount;
-
-  const selectAllId = `${col.id}-distinct-select-all`;
-
-  const panelStyle = pos
-    ? {
-        position: "fixed",
-        top: pos.top,
-        left: pos.left,
-        zIndex: 3000,
-        minWidth: pos.minWidth || 280,
-        maxWidth: pos.maxWidth || 360,
-      }
-    : undefined;
-
-  return (
-    <div className="RmgHeaderMenu" role="presentation">
-      <div
-        ref={headerDistinctFilter.menuRef}
-        className="RmgHeaderMenuPanel"
-        role="menu"
-        aria-label={`Filter ${col.label}`}
-        style={panelStyle}
-      >
-        <div className="RmgHeaderMenuTitleRow">
-          <div className="RmgHeaderMenuTitle">Filter: {col.label}</div>
-          <button
-            type="button"
-            className="RmgHeaderMenuClearBtn"
-            onClick={() => headerDistinctFilter.applySelection([])}
-            aria-label={`Clear filter for ${col.label}`}
-            disabled={selected.length === 0}
-          >
-            Clear
-          </button>
-        </div>
-
-        {options.length === 0 ? (
-          <div className="RmgHeaderMenuEmpty" role="status">
-            No values available.
-          </div>
-        ) : (
-          <ul className="RmgHeaderMenuList" role="none">
-            <li key={`${col.id}-distinct-select-all`} role="none" className="RmgHeaderMenuItem">
-              <label className="RmgHeaderMenuCheck" htmlFor={selectAllId}>
-                <input
-                  id={selectAllId}
-                  type="checkbox"
-                  checked={isAllSelected}
-                  ref={(el) => {
-                    // React doesn't have a native "indeterminate" prop; set it imperatively.
-                    if (el) el.indeterminate = isIndeterminate;
-                  }}
-                  onChange={(e) => {
-                    // If user checks -> select all options
-                    // If user unchecks -> clear selection
-                    headerDistinctFilter.applySelection(e.target.checked ? allValues : []);
-                  }}
-                  aria-label={`Select all values for ${col.label}`}
-                />
-                <span className="RmgHeaderMenuValue">
-                  Select all <span className="RmgMono">({selectedCount}/{allCount})</span>
-                </span>
-              </label>
-            </li>
-
-            {options.map((v) => {
-              const checked = selectedSet.has(String(v));
-              return (
-                <li key={`${col.id}-distinct-${v}`} role="none" className="RmgHeaderMenuItem">
-                  <label className="RmgHeaderMenuCheck">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={(e) => {
-                        const next = new Set(selectedSet);
-                        if (e.target.checked) next.add(String(v));
-                        else next.delete(String(v));
-                        headerDistinctFilter.applySelection(Array.from(next));
-                      }}
-                      aria-label={`Filter by ${v}`}
-                    />
-                    <span className="RmgHeaderMenuValue">{v}</span>
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-
-        <div className="RmgHeaderMenuFooter">
-          <button
-            type="button"
-            className="RmgButton RmgButton--small"
-            onClick={() => {
-              headerDistinctFilter.close();
-              const el = headerDistinctFilter.triggerRefs.current?.[col.id];
-              if (el && typeof el.focus === "function") el.focus();
-            }}
-          >
-            Done
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ColumnFilterCell({ col, facets, value, onChange, disabled, withinPopover = false }) {
-  // Dedicated filter row cell: always renders a stable-height container to avoid overlap/shift.
-  const cellKey = `${col.id}-filter`;
-
-  // Render an "empty" stable cell for columns without filtering.
-  if (!col.filterType) {
-    return (
-      <th key={cellKey} scope="col" aria-hidden="true">
-        <div className="RmgFilterControl" />
-      </th>
-    );
-  }
-
-  const commonProps = { disabled };
-
-  // For dense filters, we render the control(s) inside a small labeled block.
-  // This keeps min/max and start/end date layouts readable and non-overlapping.
-  const wrapInBlock = (control, ariaLabel) => {
-    if (!withinPopover) return control;
-
-    // In the popover, we want each filter to be full width and clearly labeled.
-    return (
-      <div className="RmgPopoverFilterBlock" aria-label={ariaLabel}>
-        <div className="RmgPopoverFilterLabel">{col.label}</div>
-        {control}
-      </div>
-    );
-  };
-
-  if (col.filterType === "select") {
-    const options = facets?.[col.id] || [];
-    const control = (
-      <div className="RmgFilterControl">
-        <select
-          className="RmgFilterSelect"
-          value={value?.value || ""}
-          onChange={(e) => onChange(col.id, { type: "select", value: e.target.value })}
-          aria-label={`Filter ${col.label}`}
-          {...commonProps}
-        >
-          <option value="">All</option>
-          {options.map((opt) => (
-            <option key={`${col.id}-opt-${opt}`} value={opt}>
-              {opt}
-            </option>
-          ))}
-        </select>
-      </div>
-    );
-
-    return (
-      <th key={cellKey} scope="col">
-        {wrapInBlock(control, `More filters ${col.label}`)}
-      </th>
-    );
-  }
-
-  if (col.filterType === "multiselect") {
-    const options = facets?.[col.id] || [];
-    const selected = Array.isArray(value?.values) ? value.values : [];
-    const control = (
-      <div className="RmgFilterControl">
-        <select
-          multiple
-          className="RmgFilterSelect"
-          value={selected}
-          onChange={(e) => {
-            const next = Array.from(e.target.selectedOptions).map((o) => o.value);
-            onChange(col.id, { type: "multiselect", values: next });
-          }}
-          aria-label={`Filter ${col.label} (multi-select)`}
-          {...commonProps}
-        >
-          {options.map((opt) => (
-            <option key={`${col.id}-opt-${opt}`} value={opt}>
-              {opt}
-            </option>
-          ))}
-        </select>
-      </div>
-    );
-
-    return (
-      <th key={cellKey} scope="col">
-        {wrapInBlock(control, `More filters ${col.label}`)}
-      </th>
-    );
-  }
-
-  if (col.filterType === "text") {
-    const control = (
-      <div className="RmgFilterControl">
-        <input
-          className="RmgFilterInput"
-          type="search"
-          value={value?.value || ""}
-          onChange={(e) => onChange(col.id, { type: "text", value: e.target.value })}
-          placeholder="Filter…"
-          aria-label={`Filter ${col.label} text`}
-          {...commonProps}
-        />
-      </div>
-    );
-
-    return (
-      <th key={cellKey} scope="col">
-        {wrapInBlock(control, `More filters ${col.label}`)}
-      </th>
-    );
-  }
-
-  if (col.filterType === "numberRange") {
-    const control = (
-      <div className="RmgFilterControl RmgFilterControl--range">
-        <div className="RmgFilterRangeField">
-          <span className="RmgFilterRangeLabel">Min</span>
-          <input
-            className="RmgFilterInput"
-            type="number"
-            inputMode="numeric"
-            value={value?.min || ""}
-            onChange={(e) =>
-              onChange(col.id, { type: "numberRange", min: e.target.value, max: value?.max || "" })
-            }
-            placeholder="Min"
-            aria-label={`Filter ${col.label} min`}
-            {...commonProps}
-          />
-        </div>
-
-        <div className="RmgFilterRangeField">
-          <span className="RmgFilterRangeLabel">Max</span>
-          <input
-            className="RmgFilterInput"
-            type="number"
-            inputMode="numeric"
-            value={value?.max || ""}
-            onChange={(e) =>
-              onChange(col.id, { type: "numberRange", min: value?.min || "", max: e.target.value })
-            }
-            placeholder="Max"
-            aria-label={`Filter ${col.label} max`}
-            {...commonProps}
-          />
-        </div>
-      </div>
-    );
-
-    return (
-      <th key={cellKey} scope="col">
-        {wrapInBlock(control, `More filters ${col.label}`)}
-      </th>
-    );
-  }
-
-  if (col.filterType === "dateRange") {
-    const control = (
-      <div className="RmgFilterControl RmgFilterControl--range">
-        <div className="RmgFilterRangeField">
-          <span className="RmgFilterRangeLabel">Start</span>
-          <input
-            className="RmgFilterInput"
-            type="date"
-            value={value?.min || ""}
-            onChange={(e) =>
-              onChange(col.id, { type: "dateRange", min: e.target.value, max: value?.max || "" })
-            }
-            aria-label={`Filter ${col.label} start date`}
-            {...commonProps}
-          />
-        </div>
-
-        <div className="RmgFilterRangeField">
-          <span className="RmgFilterRangeLabel">End</span>
-          <input
-            className="RmgFilterInput"
-            type="date"
-            value={value?.max || ""}
-            onChange={(e) =>
-              onChange(col.id, { type: "dateRange", min: value?.min || "", max: e.target.value })
-            }
-            aria-label={`Filter ${col.label} end date`}
-            {...commonProps}
-          />
-        </div>
-      </div>
-    );
-
-    return (
-      <th key={cellKey} scope="col">
-        {wrapInBlock(control, `More filters ${col.label}`)}
-      </th>
-    );
-  }
-
-  return (
-    <th key={cellKey} scope="col" aria-hidden="true">
-      <div className="RmgFilterControl" />
-    </th>
-  );
-}
-
-function RmgTrackerTableSection({
-  show,
-  loading,
-  visibleColumns,
-  ALL_COLUMNS,
-  filteredRows,
-  pagedRows,
-  facets,
-  columnFilters,
-  updateColumnFilter,
-  sortState,
-  toggleSort,
-  renderCell,
-}) {
-  /** Table section extracted as a real component so hooks are valid and stable. */
-  const [moreFiltersOpen, setMoreFiltersOpen] = React.useState(false);
-
-  // Enable the overflow pattern when tables are very wide/dense.
-  const { inlineColumns, overflowColumns } = chooseVisibleFilterColumns(visibleColumns, {
-    enableMoreFilters: true,
-    maxInlineFilterCount: 9,
-    // Keep key identifiers inline so the user always sees "what column is what".
-    alwaysInlineColumnIds: ["empId", "name"],
-  });
-
-  const triggerId = "rmg-more-filters-trigger";
-
-  const headerDistinctFilter = useHeaderDistinctValueFilter({
-    rows: filteredRows,
-    columns: ALL_COLUMNS,
-    columnFilters,
-    onChange: updateColumnFilter,
-  });
-
-  React.useEffect(() => {
-    if (!show && moreFiltersOpen) setMoreFiltersOpen(false);
-  }, [show, moreFiltersOpen]);
-
-  if (!show) return null;
-
-  return (
-    <div className="RmgTableWrap" role="region" aria-label="RMG table">
-      {overflowColumns.length > 0 && (
-        <div className="RmgFilterRowActions" aria-label="Column filter actions">
-          <button
-            id={triggerId}
-            type="button"
-            className="RmgButton RmgButton--small"
-            onClick={() => setMoreFiltersOpen(true)}
-            aria-haspopup="dialog"
-            aria-expanded={moreFiltersOpen ? "true" : "false"}
-            aria-controls="rmg-more-filters-popover"
-          >
-            More filters ({overflowColumns.length})
-          </button>
-
-          <MoreFiltersPopover
-            open={moreFiltersOpen}
-            onClose={() => setMoreFiltersOpen(false)}
-            returnFocusToId={triggerId}
-            ariaLabel="More filters"
-          >
-            <div id="rmg-more-filters-popover" className="RmgPopoverFiltersGrid">
-              {overflowColumns
-                .filter((c) => Boolean(c.filterType))
-                .map((c) => (
-                  <div key={`rmg-popover-filter-${c.id}`} className="RmgPopoverFiltersGridItem">
-                    <table className="RmgPopoverTable" aria-label={`More filters for ${c.label}`}>
-                      <thead>
-                        <tr className="RmgPopoverRow">
-                          <ColumnFilterCell
-                            col={c}
-                            facets={facets}
-                            value={columnFilters[c.id]}
-                            onChange={updateColumnFilter}
-                            disabled={loading}
-                            withinPopover
-                          />
-                        </tr>
-                      </thead>
-                    </table>
-                  </div>
-                ))}
-            </div>
-          </MoreFiltersPopover>
-        </div>
-      )}
-
-      <HeaderDistinctFilterMenu headerDistinctFilter={headerDistinctFilter} />
-
-      <table className="RmgTable">
-        <thead>
-          <tr>
-            {visibleColumns.map((c) => (
-              <ColumnHeaderTh
-                key={c.id}
-                col={c}
-                sortState={sortState}
-                onToggleSort={toggleSort}
-                headerDistinctFilter={headerDistinctFilter}
-                alignRight={c.id === "allocationPct"}
-              />
-            ))}
-          </tr>
-
-          <tr className="RmgFilterRow" aria-label="Column filters">
-            {inlineColumns.map((c) => (
-              <ColumnFilterCell
-                key={`${c.id}-filter`}
-                col={c}
-                facets={facets}
-                value={columnFilters[c.id]}
-                onChange={updateColumnFilter}
-                disabled={loading}
-              />
-            ))}
-
-            {overflowColumns.map((c) => (
-              <th key={`${c.id}-filter-overflow`} scope="col" aria-hidden="true">
-                <div className="RmgFilterControl" />
-              </th>
-            ))}
-          </tr>
-        </thead>
-
-        <tbody>
-          {pagedRows.length === 0 ? (
-            <tr>
-              <td colSpan={Math.max(1, visibleColumns.length)} className="RmgEmptyCell">
-                No records found.
-              </td>
-            </tr>
-          ) : (
-            pagedRows.map((r) => (
-              <tr key={r.empId}>
-                {visibleColumns.map((c) => (
-                  <td
-                    key={`${r.empId}-${c.id}`}
-                    style={c.id === "allocationPct" ? { textAlign: "right" } : undefined}
-                  >
-                    {renderCell(r, c.id)}
-                  </td>
-                ))}
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
+  return value;
 }
 
 // PUBLIC_INTERFACE
 export function RmgTrackerPage() {
-  /** RMG Tracker page that fetches (mocked) data and renders a table with loading and error states. */
+  /** RMG Tracker page that fetches (mocked) data and renders a PrimeReact table while preserving existing UX features. */
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [errorMessage, setErrorMessage] = React.useState("");
 
-  // Table options
-  const [searchText, setSearchText] = React.useState("");
+  // Page-level dropdown filters (kept as in old UX)
   const [filters, setFilters] = React.useState({
     employeeType: "",
     currentStatus: "",
@@ -1514,35 +774,6 @@ export function RmgTrackerPage() {
     ],
     []
   );
-
-  const DEFAULT_VISIBLE_COLUMN_IDS = React.useMemo(() => ALL_COLUMNS.map((c) => c.id), [ALL_COLUMNS]);
-
-  const [visibleColumnIds, setVisibleColumnIds] = React.useState(DEFAULT_VISIBLE_COLUMN_IDS);
-  const [columnPanelOpen, setColumnPanelOpen] = React.useState(false);
-
-  // Sorting + per-column filters (new)
-  const { sortState, toggleSort, clearSort } = useTableSorting();
-  const [columnFilters, setColumnFilters] = React.useState({});
-
-  function updateColumnFilter(colId, nextValue) {
-    setColumnFilters((prev) => {
-      const next = { ...prev, [colId]: nextValue };
-      // Clean up empty filters so state stays readable.
-      const v = next[colId];
-      if (!v) return next;
-      if (v.type === "text" && !String(v.value || "").trim()) delete next[colId];
-      if (v.type === "select" && !String(v.value || "").trim()) delete next[colId];
-      if (v.type === "multiselect" && (!Array.isArray(v.values) || v.values.length === 0)) delete next[colId];
-      if (v.type === "numberRange" && !String(v.min || "").trim() && !String(v.max || "").trim()) delete next[colId];
-      if (v.type === "dateRange" && !String(v.min || "").trim() && !String(v.max || "").trim()) delete next[colId];
-      return next;
-    });
-  }
-
-  // Pagination
-  const PAGE_SIZES = React.useMemo(() => [3, 5, 10, 20], []);
-  const [pageSize, setPageSize] = React.useState(5);
-  const [pageIndex, setPageIndex] = React.useState(0);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -1580,95 +811,31 @@ export function RmgTrackerPage() {
     };
   }, [load]);
 
-  // Build filter options from available values in the dataset (current rows)
   const filterOptions = React.useMemo(() => {
     const employeeType = uniqueSorted(rows.map((r) => r.employeeType));
     const currentStatus = uniqueSorted(rows.map((r) => r.currentStatus));
     const location = uniqueSorted(rows.map((r) => r.location));
     const grade = uniqueSorted(rows.map((r) => r.grade));
-
     return { employeeType, currentStatus, location, grade };
   }, [rows]);
 
-  // Facets for the per-column filters (select/multi-select)
-  const facets = React.useMemo(() => buildFacetOptions(rows, ALL_COLUMNS), [rows, ALL_COLUMNS]);
-
-  // Apply filters + global search + per-column filtering + sorting
-  const filteredRows = React.useMemo(() => {
-    const query = searchText.trim().toLowerCase();
-
-    const basicFiltered = rows.filter((r) => {
-      // Basic dropdown filters (exact match)
+  // Apply page-level filters before passing into table
+  const prefilteredRows = React.useMemo(() => {
+    return (Array.isArray(rows) ? rows : []).filter((r) => {
       if (filters.employeeType && normalizeText(r.employeeType) !== filters.employeeType) return false;
       if (filters.currentStatus && normalizeText(r.currentStatus) !== filters.currentStatus) return false;
       if (filters.location && normalizeText(r.location) !== filters.location) return false;
       if (filters.grade && normalizeText(r.grade) !== filters.grade) return false;
-
-      // Global search: match any cell (across ALL columns, not only visible ones).
-      if (!query) return true;
-
-      const anyMatch = ALL_COLUMNS.some((c) => {
-        const value = r[c.id];
-        return normalizeText(value).toLowerCase().includes(query);
-      });
-
-      return anyMatch;
+      return true;
     });
-
-    const columnFiltered = applyColumnFilters(basicFiltered, ALL_COLUMNS, columnFilters);
-    return sortRows(columnFiltered, ALL_COLUMNS, sortState);
-  }, [rows, filters, searchText, ALL_COLUMNS, columnFilters, sortState]);
-
-  // Reset pagination when the dataset changes (search/filters/pageSize/columnFilters/sort)
-  React.useEffect(() => {
-    setPageIndex(0);
-  }, [
-    searchText,
-    filters.employeeType,
-    filters.currentStatus,
-    filters.location,
-    filters.grade,
-    pageSize,
-    JSON.stringify(columnFilters),
-    sortState.columnId,
-    sortState.direction,
-  ]);
-
-  const totalRows = filteredRows.length;
-  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
-  const safePageIndex = Math.min(pageIndex, totalPages - 1);
-  const start = safePageIndex * pageSize;
-  const end = start + pageSize;
-  const pagedRows = filteredRows.slice(start, end);
-
-  const visibleColumns = React.useMemo(() => {
-    const set = new Set(visibleColumnIds);
-    return ALL_COLUMNS.filter((c) => set.has(c.id));
-  }, [ALL_COLUMNS, visibleColumnIds]);
-
-  function toggleColumn(colId) {
-    setVisibleColumnIds((prev) => {
-      const set = new Set(prev);
-      if (set.has(colId)) set.delete(colId);
-      else set.add(colId);
-      if (set.size === 0) return prev;
-      return Array.from(set);
-    });
-  }
-
-  function clearFilters() {
-    setFilters({ employeeType: "", currentStatus: "", location: "", grade: "" });
-    setSearchText("");
-    setColumnFilters({});
-    clearSort();
-  }
+  }, [rows, filters]);
 
   function renderCell(r, colId) {
     switch (colId) {
       case "empId":
         return <span className="RmgMono">{r.empId}</span>;
       case "allocationPct":
-        return <span style={{ display: "inline-block", minWidth: 30 }}>{r.allocationPct}</span>;
+        return <span className="RmgMono">{r.allocationPct}</span>;
       case "status":
         return <span className={`RmgPill RmgPill--${String(r.status).toLowerCase()}`}>{r.status}</span>;
       case "startDate":
@@ -1692,8 +859,6 @@ export function RmgTrackerPage() {
     }
   }
 
-  const showTable = !loading && !errorMessage;
-
   return (
     <main className="App-main" aria-label="RMG Tracker page">
       <section className="HelloCard HelloCard--wide" aria-label="RMG Tracker content">
@@ -1706,176 +871,69 @@ export function RmgTrackerPage() {
             {loading ? "Loading…" : "Refresh"}
           </button>
 
-          <button
-            type="button"
-            className="RmgButton"
-            onClick={() => setColumnPanelOpen((v) => !v)}
-            aria-expanded={columnPanelOpen ? "true" : "false"}
-            aria-controls="rmg-column-panel"
-            disabled={loading}
-          >
-            Columns
-          </button>
-
-          <button type="button" className="RmgButton" onClick={clearFilters} disabled={loading}>
-            Reset
-          </button>
-
           <Link className="RmgLink" to="/">
             Back to Home
           </Link>
         </div>
 
-        {/* Controls */}
         {!loading && !errorMessage && (
-          <div className="RmgOptions" aria-label="RMG table options">
+          <div className="RmgOptions" aria-label="RMG table filters">
             <div className="RmgOptionsRow">
               <label className="RmgField">
-                <span className="RmgFieldLabel">Search</span>
-                <input
-                  className="RmgInput"
-                  type="search"
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                  placeholder="Search any field…"
-                  aria-label="Global search"
+                <span className="RmgFieldLabel">Employee Type</span>
+                <Dropdown
+                  value={filters.employeeType}
+                  options={[{ label: "All", value: "" }, ...filterOptions.employeeType.map((v) => ({ label: v, value: v }))]}
+                  onChange={(e) => setFilters((f) => ({ ...f, employeeType: e.value }))}
+                  placeholder="All"
+                  aria-label="Filter by employee type"
+                  style={{ width: "100%" }}
                 />
               </label>
 
               <label className="RmgField">
-                <span className="RmgFieldLabel">Employee Type</span>
-                <select
-                  className="RmgSelect"
-                  value={filters.employeeType}
-                  onChange={(e) => setFilters((f) => ({ ...f, employeeType: e.target.value }))}
-                  aria-label="Filter by employee type"
-                >
-                  <option value="">All</option>
-                  {filterOptions.employeeType.map((v) => (
-                    <option key={`employeeType-${v}`} value={v}>
-                      {v}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="RmgField">
                 <span className="RmgFieldLabel">Current Status</span>
-                <select
-                  className="RmgSelect"
+                <Dropdown
                   value={filters.currentStatus}
-                  onChange={(e) => setFilters((f) => ({ ...f, currentStatus: e.target.value }))}
+                  options={[{ label: "All", value: "" }, ...filterOptions.currentStatus.map((v) => ({ label: v, value: v }))]}
+                  onChange={(e) => setFilters((f) => ({ ...f, currentStatus: e.value }))}
+                  placeholder="All"
                   aria-label="Filter by current status"
-                >
-                  <option value="">All</option>
-                  {filterOptions.currentStatus.map((v) => (
-                    <option key={`currentStatus-${v}`} value={v}>
-                      {v}
-                    </option>
-                  ))}
-                </select>
+                  style={{ width: "100%" }}
+                />
               </label>
 
               <label className="RmgField">
                 <span className="RmgFieldLabel">Location</span>
-                <select
-                  className="RmgSelect"
+                <Dropdown
                   value={filters.location}
-                  onChange={(e) => setFilters((f) => ({ ...f, location: e.target.value }))}
+                  options={[{ label: "All", value: "" }, ...filterOptions.location.map((v) => ({ label: v, value: v }))]}
+                  onChange={(e) => setFilters((f) => ({ ...f, location: e.value }))}
+                  placeholder="All"
                   aria-label="Filter by location"
-                >
-                  <option value="">All</option>
-                  {filterOptions.location.map((v) => (
-                    <option key={`location-${v}`} value={v}>
-                      {v}
-                    </option>
-                  ))}
-                </select>
+                  style={{ width: "100%" }}
+                />
               </label>
 
               <label className="RmgField">
                 <span className="RmgFieldLabel">Grade</span>
-                <select
-                  className="RmgSelect"
+                <Dropdown
                   value={filters.grade}
-                  onChange={(e) => setFilters((f) => ({ ...f, grade: e.target.value }))}
+                  options={[{ label: "All", value: "" }, ...filterOptions.grade.map((v) => ({ label: v, value: v }))]}
+                  onChange={(e) => setFilters((f) => ({ ...f, grade: e.value }))}
+                  placeholder="All"
                   aria-label="Filter by grade"
-                >
-                  <option value="">All</option>
-                  {filterOptions.grade.map((v) => (
-                    <option key={`grade-${v}`} value={v}>
-                      {v}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <div className="RmgOptionsRow RmgOptionsRow--meta" aria-label="RMG table meta">
-              <div className="RmgMetaText" aria-live="polite">
-                Showing <strong>{totalRows === 0 ? 0 : start + 1}</strong>–<strong>{Math.min(end, totalRows)}</strong> of{" "}
-                <strong>{totalRows}</strong>
-              </div>
-
-              <label className="RmgField RmgField--inline">
-                <span className="RmgFieldLabel">Page size</span>
-                <select className="RmgSelect" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} aria-label="Select page size">
-                  {PAGE_SIZES.map((s) => (
-                    <option key={`pageSize-${s}`} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
+                  style={{ width: "100%" }}
+                />
               </label>
 
-              <div className="RmgPager" aria-label="Pagination controls">
-                <button type="button" className="RmgButton RmgButton--small" onClick={() => setPageIndex((p) => Math.max(0, p - 1))} disabled={safePageIndex <= 0}>
-                  Prev
+              <label className="RmgField">
+                <span className="RmgFieldLabel">Quick reset</span>
+                <button type="button" className="RmgButton" onClick={() => setFilters({ employeeType: "", currentStatus: "", location: "", grade: "" })} disabled={loading}>
+                  Reset filters
                 </button>
-                <span className="RmgPagerText" aria-label="Current page">
-                  Page <strong>{safePageIndex + 1}</strong> of <strong>{totalPages}</strong>
-                </span>
-                <button
-                  type="button"
-                  className="RmgButton RmgButton--small"
-                  onClick={() => setPageIndex((p) => Math.min(totalPages - 1, p + 1))}
-                  disabled={safePageIndex >= totalPages - 1}
-                >
-                  Next
-                </button>
-              </div>
+              </label>
             </div>
-
-            {columnPanelOpen && (
-              <div id="rmg-column-panel" className="RmgColumnPanel" role="region" aria-label="Column visibility">
-                <div className="RmgColumnPanelHeader">
-                  <div className="RmgColumnPanelTitle">Visible columns</div>
-                  <button type="button" className="RmgButton RmgButton--small" onClick={() => setColumnPanelOpen(false)} aria-label="Close column visibility panel">
-                    Close
-                  </button>
-                </div>
-
-                <div className="RmgColumnGrid">
-                  {ALL_COLUMNS.map((c) => {
-                    const checked = visibleColumnIds.includes(c.id);
-                    const isLastVisible = checked && visibleColumnIds.length === 1;
-
-                    return (
-                      <label key={c.id} className="RmgCheckbox">
-                        <input type="checkbox" checked={checked} onChange={() => toggleColumn(c.id)} disabled={isLastVisible} aria-label={`Toggle column ${c.label}`} />
-                        <span>{c.label}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-
-                {visibleColumnIds.length === 1 && (
-                  <div className="RmgHint" role="note">
-                    At least one column must remain visible.
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         )}
 
@@ -1896,29 +954,30 @@ export function RmgTrackerPage() {
           </div>
         )}
 
-        <RmgTrackerTableSection
-          show={showTable}
-          loading={loading}
-          visibleColumns={visibleColumns}
-          ALL_COLUMNS={ALL_COLUMNS}
-          filteredRows={filteredRows}
-          pagedRows={pagedRows}
-          facets={facets}
-          columnFilters={columnFilters}
-          updateColumnFilter={updateColumnFilter}
-          sortState={sortState}
-          toggleSort={toggleSort}
-          renderCell={renderCell}
-        />
+        {!loading && !errorMessage && (
+          <PrimeDataTableCard
+            title="RMG Table"
+            subtitle="PrimeReact DataTable with preserved filters/sort/pagination UX."
+            columns={ALL_COLUMNS}
+            rows={prefilteredRows}
+            loading={loading}
+            errorMessage={errorMessage}
+            alwaysInlineColumnIds={["empId", "name"]}
+            rowKey={(r) => r.empId}
+            renderCell={renderCell}
+          />
+        )}
       </section>
     </main>
   );
 }
 
 /**
- * Mocked response used for the Skill Factories table.
- * Replace this with a real fetch() call when backend is ready.
+ * ---------------------------------------------------------------------------
+ * Skill Factories
+ * ---------------------------------------------------------------------------
  */
+
 const DUMMY_SKILL_FACTORIES_RESPONSE = {
   status: "success",
   data: [
@@ -1926,18 +985,8 @@ const DUMMY_SKILL_FACTORIES_RESPONSE = {
       skillFactoryId: "SF-PLATFORM-001",
       skillFactoryName: "Platform Engineering",
       mentors: [
-        {
-          mentorId: "M-001",
-          mentorName: "Mentor A",
-          mentorEmail: "mentor.a@example.com",
-          isInPool: true,
-        },
-        {
-          mentorId: "M-002",
-          mentorName: "Mentor B",
-          mentorEmail: "mentor.b@example.com",
-          isInPool: false,
-        },
+        { mentorId: "M-001", mentorName: "Mentor A", mentorEmail: "mentor.a@example.com", isInPool: true },
+        { mentorId: "M-002", mentorName: "Mentor B", mentorEmail: "mentor.b@example.com", isInPool: false },
       ],
       employees: [
         {
@@ -1958,99 +1007,67 @@ const DUMMY_SKILL_FACTORIES_RESPONSE = {
   count: 1,
 };
 
-/**
- * Simulates an API call with loading/error states.
- * This is where a real request will live later:
- *   fetch(`${process.env.REACT_APP_API_BASE}/skill-factories`, ...)
- */
 async function fetchSkillFactoriesMock({ signal } = {}) {
-  // Simulate network latency
-  await new Promise((resolve, reject) => {
-    const timeoutId = setTimeout(resolve, 650);
-    if (signal) {
-      signal.addEventListener(
-        "abort",
-        () => {
-          clearTimeout(timeoutId);
-          reject(new DOMException("Request aborted", "AbortError"));
-        },
-        { once: true }
-      );
-    }
-  });
-
-  // Toggle to validate error UI if needed.
+  await delay(650, { signal });
   const shouldFail = false;
-  if (shouldFail) {
-    throw new Error("Failed to load Skill Factories. Please try again.");
-  }
-
+  if (shouldFail) throw new Error("Failed to load Skill Factories. Please try again.");
   return DUMMY_SKILL_FACTORIES_RESPONSE;
 }
 
-function formatLearningPathsIsoDateTimeOrDash(value) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return date.toISOString().replace(".000Z", "Z");
+function formatRatingOrDash(value) {
+  if (value === null || value === undefined) return "—";
+  const num = Number(value);
+  if (Number.isNaN(num)) return "—";
+  return num.toFixed(1);
+}
+
+function yesNo(value) {
+  if (value === true) return "Yes";
+  if (value === false) return "No";
+  return "—";
+}
+
+function flattenPoolFlags(sf) {
+  const flags = [];
+  if (Array.isArray(sf.mentors)) flags.push(...sf.mentors.map((m) => m?.isInPool));
+  if (Array.isArray(sf.employees)) flags.push(...sf.employees.map((e) => e?.isInPool));
+  return flags.some(Boolean);
+}
+
+function getMentorPoolStatus(sf) {
+  if (!Array.isArray(sf.mentors) || sf.mentors.length === 0) return "—";
+  return sf.mentors.some((m) => m?.isInPool) ? "In pool" : "Not in pool";
+}
+
+function getEmployeePoolStatus(sf) {
+  if (!Array.isArray(sf.employees) || sf.employees.length === 0) return "—";
+  return sf.employees.some((e) => e?.isInPool) ? "In pool" : "Not in pool";
+}
+
+function safeArrayCount(value) {
+  if (!Array.isArray(value)) return 0;
+  return value.length;
 }
 
 // PUBLIC_INTERFACE
 export function SkillFactoriesPage() {
-  /** Skill Factories page that fetches (mocked) data and renders a table with loading and error states + client-side table UX. */
+  /** Skill Factories page that fetches (mocked) data and renders a PrimeReact table with preserved filtering UX. */
   const location = useLocation();
 
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [errorMessage, setErrorMessage] = React.useState("");
 
-  // Table options (match RMG Tracker UX)
-  const [searchText, setSearchText] = React.useState("");
   const [filters, setFilters] = React.useState({
     skillFactoryName: "",
     mentorPoolStatus: "",
     employeePoolStatus: "",
   });
 
-  // New per-column filters + sorting
-  const { sortState, toggleSort, clearSort } = useTableSorting();
-  const [columnFilters, setColumnFilters] = React.useState({});
-  function updateColumnFilter(colId, nextValue) {
-    setColumnFilters((prev) => {
-      const next = { ...prev, [colId]: nextValue };
-      const v = next[colId];
-      if (!v) return next;
-      if (v.type === "text" && !String(v.value || "").trim()) delete next[colId];
-      if (v.type === "select" && !String(v.value || "").trim()) delete next[colId];
-      if (v.type === "multiselect" && (!Array.isArray(v.values) || v.values.length === 0)) delete next[colId];
-      if (v.type === "numberRange" && !String(v.min || "").trim() && !String(v.max || "").trim()) delete next[colId];
-      if (v.type === "dateRange" && !String(v.min || "").trim() && !String(v.max || "").trim()) delete next[colId];
-      return next;
-    });
-  }
-
-  // Apply URL query parameters to pre-populate controls (mirrors LearningPathsPage approach).
-  const hasAppliedQueryRef = React.useRef(false);
   React.useEffect(() => {
-    const { q, mentorPool, employeePool } = parseSkillFactoriesQuery(location.search);
-
-    setSearchText(q);
-
-    const normalizedMentorPool = normalizePoolParam(mentorPool);
-    const normalizedEmployeePool = normalizePoolParam(employeePool);
-
-    const nextMentorLabel = poolParamToLabel(normalizedMentorPool);
-    const nextEmployeeLabel = poolParamToLabel(normalizedEmployeePool);
-
-    if (!hasAppliedQueryRef.current) {
-      setFilters((f) => ({
-        ...f,
-        mentorPoolStatus: nextMentorLabel || "",
-        employeePoolStatus: nextEmployeeLabel || "",
-      }));
-      hasAppliedQueryRef.current = true;
-      return;
-    }
+    const { mentorPool, employeePool } = parseSkillFactoriesQuery(location.search);
+    const nextMentorLabel = poolParamToLabel(normalizePoolParam(mentorPool));
+    const nextEmployeeLabel = poolParamToLabel(normalizePoolParam(employeePool));
 
     setFilters((f) => ({
       ...f,
@@ -2109,7 +1126,10 @@ export function SkillFactoriesPage() {
         sortType: "text",
         filterType: "text",
         accessor: (sf) => (Array.isArray(sf.mentors) ? sf.mentors.map((m) => m?.mentorName).join(" ") : ""),
-        filterAccessor: (sf) => (Array.isArray(sf.mentors) ? sf.mentors.map((m) => `${m?.mentorName || ""} ${m?.mentorEmail || ""}`).join(" ") : ""),
+        filterAccessor: (sf) =>
+          Array.isArray(sf.mentors)
+            ? sf.mentors.map((m) => `${m?.mentorName || ""} ${m?.mentorEmail || ""} ${m?.isInPool ? "in" : "not-in"}`).join(" ")
+            : "",
       },
       {
         id: "employees",
@@ -2120,7 +1140,10 @@ export function SkillFactoriesPage() {
         filterAccessor: (sf) =>
           Array.isArray(sf.employees)
             ? sf.employees
-                .map((e) => `${e?.id || ""} ${e?.name || ""} ${e?.email || ""} ${formatRatingOrDash(e?.currentRating)}`)
+                .map(
+                  (e) =>
+                    `${e?.id || ""} ${e?.name || ""} ${e?.email || ""} ${formatRatingOrDash(e?.initialRating)} ${formatRatingOrDash(e?.currentRating)} ${e?.isInPool ? "in" : "not-in"}`
+                )
                 .join(" ")
             : "",
       },
@@ -2129,16 +1152,6 @@ export function SkillFactoriesPage() {
     ],
     []
   );
-
-  const DEFAULT_VISIBLE_COLUMN_IDS = React.useMemo(() => ALL_COLUMNS.map((c) => c.id), [ALL_COLUMNS]);
-
-  const [visibleColumnIds, setVisibleColumnIds] = React.useState(DEFAULT_VISIBLE_COLUMN_IDS);
-  const [columnPanelOpen, setColumnPanelOpen] = React.useState(false);
-
-  // Pagination
-  const PAGE_SIZES = React.useMemo(() => [3, 5, 10, 20], []);
-  const [pageSize, setPageSize] = React.useState(5);
-  const [pageIndex, setPageIndex] = React.useState(0);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -2178,24 +1191,15 @@ export function SkillFactoriesPage() {
 
   const filterOptions = React.useMemo(() => {
     const skillFactoryName = uniqueSorted(rows.map((r) => r.skillFactoryName));
-    const mentorPoolStatus = ["In pool", "Not in pool"];
-    const employeePoolStatus = ["In pool", "Not in pool"];
-    return { skillFactoryName, mentorPoolStatus, employeePoolStatus };
+    return {
+      skillFactoryName,
+      mentorPoolStatus: ["In pool", "Not in pool"],
+      employeePoolStatus: ["In pool", "Not in pool"],
+    };
   }, [rows]);
 
-  const facets = React.useMemo(() => {
-    const base = buildFacetOptions(rows, ALL_COLUMNS);
-    // Ensure derived select columns have stable options even if there are missing values.
-    base.mentorPoolStatus = ["In pool", "Not in pool"];
-    base.employeePoolStatus = ["In pool", "Not in pool"];
-    base.hasAnyPoolMembers = ["Yes", "No"];
-    return base;
-  }, [rows, ALL_COLUMNS]);
-
-  const filteredRows = React.useMemo(() => {
-    const query = searchText.trim().toLowerCase();
-
-    const basicFiltered = rows.filter((sf) => {
+  const prefilteredRows = React.useMemo(() => {
+    return (Array.isArray(rows) ? rows : []).filter((sf) => {
       const sfName = normalizeText(sf.skillFactoryName);
 
       if (filters.skillFactoryName && sfName !== filters.skillFactoryName) return false;
@@ -2206,99 +1210,9 @@ export function SkillFactoriesPage() {
       const employeesPool = getEmployeePoolStatus(sf);
       if (filters.employeePoolStatus && employeesPool !== filters.employeePoolStatus) return false;
 
-      // Global search across all columns (not only visible ones)
-      if (!query) return true;
-
-      const anyMatch = ALL_COLUMNS.some((c) => {
-        switch (c.id) {
-          case "mentorCount":
-            return String(safeArrayCount(sf.mentors)).toLowerCase().includes(query);
-          case "employeeCount":
-            return String(safeArrayCount(sf.employees)).toLowerCase().includes(query);
-          case "mentorPoolStatus":
-            return getMentorPoolStatus(sf).toLowerCase().includes(query);
-          case "employeePoolStatus":
-            return getEmployeePoolStatus(sf).toLowerCase().includes(query);
-          case "hasAnyPoolMembers":
-            return yesNo(flattenPoolFlags(sf)).toLowerCase().includes(query);
-          case "mentors":
-            return Array.isArray(sf.mentors)
-              ? sf.mentors
-                  .map((m) => `${m?.mentorName || ""} ${m?.mentorEmail || ""} ${yesNo(m?.isInPool)}`)
-                  .join(" ")
-                  .toLowerCase()
-                  .includes(query)
-              : false;
-          case "employees":
-            return Array.isArray(sf.employees)
-              ? sf.employees
-                  .map(
-                    (e) =>
-                      `${e?.id || ""} ${e?.name || ""} ${e?.email || ""} ${formatRatingOrDash(
-                        e?.initialRating
-                      )} ${formatRatingOrDash(e?.currentRating)} ${yesNo(e?.isInPool)}`
-                  )
-                  .join(" ")
-                  .toLowerCase()
-                  .includes(query)
-              : false;
-          case "createdAt":
-          case "updatedAt":
-            return normalizeText(formatIsoDateTimeOrDash(sf[c.id])).toLowerCase().includes(query);
-          default:
-            return normalizeText(sf[c.id]).toLowerCase().includes(query);
-        }
-      });
-
-      return anyMatch;
+      return true;
     });
-
-    const columnFiltered = applyColumnFilters(basicFiltered, ALL_COLUMNS, columnFilters);
-    return sortRows(columnFiltered, ALL_COLUMNS, sortState);
-  }, [rows, filters, searchText, ALL_COLUMNS, columnFilters, sortState]);
-
-  // Reset pagination when data set changes (search/filters/pageSize/columnFilters/sort)
-  React.useEffect(() => {
-    setPageIndex(0);
-  }, [
-    searchText,
-    filters.skillFactoryName,
-    filters.mentorPoolStatus,
-    filters.employeePoolStatus,
-    pageSize,
-    JSON.stringify(columnFilters),
-    sortState.columnId,
-    sortState.direction,
-  ]);
-
-  const totalRows = filteredRows.length;
-  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
-  const safePageIndex = Math.min(pageIndex, totalPages - 1);
-  const start = safePageIndex * pageSize;
-  const end = start + pageSize;
-  const pagedRows = filteredRows.slice(start, end);
-
-  const visibleColumns = React.useMemo(() => {
-    const set = new Set(visibleColumnIds);
-    return ALL_COLUMNS.filter((c) => set.has(c.id));
-  }, [ALL_COLUMNS, visibleColumnIds]);
-
-  function toggleColumn(colId) {
-    setVisibleColumnIds((prev) => {
-      const set = new Set(prev);
-      if (set.has(colId)) set.delete(colId);
-      else set.add(colId);
-      if (set.size === 0) return prev;
-      return Array.from(set);
-    });
-  }
-
-  function clearFilters() {
-    setFilters({ skillFactoryName: "", mentorPoolStatus: "", employeePoolStatus: "" });
-    setSearchText("");
-    setColumnFilters({});
-    clearSort();
-  }
+  }, [rows, filters]);
 
   function renderMentorChips(sf) {
     if (!Array.isArray(sf.mentors) || sf.mentors.length === 0) return "—";
@@ -2337,16 +1251,10 @@ export function SkillFactoriesPage() {
     switch (colId) {
       case "skillFactoryId":
         return <span className="RmgMono">{sf.skillFactoryId}</span>;
-      case "skillFactoryName":
-        return normalizeText(sf.skillFactoryName) || "—";
       case "mentorCount":
         return <span className="RmgMono">{safeArrayCount(sf.mentors)}</span>;
       case "employeeCount":
         return <span className="RmgMono">{safeArrayCount(sf.employees)}</span>;
-      case "mentorPoolStatus":
-        return getMentorPoolStatus(sf);
-      case "employeePoolStatus":
-        return getEmployeePoolStatus(sf);
       case "hasAnyPoolMembers":
         return <span className={`RmgPill ${flattenPoolFlags(sf) ? "RmgPill--billable" : "RmgPill--bench"}`}>{yesNo(flattenPoolFlags(sf))}</span>;
       case "mentors":
@@ -2361,8 +1269,6 @@ export function SkillFactoriesPage() {
     }
   }
 
-  const showTable = !loading && !errorMessage;
-
   return (
     <main className="App-main" aria-label="Skill Factories page">
       <section className="HelloCard HelloCard--wide" aria-label="Skill Factories content">
@@ -2375,131 +1281,57 @@ export function SkillFactoriesPage() {
             {loading ? "Loading…" : "Refresh"}
           </button>
 
-          <button
-            type="button"
-            className="RmgButton"
-            onClick={() => setColumnPanelOpen((v) => !v)}
-            aria-expanded={columnPanelOpen ? "true" : "false"}
-            aria-controls="skillfactories-column-panel"
-            disabled={loading}
-          >
-            Columns
-          </button>
-
-          <button type="button" className="RmgButton" onClick={clearFilters} disabled={loading}>
-            Reset
-          </button>
-
           <Link className="RmgLink" to="/">
             Back to Home
           </Link>
         </div>
 
-        {/* Controls */}
         {!loading && !errorMessage && (
-          <div className="RmgOptions" aria-label="Skill Factories table options">
+          <div className="RmgOptions" aria-label="Skill Factories filters">
             <div className="RmgOptionsRow">
               <label className="RmgField">
-                <span className="RmgFieldLabel">Search</span>
-                <input className="RmgInput" type="search" value={searchText} onChange={(e) => setSearchText(e.target.value)} placeholder="Search any field…" aria-label="Global search" />
-              </label>
-
-              <label className="RmgField">
                 <span className="RmgFieldLabel">Skill Factory</span>
-                <select className="RmgSelect" value={filters.skillFactoryName} onChange={(e) => setFilters((f) => ({ ...f, skillFactoryName: e.target.value }))} aria-label="Filter by skill factory name">
-                  <option value="">All</option>
-                  {filterOptions.skillFactoryName.map((v) => (
-                    <option key={`skillFactoryName-${v}`} value={v}>
-                      {v}
-                    </option>
-                  ))}
-                </select>
+                <Dropdown
+                  value={filters.skillFactoryName}
+                  options={[{ label: "All", value: "" }, ...filterOptions.skillFactoryName.map((v) => ({ label: v, value: v }))]}
+                  onChange={(e) => setFilters((f) => ({ ...f, skillFactoryName: e.value }))}
+                  placeholder="All"
+                  aria-label="Filter by skill factory name"
+                  style={{ width: "100%" }}
+                />
               </label>
 
               <label className="RmgField">
                 <span className="RmgFieldLabel">Mentors Pool</span>
-                <select className="RmgSelect" value={filters.mentorPoolStatus} onChange={(e) => setFilters((f) => ({ ...f, mentorPoolStatus: e.target.value }))} aria-label="Filter by mentors pool status">
-                  <option value="">All</option>
-                  {filterOptions.mentorPoolStatus.map((v) => (
-                    <option key={`mentorPool-${v}`} value={v}>
-                      {v}
-                    </option>
-                  ))}
-                </select>
+                <Dropdown
+                  value={filters.mentorPoolStatus}
+                  options={[{ label: "All", value: "" }, ...filterOptions.mentorPoolStatus.map((v) => ({ label: v, value: v }))]}
+                  onChange={(e) => setFilters((f) => ({ ...f, mentorPoolStatus: e.value }))}
+                  placeholder="All"
+                  aria-label="Filter by mentors pool status"
+                  style={{ width: "100%" }}
+                />
               </label>
 
               <label className="RmgField">
                 <span className="RmgFieldLabel">Employees Pool</span>
-                <select className="RmgSelect" value={filters.employeePoolStatus} onChange={(e) => setFilters((f) => ({ ...f, employeePoolStatus: e.target.value }))} aria-label="Filter by employees pool status">
-                  <option value="">All</option>
-                  {filterOptions.employeePoolStatus.map((v) => (
-                    <option key={`employeePool-${v}`} value={v}>
-                      {v}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <div className="RmgOptionsRow RmgOptionsRow--meta" aria-label="Skill Factories table meta">
-              <div className="RmgMetaText" aria-live="polite">
-                Showing <strong>{totalRows === 0 ? 0 : start + 1}</strong>–<strong>{Math.min(end, totalRows)}</strong> of <strong>{totalRows}</strong>
-              </div>
-
-              <label className="RmgField RmgField--inline">
-                <span className="RmgFieldLabel">Page size</span>
-                <select className="RmgSelect" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} aria-label="Select page size">
-                  {PAGE_SIZES.map((s) => (
-                    <option key={`pageSize-sf-${s}`} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
+                <Dropdown
+                  value={filters.employeePoolStatus}
+                  options={[{ label: "All", value: "" }, ...filterOptions.employeePoolStatus.map((v) => ({ label: v, value: v }))]}
+                  onChange={(e) => setFilters((f) => ({ ...f, employeePoolStatus: e.value }))}
+                  placeholder="All"
+                  aria-label="Filter by employees pool status"
+                  style={{ width: "100%" }}
+                />
               </label>
 
-              <div className="RmgPager" aria-label="Pagination controls">
-                <button type="button" className="RmgButton RmgButton--small" onClick={() => setPageIndex((p) => Math.max(0, p - 1))} disabled={safePageIndex <= 0}>
-                  Prev
+              <label className="RmgField">
+                <span className="RmgFieldLabel">Quick reset</span>
+                <button type="button" className="RmgButton" onClick={() => setFilters({ skillFactoryName: "", mentorPoolStatus: "", employeePoolStatus: "" })} disabled={loading}>
+                  Reset filters
                 </button>
-                <span className="RmgPagerText" aria-label="Current page">
-                  Page <strong>{safePageIndex + 1}</strong> of <strong>{totalPages}</strong>
-                </span>
-                <button type="button" className="RmgButton RmgButton--small" onClick={() => setPageIndex((p) => Math.min(totalPages - 1, p + 1))} disabled={safePageIndex >= totalPages - 1}>
-                  Next
-                </button>
-              </div>
+              </label>
             </div>
-
-            {columnPanelOpen && (
-              <div id="skillfactories-column-panel" className="RmgColumnPanel" role="region" aria-label="Column visibility">
-                <div className="RmgColumnPanelHeader">
-                  <div className="RmgColumnPanelTitle">Visible columns</div>
-                  <button type="button" className="RmgButton RmgButton--small" onClick={() => setColumnPanelOpen(false)} aria-label="Close column visibility panel">
-                    Close
-                  </button>
-                </div>
-
-                <div className="RmgColumnGrid">
-                  {ALL_COLUMNS.map((c) => {
-                    const checked = visibleColumnIds.includes(c.id);
-                    const isLastVisible = checked && visibleColumnIds.length === 1;
-
-                    return (
-                      <label key={c.id} className="RmgCheckbox">
-                        <input type="checkbox" checked={checked} onChange={() => toggleColumn(c.id)} disabled={isLastVisible} aria-label={`Toggle column ${c.label}`} />
-                        <span>{c.label}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-
-                {visibleColumnIds.length === 1 && (
-                  <div className="RmgHint" role="note">
-                    At least one column must remain visible.
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         )}
 
@@ -2520,171 +1352,30 @@ export function SkillFactoriesPage() {
           </div>
         )}
 
-        <SkillFactoriesTableSection
-          show={showTable}
-          loading={loading}
-          visibleColumns={visibleColumns}
-          ALL_COLUMNS={ALL_COLUMNS}
-          filteredRows={filteredRows}
-          pagedRows={pagedRows}
-          facets={facets}
-          columnFilters={columnFilters}
-          updateColumnFilter={updateColumnFilter}
-          sortState={sortState}
-          toggleSort={toggleSort}
-          renderCell={renderCell}
-        />
+        {!loading && !errorMessage && (
+          <PrimeDataTableCard
+            title="Skill Factories Table"
+            subtitle="PrimeReact DataTable with preserved filters/sort/pagination UX."
+            columns={ALL_COLUMNS}
+            rows={prefilteredRows}
+            loading={loading}
+            errorMessage={errorMessage}
+            alwaysInlineColumnIds={["skillFactoryId", "skillFactoryName"]}
+            rowKey={(sf) => sf.skillFactoryId}
+            renderCell={renderCell}
+          />
+        )}
       </section>
     </main>
   );
 }
 
-function SkillFactoriesTableSection({
-  show,
-  loading,
-  visibleColumns,
-  ALL_COLUMNS,
-  filteredRows,
-  pagedRows,
-  facets,
-  columnFilters,
-  updateColumnFilter,
-  sortState,
-  toggleSort,
-  renderCell,
-}) {
-  const [moreFiltersOpen, setMoreFiltersOpen] = React.useState(false);
-
-  const { inlineColumns, overflowColumns } = chooseVisibleFilterColumns(visibleColumns, {
-    enableMoreFilters: true,
-    maxInlineFilterCount: 8,
-    alwaysInlineColumnIds: ["skillFactoryId", "skillFactoryName"],
-  });
-
-  const triggerId = "sf-more-filters-trigger";
-
-  const headerDistinctFilter = useHeaderDistinctValueFilter({
-    rows: filteredRows,
-    columns: ALL_COLUMNS,
-    columnFilters,
-    onChange: updateColumnFilter,
-  });
-
-  React.useEffect(() => {
-    if (!show && moreFiltersOpen) setMoreFiltersOpen(false);
-  }, [show, moreFiltersOpen]);
-
-  if (!show) return null;
-
-  return (
-    <div className="RmgTableWrap" role="region" aria-label="Skill Factories table">
-      {overflowColumns.length > 0 && (
-        <div className="RmgFilterRowActions" aria-label="Column filter actions">
-          <button
-            id={triggerId}
-            type="button"
-            className="RmgButton RmgButton--small"
-            onClick={() => setMoreFiltersOpen(true)}
-            aria-haspopup="dialog"
-            aria-expanded={moreFiltersOpen ? "true" : "false"}
-            aria-controls="sf-more-filters-popover"
-          >
-            More filters ({overflowColumns.length})
-          </button>
-
-          <MoreFiltersPopover
-            open={moreFiltersOpen}
-            onClose={() => setMoreFiltersOpen(false)}
-            returnFocusToId={triggerId}
-            ariaLabel="More filters"
-          >
-            <div id="sf-more-filters-popover" className="RmgPopoverFiltersGrid">
-              {overflowColumns
-                .filter((c) => Boolean(c.filterType))
-                .map((c) => (
-                  <div key={`sf-popover-filter-${c.id}`} className="RmgPopoverFiltersGridItem">
-                    <table className="RmgPopoverTable" aria-label={`More filters for ${c.label}`}>
-                      <thead>
-                        <tr className="RmgPopoverRow">
-                          <ColumnFilterCell
-                            col={c}
-                            facets={facets}
-                            value={columnFilters[c.id]}
-                            onChange={updateColumnFilter}
-                            disabled={loading}
-                            withinPopover
-                          />
-                        </tr>
-                      </thead>
-                    </table>
-                  </div>
-                ))}
-            </div>
-          </MoreFiltersPopover>
-        </div>
-      )}
-
-      <HeaderDistinctFilterMenu headerDistinctFilter={headerDistinctFilter} />
-
-      <table className="RmgTable">
-        <thead>
-          <tr>
-            {visibleColumns.map((c) => (
-              <ColumnHeaderTh
-                key={c.id}
-                col={c}
-                sortState={sortState}
-                onToggleSort={toggleSort}
-                headerDistinctFilter={headerDistinctFilter}
-              />
-            ))}
-          </tr>
-
-          <tr className="RmgFilterRow" aria-label="Column filters">
-            {inlineColumns.map((c) => (
-              <ColumnFilterCell
-                key={`${c.id}-filter`}
-                col={c}
-                facets={facets}
-                value={columnFilters[c.id]}
-                onChange={updateColumnFilter}
-                disabled={loading}
-              />
-            ))}
-            {overflowColumns.map((c) => (
-              <th key={`${c.id}-filter-overflow`} scope="col" aria-hidden="true">
-                <div className="RmgFilterControl" />
-              </th>
-            ))}
-          </tr>
-        </thead>
-
-        <tbody>
-          {pagedRows.length === 0 ? (
-            <tr>
-              <td colSpan={Math.max(1, visibleColumns.length)} className="RmgEmptyCell">
-                No records found.
-              </td>
-            </tr>
-          ) : (
-            pagedRows.map((sf) => (
-              <tr key={sf.skillFactoryId}>
-                {visibleColumns.map((c) => (
-                  <td key={`${sf.skillFactoryId}-${c.id}`}>{renderCell(sf, c.id)}</td>
-                ))}
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 /**
- * Mocked response used for the Learning Paths table.
- * Replace this with a real fetch() call when backend is ready.
+ * ---------------------------------------------------------------------------
+ * Learning Paths
+ * ---------------------------------------------------------------------------
  */
+
 const DUMMY_LEARNING_PATHS_RESPONSE = {
   status: "success",
   data: [
@@ -2704,218 +1395,68 @@ const DUMMY_LEARNING_PATHS_RESPONSE = {
   count: 1,
 };
 
-/**
- * Simulates an API call with loading/error states.
- * This is where a real request will live later:
- *   fetch(`${process.env.REACT_APP_API_BASE}/learning-paths`, ...)
- */
 async function fetchLearningPathsMock({ signal } = {}) {
-  // Simulate network latency
-  await new Promise((resolve, reject) => {
-    const timeoutId = setTimeout(resolve, 650);
-    if (signal) {
-      signal.addEventListener(
-        "abort",
-        () => {
-          clearTimeout(timeoutId);
-          reject(new DOMException("Request aborted", "AbortError"));
-        },
-        { once: true }
-      );
-    }
-  });
-
-  // Toggle to validate error UI if needed.
+  await delay(650, { signal });
   const shouldFail = false;
-  if (shouldFail) {
-    throw new Error("Failed to load Learning Paths. Please try again.");
-  }
-
+  if (shouldFail) throw new Error("Failed to load Learning Paths. Please try again.");
   return DUMMY_LEARNING_PATHS_RESPONSE;
 }
 
-function LearningPathsTableSection({
-  show,
-  loading,
-  visibleColumns,
-  ALL_COLUMNS,
-  filteredRows,
-  pagedRows,
-  facets,
-  columnFilters,
-  updateColumnFilter,
-  sortState,
-  toggleSort,
-  renderCell,
-}) {
-  const [moreFiltersOpen, setMoreFiltersOpen] = React.useState(false);
+function parseLearningPathsQuery(locationSearch) {
+  const params = new URLSearchParams(locationSearch || "");
+  const q = (params.get("q") || "").trim();
+  const status = (params.get("status") || "").trim();
+  return { q, status };
+}
 
-  const { inlineColumns, overflowColumns } = chooseVisibleFilterColumns(visibleColumns, {
-    enableMoreFilters: true,
-    maxInlineFilterCount: 8,
-    alwaysInlineColumnIds: ["learningPathName"],
-  });
+function normalizeLpStatusFilter(value) {
+  const v = String(value || "").trim().toLowerCase();
+  if (v === "completed") return "completed";
+  if (v === "inprogress" || v === "in_progress" || v === "in-progress") return "inProgress";
+  if (v === "inprogresscount") return "inProgress";
+  return "";
+}
 
-  const triggerId = "lp-more-filters-trigger";
+function safeNumberOrDash(value) {
+  if (value === null || value === undefined) return "—";
+  const num = Number(value);
+  return Number.isFinite(num) ? String(num) : "—";
+}
 
-  const headerDistinctFilter = useHeaderDistinctValueFilter({
-    rows: filteredRows,
-    columns: ALL_COLUMNS,
-    columnFilters,
-    onChange: updateColumnFilter,
-  });
-
-  React.useEffect(() => {
-    if (!show && moreFiltersOpen) setMoreFiltersOpen(false);
-  }, [show, moreFiltersOpen]);
-
-  if (!show) return null;
-
-  return (
-    <div className="RmgTableWrap" role="region" aria-label="Learning Paths table">
-      {overflowColumns.length > 0 && (
-        <div className="RmgFilterRowActions" aria-label="Column filter actions">
-          <button
-            id={triggerId}
-            type="button"
-            className="RmgButton RmgButton--small"
-            onClick={() => setMoreFiltersOpen(true)}
-            aria-haspopup="dialog"
-            aria-expanded={moreFiltersOpen ? "true" : "false"}
-            aria-controls="lp-more-filters-popover"
-          >
-            More filters ({overflowColumns.length})
-          </button>
-
-          <MoreFiltersPopover
-            open={moreFiltersOpen}
-            onClose={() => setMoreFiltersOpen(false)}
-            returnFocusToId={triggerId}
-            ariaLabel="More filters"
-          >
-            <div id="lp-more-filters-popover" className="RmgPopoverFiltersGrid">
-              {overflowColumns
-                .filter((c) => Boolean(c.filterType))
-                .map((c) => (
-                  <div key={`lp-popover-filter-${c.id}`} className="RmgPopoverFiltersGridItem">
-                    <table className="RmgPopoverTable" aria-label={`More filters for ${c.label}`}>
-                      <thead>
-                        <tr className="RmgPopoverRow">
-                          <ColumnFilterCell
-                            col={c}
-                            facets={facets}
-                            value={columnFilters[c.id]}
-                            onChange={updateColumnFilter}
-                            disabled={loading}
-                            withinPopover
-                          />
-                        </tr>
-                      </thead>
-                    </table>
-                  </div>
-                ))}
-            </div>
-          </MoreFiltersPopover>
-        </div>
-      )}
-
-      <HeaderDistinctFilterMenu headerDistinctFilter={headerDistinctFilter} />
-
-      <table className="RmgTable">
-        <thead>
-          <tr>
-            {visibleColumns.map((c) => (
-              <ColumnHeaderTh
-                key={c.id}
-                col={c}
-                sortState={sortState}
-                onToggleSort={toggleSort}
-                headerDistinctFilter={headerDistinctFilter}
-              />
-            ))}
-          </tr>
-
-          <tr className="RmgFilterRow" aria-label="Column filters">
-            {inlineColumns.map((c) => (
-              <ColumnFilterCell
-                key={`${c.id}-filter`}
-                col={c}
-                facets={facets}
-                value={columnFilters[c.id]}
-                onChange={updateColumnFilter}
-                disabled={loading}
-              />
-            ))}
-            {overflowColumns.map((c) => (
-              <th key={`${c.id}-filter-overflow`} scope="col" aria-hidden="true">
-                <div className="RmgFilterControl" />
-              </th>
-            ))}
-          </tr>
-        </thead>
-
-        <tbody>
-          {pagedRows.length === 0 ? (
-            <tr>
-              <td colSpan={Math.max(1, visibleColumns.length)} className="RmgEmptyCell">
-                No learning paths found.
-              </td>
-            </tr>
-          ) : (
-            pagedRows.map((lp) => (
-              <tr key={lp.learningPathName}>
-                {visibleColumns.map((c) => (
-                  <td key={`${lp.learningPathName}-${c.id}`}>{renderCell(lp, c.id)}</td>
-                ))}
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
+function formatLearningPathsIsoDateTimeOrDash(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toISOString().replace(".000Z", "Z");
 }
 
 // PUBLIC_INTERFACE
 export function LearningPathsPage() {
-  /** Learning Paths page that fetches (mocked) data and renders a table with loading and error states + client-side table UX. */
+  /** Learning Paths page that fetches (mocked) data and renders a PrimeReact table preserving existing controls. */
   const location = useLocation();
 
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [errorMessage, setErrorMessage] = React.useState("");
 
-  // Table options (match RMG Tracker / Skill Factories UX)
-  const [searchText, setSearchText] = React.useState("");
   const [filters, setFilters] = React.useState({
     duration: "",
     tag: "",
     status: "",
   });
 
-  // New per-column filters + sorting
-  const { sortState, toggleSort, clearSort } = useTableSorting();
-  const [columnFilters, setColumnFilters] = React.useState({});
-  function updateColumnFilter(colId, nextValue) {
-    setColumnFilters((prev) => {
-      const next = { ...prev, [colId]: nextValue };
-      const v = next[colId];
-      if (!v) return next;
-      if (v.type === "text" && !String(v.value || "").trim()) delete next[colId];
-      if (v.type === "select" && !String(v.value || "").trim()) delete next[colId];
-      if (v.type === "multiselect" && (!Array.isArray(v.values) || v.values.length === 0)) delete next[colId];
-      if (v.type === "numberRange" && !String(v.min || "").trim() && !String(v.max || "").trim()) delete next[colId];
-      if (v.type === "dateRange" && !String(v.min || "").trim() && !String(v.max || "").trim()) delete next[colId];
-      return next;
-    });
-  }
-
   const ALL_COLUMNS = React.useMemo(
     () => [
       { id: "learningPathName", label: "Learning Path Name", sortType: "text", filterType: "text" },
       { id: "description", label: "Description", sortType: "text", filterType: "text" },
       { id: "tags", label: "Tags", sortType: "text", filterType: "multiselect", filterAccessor: (lp) => lp?.tags || [] },
-      { id: "courseLinks", label: "Course Links", sortType: "text", filterType: "text", filterAccessor: (lp) => (Array.isArray(lp.courseLinks) ? lp.courseLinks.join(" ") : "") },
+      {
+        id: "courseLinks",
+        label: "Course Links",
+        sortType: "text",
+        filterType: "text",
+        filterAccessor: (lp) => (Array.isArray(lp.courseLinks) ? lp.courseLinks.join(" ") : ""),
+      },
       { id: "duration", label: "Duration", sortType: "text", filterType: "select" },
       { id: "enrolledCount", label: "Enrolled", sortType: "number", filterType: "numberRange" },
       { id: "completedCount", label: "Completed", sortType: "number", filterType: "numberRange" },
@@ -2926,37 +1467,10 @@ export function LearningPathsPage() {
     []
   );
 
-  const DEFAULT_VISIBLE_COLUMN_IDS = React.useMemo(() => ALL_COLUMNS.map((c) => c.id), [ALL_COLUMNS]);
-
-  const [visibleColumnIds, setVisibleColumnIds] = React.useState(DEFAULT_VISIBLE_COLUMN_IDS);
-  const [columnPanelOpen, setColumnPanelOpen] = React.useState(false);
-
-  // Pagination
-  const PAGE_SIZES = React.useMemo(() => [3, 5, 10, 20], []);
-  const [pageSize, setPageSize] = React.useState(5);
-  const [pageIndex, setPageIndex] = React.useState(0);
-
-  // Apply URL query parameters to pre-populate controls.
-  const hasAppliedQueryRef = React.useRef(false);
   React.useEffect(() => {
-    const { q, status } = parseLearningPathsQuery(location.search);
-
-    setSearchText(q);
-
+    const { status } = parseLearningPathsQuery(location.search);
     const normalized = normalizeLpStatusFilter(status);
-    if (!hasAppliedQueryRef.current) {
-      if (normalized) {
-        setFilters((f) => ({ ...f, status: normalized }));
-      }
-      hasAppliedQueryRef.current = true;
-      return;
-    }
-
-    if (normalized) {
-      setFilters((f) => ({ ...f, status: normalized }));
-    } else if (status === "") {
-      setFilters((f) => ({ ...f, status: "" }));
-    }
+    setFilters((f) => ({ ...f, status: normalized || "" }));
   }, [location.search]);
 
   const load = React.useCallback(async () => {
@@ -2986,7 +1500,6 @@ export function LearningPathsPage() {
 
   React.useEffect(() => {
     let cleanup = null;
-
     (async () => {
       cleanup = await load();
     })();
@@ -2999,28 +1512,25 @@ export function LearningPathsPage() {
   const filterOptions = React.useMemo(() => {
     const duration = uniqueSorted(rows.map((r) => r.duration));
 
-    // Flatten tags into a single filter dropdown.
     const allTags = [];
     for (const r of rows) {
       if (Array.isArray(r?.tags)) allTags.push(...r.tags);
     }
     const tag = uniqueSorted(allTags);
 
-    const status = [
-      { value: "", label: "All" },
-      { value: "completed", label: "Completed" },
-      { value: "inProgress", label: "In Progress" },
-    ];
-
-    return { duration, tag, status };
+    return {
+      duration,
+      tag,
+      status: [
+        { value: "", label: "All" },
+        { value: "completed", label: "Completed" },
+        { value: "inProgress", label: "In Progress" },
+      ],
+    };
   }, [rows]);
 
-  const facets = React.useMemo(() => buildFacetOptions(rows, ALL_COLUMNS), [rows, ALL_COLUMNS]);
-
-  const filteredRows = React.useMemo(() => {
-    const query = searchText.trim().toLowerCase();
-
-    const basicFiltered = rows.filter((lp) => {
+  const prefilteredRows = React.useMemo(() => {
+    return (Array.isArray(rows) ? rows : []).filter((lp) => {
       if (filters.duration && normalizeText(lp.duration) !== filters.duration) return false;
 
       if (filters.tag) {
@@ -3037,70 +1547,9 @@ export function LearningPathsPage() {
         if (!(Number.isFinite(n) && n > 0)) return false;
       }
 
-      if (!query) return true;
-
-      const anyMatch = ALL_COLUMNS.some((c) => {
-        switch (c.id) {
-          case "tags":
-            return Array.isArray(lp.tags) ? lp.tags.join(" ").toLowerCase().includes(query) : false;
-          case "courseLinks":
-            return Array.isArray(lp.courseLinks) ? lp.courseLinks.join(" ").toLowerCase().includes(query) : false;
-          case "createdAt":
-          case "updatedAt":
-            return normalizeText(formatLearningPathsIsoDateTimeOrDash(lp[c.id])).toLowerCase().includes(query);
-          default:
-            return normalizeText(lp[c.id]).toLowerCase().includes(query);
-        }
-      });
-
-      return anyMatch;
+      return true;
     });
-
-    const columnFiltered = applyColumnFilters(basicFiltered, ALL_COLUMNS, columnFilters);
-    return sortRows(columnFiltered, ALL_COLUMNS, sortState);
-  }, [rows, filters, searchText, ALL_COLUMNS, columnFilters, sortState]);
-
-  React.useEffect(() => {
-    setPageIndex(0);
-  }, [
-    searchText,
-    filters.duration,
-    filters.tag,
-    filters.status,
-    pageSize,
-    JSON.stringify(columnFilters),
-    sortState.columnId,
-    sortState.direction,
-  ]);
-
-  const totalRows = filteredRows.length;
-  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
-  const safePageIndex = Math.min(pageIndex, totalPages - 1);
-  const start = safePageIndex * pageSize;
-  const end = start + pageSize;
-  const pagedRows = filteredRows.slice(start, end);
-
-  const visibleColumns = React.useMemo(() => {
-    const set = new Set(visibleColumnIds);
-    return ALL_COLUMNS.filter((c) => set.has(c.id));
-  }, [ALL_COLUMNS, visibleColumnIds]);
-
-  function toggleColumn(colId) {
-    setVisibleColumnIds((prev) => {
-      const set = new Set(prev);
-      if (set.has(colId)) set.delete(colId);
-      else set.add(colId);
-      if (set.size === 0) return prev;
-      return Array.from(set);
-    });
-  }
-
-  function clearFilters() {
-    setFilters({ duration: "", tag: "", status: "" });
-    setSearchText("");
-    setColumnFilters({});
-    clearSort();
-  }
+  }, [rows, filters]);
 
   function renderCell(lp, colId) {
     switch (colId) {
@@ -3146,8 +1595,6 @@ export function LearningPathsPage() {
     }
   }
 
-  const showTable = !loading && !errorMessage;
-
   return (
     <main className="App-main" aria-label="Learning Paths page">
       <section className="HelloCard HelloCard--wide" aria-label="Learning Paths content">
@@ -3160,131 +1607,57 @@ export function LearningPathsPage() {
             {loading ? "Loading…" : "Refresh"}
           </button>
 
-          <button
-            type="button"
-            className="RmgButton"
-            onClick={() => setColumnPanelOpen((v) => !v)}
-            aria-expanded={columnPanelOpen ? "true" : "false"}
-            aria-controls="learningpaths-column-panel"
-            disabled={loading}
-          >
-            Columns
-          </button>
-
-          <button type="button" className="RmgButton" onClick={clearFilters} disabled={loading}>
-            Reset
-          </button>
-
           <Link className="RmgLink" to="/">
             Back to Home
           </Link>
         </div>
 
-        {/* Controls */}
         {!loading && !errorMessage && (
-          <div className="RmgOptions" aria-label="Learning Paths table options">
+          <div className="RmgOptions" aria-label="Learning Paths filters">
             <div className="RmgOptionsRow">
               <label className="RmgField">
-                <span className="RmgFieldLabel">Search</span>
-                <input className="RmgInput" type="search" value={searchText} onChange={(e) => setSearchText(e.target.value)} placeholder="Search any field…" aria-label="Global search" />
-              </label>
-
-              <label className="RmgField">
                 <span className="RmgFieldLabel">Duration</span>
-                <select className="RmgSelect" value={filters.duration} onChange={(e) => setFilters((f) => ({ ...f, duration: e.target.value }))} aria-label="Filter by duration">
-                  <option value="">All</option>
-                  {filterOptions.duration.map((v) => (
-                    <option key={`lp-duration-${v}`} value={v}>
-                      {v}
-                    </option>
-                  ))}
-                </select>
+                <Dropdown
+                  value={filters.duration}
+                  options={[{ label: "All", value: "" }, ...filterOptions.duration.map((v) => ({ label: v, value: v }))]}
+                  onChange={(e) => setFilters((f) => ({ ...f, duration: e.value }))}
+                  placeholder="All"
+                  aria-label="Filter by duration"
+                  style={{ width: "100%" }}
+                />
               </label>
 
               <label className="RmgField">
                 <span className="RmgFieldLabel">Tag</span>
-                <select className="RmgSelect" value={filters.tag} onChange={(e) => setFilters((f) => ({ ...f, tag: e.target.value }))} aria-label="Filter by tag">
-                  <option value="">All</option>
-                  {filterOptions.tag.map((v) => (
-                    <option key={`lp-tag-${v}`} value={v}>
-                      {v}
-                    </option>
-                  ))}
-                </select>
+                <Dropdown
+                  value={filters.tag}
+                  options={[{ label: "All", value: "" }, ...filterOptions.tag.map((v) => ({ label: v, value: v }))]}
+                  onChange={(e) => setFilters((f) => ({ ...f, tag: e.value }))}
+                  placeholder="All"
+                  aria-label="Filter by tag"
+                  style={{ width: "100%" }}
+                />
               </label>
 
               <label className="RmgField">
                 <span className="RmgFieldLabel">Status</span>
-                <select className="RmgSelect" value={filters.status} onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))} aria-label="Filter by status">
-                  {filterOptions.status.map((opt) => (
-                    <option key={`lp-status-${opt.value || "all"}`} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <div className="RmgOptionsRow RmgOptionsRow--meta" aria-label="Learning Paths table meta">
-              <div className="RmgMetaText" aria-live="polite">
-                Showing <strong>{totalRows === 0 ? 0 : start + 1}</strong>–<strong>{Math.min(end, totalRows)}</strong> of{" "}
-                <strong>{totalRows}</strong>
-              </div>
-
-              <label className="RmgField RmgField--inline">
-                <span className="RmgFieldLabel">Page size</span>
-                <select className="RmgSelect" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} aria-label="Select page size">
-                  {PAGE_SIZES.map((s) => (
-                    <option key={`pageSize-lp-${s}`} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
+                <Dropdown
+                  value={filters.status}
+                  options={filterOptions.status}
+                  onChange={(e) => setFilters((f) => ({ ...f, status: e.value }))}
+                  placeholder="All"
+                  aria-label="Filter by status"
+                  style={{ width: "100%" }}
+                />
               </label>
 
-              <div className="RmgPager" aria-label="Pagination controls">
-                <button type="button" className="RmgButton RmgButton--small" onClick={() => setPageIndex((p) => Math.max(0, p - 1))} disabled={safePageIndex <= 0}>
-                  Prev
+              <label className="RmgField">
+                <span className="RmgFieldLabel">Quick reset</span>
+                <button type="button" className="RmgButton" onClick={() => setFilters({ duration: "", tag: "", status: "" })} disabled={loading}>
+                  Reset filters
                 </button>
-                <span className="RmgPagerText" aria-label="Current page">
-                  Page <strong>{safePageIndex + 1}</strong> of <strong>{totalPages}</strong>
-                </span>
-                <button type="button" className="RmgButton RmgButton--small" onClick={() => setPageIndex((p) => Math.min(totalPages - 1, p + 1))} disabled={safePageIndex >= totalPages - 1}>
-                  Next
-                </button>
-              </div>
+              </label>
             </div>
-
-            {columnPanelOpen && (
-              <div id="learningpaths-column-panel" className="RmgColumnPanel" role="region" aria-label="Column visibility">
-                <div className="RmgColumnPanelHeader">
-                  <div className="RmgColumnPanelTitle">Visible columns</div>
-                  <button type="button" className="RmgButton RmgButton--small" onClick={() => setColumnPanelOpen(false)} aria-label="Close column visibility panel">
-                    Close
-                  </button>
-                </div>
-
-                <div className="RmgColumnGrid">
-                  {ALL_COLUMNS.map((c) => {
-                    const checked = visibleColumnIds.includes(c.id);
-                    const isLastVisible = checked && visibleColumnIds.length === 1;
-
-                    return (
-                      <label key={c.id} className="RmgCheckbox">
-                        <input type="checkbox" checked={checked} onChange={() => toggleColumn(c.id)} disabled={isLastVisible} aria-label={`Toggle column ${c.label}`} />
-                        <span>{c.label}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-
-                {visibleColumnIds.length === 1 && (
-                  <div className="RmgHint" role="note">
-                    At least one column must remain visible.
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         )}
 
@@ -3305,29 +1678,30 @@ export function LearningPathsPage() {
           </div>
         )}
 
-        <LearningPathsTableSection
-          show={showTable}
-          loading={loading}
-          visibleColumns={visibleColumns}
-          ALL_COLUMNS={ALL_COLUMNS}
-          filteredRows={filteredRows}
-          pagedRows={pagedRows}
-          facets={facets}
-          columnFilters={columnFilters}
-          updateColumnFilter={updateColumnFilter}
-          sortState={sortState}
-          toggleSort={toggleSort}
-          renderCell={renderCell}
-        />
+        {!loading && !errorMessage && (
+          <PrimeDataTableCard
+            title="Learning Paths Table"
+            subtitle="PrimeReact DataTable with preserved filters/sort/pagination UX."
+            columns={ALL_COLUMNS}
+            rows={prefilteredRows}
+            loading={loading}
+            errorMessage={errorMessage}
+            alwaysInlineColumnIds={["learningPathName"]}
+            rowKey={(lp) => lp.learningPathName}
+            renderCell={renderCell}
+          />
+        )}
       </section>
     </main>
   );
 }
 
 /**
- * Mocked response used for the Assessments table.
- * Replace this with a real fetch() call when backend is ready.
+ * ---------------------------------------------------------------------------
+ * Assessments
+ * ---------------------------------------------------------------------------
  */
+
 const DUMMY_ASSESSMENTS_RESPONSE = {
   status: "success",
   data: [
@@ -3355,209 +1729,55 @@ const DUMMY_ASSESSMENTS_RESPONSE = {
   count: 1,
 };
 
-/**
- * Simulates an API call with loading/error states.
- * This is where a real request will live later:
- *   fetch(`${process.env.REACT_APP_API_BASE}/assessments`, ...)
- */
 async function fetchAssessmentsMock({ signal } = {}) {
-  // Simulate network latency
-  await new Promise((resolve, reject) => {
-    const timeoutId = setTimeout(resolve, 650);
-    if (signal) {
-      signal.addEventListener(
-        "abort",
-        () => {
-          clearTimeout(timeoutId);
-          reject(new DOMException("Request aborted", "AbortError"));
-        },
-        { once: true }
-      );
-    }
-  });
-
-  // Toggle to validate error UI if needed.
+  await delay(650, { signal });
   const shouldFail = false;
-  if (shouldFail) {
-    throw new Error("Failed to load Assessments. Please try again.");
-  }
-
+  if (shouldFail) throw new Error("Failed to load Assessments. Please try again.");
   return DUMMY_ASSESSMENTS_RESPONSE;
 }
 
-function AssessmentsTableSection({
-  show,
-  loading,
-  visibleColumns,
-  ALL_COLUMNS,
-  filteredRows,
-  pagedRows,
-  facets,
-  columnFilters,
-  updateColumnFilter,
-  sortState,
-  toggleSort,
-  renderCell,
-}) {
-  /** Table section extracted as a real component so hooks are valid and stable. */
-  const [moreFiltersOpen, setMoreFiltersOpen] = React.useState(false);
+function formatAssessmentsIsoDateTimeOrDash(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toISOString().replace(".000Z", "Z");
+}
 
-  const { inlineColumns, overflowColumns } = chooseVisibleFilterColumns(visibleColumns, {
-    enableMoreFilters: true,
-    maxInlineFilterCount: 8,
-    alwaysInlineColumnIds: ["assessmentId", "title"],
-  });
+function formatMarkOrDash(value) {
+  if (value === null || value === undefined) return "—";
+  const num = Number(value);
+  return Number.isFinite(num) ? String(num) : "—";
+}
 
-  const triggerId = "assessments-more-filters-trigger";
+function firstAssigneeOrDash(assignedTo) {
+  if (!Array.isArray(assignedTo) || assignedTo.length === 0) return "—";
+  const a = assignedTo[0];
+  return `${a?.employeeName || "—"} (${a?.employeeId || "—"})`;
+}
 
-  const headerDistinctFilter = useHeaderDistinctValueFilter({
-    rows: filteredRows,
-    columns: ALL_COLUMNS,
-    columnFilters,
-    onChange: updateColumnFilter,
-  });
+function assigneeContactOrDash(assignedTo) {
+  if (!Array.isArray(assignedTo) || assignedTo.length === 0) return "—";
+  const a = assignedTo[0];
+  const parts = [a?.email, a?.employeeId].filter(Boolean);
+  return parts.length ? parts.join(" • ") : "—";
+}
 
-  React.useEffect(() => {
-    if (!show && moreFiltersOpen) setMoreFiltersOpen(false);
-  }, [show, moreFiltersOpen]);
-
-  if (!show) return null;
-
-  return (
-    <div className="RmgTableWrap" role="region" aria-label="Assessments table">
-      {overflowColumns.length > 0 && (
-        <div className="RmgFilterRowActions" aria-label="Column filter actions">
-          <button
-            id={triggerId}
-            type="button"
-            className="RmgButton RmgButton--small"
-            onClick={() => setMoreFiltersOpen(true)}
-            aria-haspopup="dialog"
-            aria-expanded={moreFiltersOpen ? "true" : "false"}
-            aria-controls="assessments-more-filters-popover"
-          >
-            More filters ({overflowColumns.length})
-          </button>
-
-          <MoreFiltersPopover
-            open={moreFiltersOpen}
-            onClose={() => setMoreFiltersOpen(false)}
-            returnFocusToId={triggerId}
-            ariaLabel="More filters"
-          >
-            <div id="assessments-more-filters-popover" className="RmgPopoverFiltersGrid">
-              {overflowColumns
-                .filter((c) => Boolean(c.filterType))
-                .map((c) => (
-                  <div key={`assessments-popover-filter-${c.id}`} className="RmgPopoverFiltersGridItem">
-                    <table className="RmgPopoverTable" aria-label={`More filters for ${c.label}`}>
-                      <thead>
-                        <tr className="RmgPopoverRow">
-                          <ColumnFilterCell
-                            col={c}
-                            facets={facets}
-                            value={columnFilters[c.id]}
-                            onChange={updateColumnFilter}
-                            disabled={loading}
-                            withinPopover
-                          />
-                        </tr>
-                      </thead>
-                    </table>
-                  </div>
-                ))}
-            </div>
-          </MoreFiltersPopover>
-        </div>
-      )}
-
-      <HeaderDistinctFilterMenu headerDistinctFilter={headerDistinctFilter} />
-
-      <table className="RmgTable">
-        <thead>
-          <tr>
-            {visibleColumns.map((c) => (
-              <ColumnHeaderTh
-                key={c.id}
-                col={c}
-                sortState={sortState}
-                onToggleSort={toggleSort}
-                headerDistinctFilter={headerDistinctFilter}
-              />
-            ))}
-          </tr>
-
-          <tr className="RmgFilterRow" aria-label="Column filters">
-            {inlineColumns.map((c) => (
-              <ColumnFilterCell
-                key={`${c.id}-filter`}
-                col={c}
-                facets={facets}
-                value={columnFilters[c.id]}
-                onChange={updateColumnFilter}
-                disabled={loading}
-              />
-            ))}
-            {overflowColumns.map((c) => (
-              <th key={`${c.id}-filter-overflow`} scope="col" aria-hidden="true">
-                <div className="RmgFilterControl" />
-              </th>
-            ))}
-          </tr>
-        </thead>
-
-        <tbody>
-          {pagedRows.length === 0 ? (
-            <tr>
-              <td colSpan={Math.max(1, visibleColumns.length)} className="RmgEmptyCell">
-                No assessments found.
-              </td>
-            </tr>
-          ) : (
-            pagedRows.map((a) => (
-              <tr key={a.assessmentId}>
-                {visibleColumns.map((c) => (
-                  <td key={`${a.assessmentId}-${c.id}`}>{renderCell(a, c.id)}</td>
-                ))}
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
+function normalizeAssessmentStatus(value) {
+  if (!value) return "";
+  return String(value).trim().toLowerCase().replace(/\s+/g, "-");
 }
 
 // PUBLIC_INTERFACE
 export function AssessmentsPage() {
-  /** Assessments page that fetches (mocked) data and renders a table with loading and error states + client-side table UX. */
+  /** Assessments page that fetches (mocked) data and renders a PrimeReact table preserving existing controls. */
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [errorMessage, setErrorMessage] = React.useState("");
 
-  // Table options (match existing UX)
-  const [searchText, setSearchText] = React.useState("");
   const [filters, setFilters] = React.useState({
     status: "",
     dueMonth: "",
   });
-
-  // New per-column filters + sorting
-  const { sortState, toggleSort, clearSort } = useTableSorting();
-  const [columnFilters, setColumnFilters] = React.useState({});
-  function updateColumnFilter(colId, nextValue) {
-    setColumnFilters((prev) => {
-      const next = { ...prev, [colId]: nextValue };
-      const v = next[colId];
-      if (!v) return next;
-      if (v.type === "text" && !String(v.value || "").trim()) delete next[colId];
-      if (v.type === "select" && !String(v.value || "").trim()) delete next[colId];
-      if (v.type === "multiselect" && (!Array.isArray(v.values) || v.values.length === 0)) delete next[colId];
-      if (v.type === "numberRange" && !String(v.min || "").trim() && !String(v.max || "").trim()) delete next[colId];
-      if (v.type === "dateRange" && !String(v.min || "").trim() && !String(v.max || "").trim()) delete next[colId];
-      return next;
-    });
-  }
 
   const ALL_COLUMNS = React.useMemo(
     () => [
@@ -3592,16 +1812,6 @@ export function AssessmentsPage() {
     []
   );
 
-  const DEFAULT_VISIBLE_COLUMN_IDS = React.useMemo(() => ALL_COLUMNS.map((c) => c.id), [ALL_COLUMNS]);
-
-  const [visibleColumnIds, setVisibleColumnIds] = React.useState(DEFAULT_VISIBLE_COLUMN_IDS);
-  const [columnPanelOpen, setColumnPanelOpen] = React.useState(false);
-
-  // Pagination
-  const PAGE_SIZES = React.useMemo(() => [3, 5, 10, 20], []);
-  const [pageSize, setPageSize] = React.useState(5);
-  const [pageIndex, setPageIndex] = React.useState(0);
-
   const load = React.useCallback(async () => {
     setLoading(true);
     setErrorMessage("");
@@ -3629,7 +1839,6 @@ export function AssessmentsPage() {
 
   React.useEffect(() => {
     let cleanup = null;
-
     (async () => {
       cleanup = await load();
     })();
@@ -3647,96 +1856,29 @@ export function AssessmentsPage() {
       const value = r?.dueDate;
       const d = value ? new Date(value) : null;
       if (!d || Number.isNaN(d.getTime())) continue;
-
       const month = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
       months.push(month);
     }
-    const dueMonth = uniqueSorted(months);
 
-    return { status, dueMonth };
+    return { status, dueMonth: uniqueSorted(months) };
   }, [rows]);
 
-  const facets = React.useMemo(() => buildFacetOptions(rows, ALL_COLUMNS), [rows, ALL_COLUMNS]);
-
-  const filteredRows = React.useMemo(() => {
-    const query = searchText.trim().toLowerCase();
-
-    const basicFiltered = rows.filter((a) => {
+  const prefilteredRows = React.useMemo(() => {
+    return (Array.isArray(rows) ? rows : []).filter((a) => {
       if (filters.status && normalizeText(a.status) !== filters.status) return false;
 
       if (filters.dueMonth) {
         const d = a?.dueDate ? new Date(a.dueDate) : null;
         const month =
-          d && !Number.isNaN(d.getTime()) ? `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}` : "";
+          d && !Number.isNaN(d.getTime())
+            ? `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`
+            : "";
         if (month !== filters.dueMonth) return false;
       }
 
-      if (!query) return true;
-
-      const anyMatch = ALL_COLUMNS.some((c) => {
-        switch (c.id) {
-          case "assignedTo":
-            return normalizeText(firstAssigneeOrDash(a.assignedTo)).toLowerCase().includes(query);
-          case "assigneeContact":
-            return normalizeText(assigneeContactOrDash(a.assignedTo)).toLowerCase().includes(query);
-          case "dueDate":
-          case "createdAt":
-          case "updatedAt":
-            return normalizeText(formatAssessmentsIsoDateTimeOrDash(a[c.id])).toLowerCase().includes(query);
-          case "marks":
-            return String(formatMarkOrDash(a.marks)).toLowerCase().includes(query);
-          default:
-            return normalizeText(a[c.id]).toLowerCase().includes(query);
-        }
-      });
-
-      return anyMatch;
+      return true;
     });
-
-    const columnFiltered = applyColumnFilters(basicFiltered, ALL_COLUMNS, columnFilters);
-    return sortRows(columnFiltered, ALL_COLUMNS, sortState);
-  }, [rows, filters, searchText, ALL_COLUMNS, columnFilters, sortState]);
-
-  React.useEffect(() => {
-    setPageIndex(0);
-  }, [
-    searchText,
-    filters.status,
-    filters.dueMonth,
-    pageSize,
-    JSON.stringify(columnFilters),
-    sortState.columnId,
-    sortState.direction,
-  ]);
-
-  const totalRows = filteredRows.length;
-  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
-  const safePageIndex = Math.min(pageIndex, totalPages - 1);
-  const start = safePageIndex * pageSize;
-  const end = start + pageSize;
-  const pagedRows = filteredRows.slice(start, end);
-
-  const visibleColumns = React.useMemo(() => {
-    const set = new Set(visibleColumnIds);
-    return ALL_COLUMNS.filter((c) => set.has(c.id));
-  }, [ALL_COLUMNS, visibleColumnIds]);
-
-  function toggleColumn(colId) {
-    setVisibleColumnIds((prev) => {
-      const set = new Set(prev);
-      if (set.has(colId)) set.delete(colId);
-      else set.add(colId);
-      if (set.size === 0) return prev;
-      return Array.from(set);
-    });
-  }
-
-  function clearFilters() {
-    setFilters({ status: "", dueMonth: "" });
-    setSearchText("");
-    setColumnFilters({});
-    clearSort();
-  }
+  }, [rows, filters]);
 
   function renderCell(a, colId) {
     switch (colId) {
@@ -3762,8 +1904,6 @@ export function AssessmentsPage() {
     }
   }
 
-  const showTable = !loading && !errorMessage;
-
   return (
     <main className="App-main" aria-label="Assessments page">
       <section className="HelloCard HelloCard--wide" aria-label="Assessments content">
@@ -3776,120 +1916,45 @@ export function AssessmentsPage() {
             {loading ? "Loading…" : "Refresh"}
           </button>
 
-          <button
-            type="button"
-            className="RmgButton"
-            onClick={() => setColumnPanelOpen((v) => !v)}
-            aria-expanded={columnPanelOpen ? "true" : "false"}
-            aria-controls="assessments-column-panel"
-            disabled={loading}
-          >
-            Columns
-          </button>
-
-          <button type="button" className="RmgButton" onClick={clearFilters} disabled={loading}>
-            Reset
-          </button>
-
           <Link className="RmgLink" to="/">
             Back to Home
           </Link>
         </div>
 
-        {/* Controls */}
         {!loading && !errorMessage && (
-          <div className="RmgOptions" aria-label="Assessments table options">
+          <div className="RmgOptions" aria-label="Assessments filters">
             <div className="RmgOptionsRow">
               <label className="RmgField">
-                <span className="RmgFieldLabel">Search</span>
-                <input className="RmgInput" type="search" value={searchText} onChange={(e) => setSearchText(e.target.value)} placeholder="Search any field…" aria-label="Global search" />
-              </label>
-
-              <label className="RmgField">
                 <span className="RmgFieldLabel">Status</span>
-                <select className="RmgSelect" value={filters.status} onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))} aria-label="Filter by status">
-                  <option value="">All</option>
-                  {filterOptions.status.map((v) => (
-                    <option key={`assessment-status-${v}`} value={v}>
-                      {v}
-                    </option>
-                  ))}
-                </select>
+                <Dropdown
+                  value={filters.status}
+                  options={[{ label: "All", value: "" }, ...filterOptions.status.map((v) => ({ label: v, value: v }))]}
+                  onChange={(e) => setFilters((f) => ({ ...f, status: e.value }))}
+                  placeholder="All"
+                  aria-label="Filter by status"
+                  style={{ width: "100%" }}
+                />
               </label>
 
               <label className="RmgField">
                 <span className="RmgFieldLabel">Due month</span>
-                <select className="RmgSelect" value={filters.dueMonth} onChange={(e) => setFilters((f) => ({ ...f, dueMonth: e.target.value }))} aria-label="Filter by due month">
-                  <option value="">All</option>
-                  {filterOptions.dueMonth.map((v) => (
-                    <option key={`assessment-duemonth-${v}`} value={v}>
-                      {v}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <div className="RmgOptionsRow RmgOptionsRow--meta" aria-label="Assessments table meta">
-              <div className="RmgMetaText" aria-live="polite">
-                Showing <strong>{totalRows === 0 ? 0 : start + 1}</strong>–<strong>{Math.min(end, totalRows)}</strong> of{" "}
-                <strong>{totalRows}</strong>
-              </div>
-
-              <label className="RmgField RmgField--inline">
-                <span className="RmgFieldLabel">Page size</span>
-                <select className="RmgSelect" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} aria-label="Select page size">
-                  {PAGE_SIZES.map((s) => (
-                    <option key={`pageSize-assessments-${s}`} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
+                <Dropdown
+                  value={filters.dueMonth}
+                  options={[{ label: "All", value: "" }, ...filterOptions.dueMonth.map((v) => ({ label: v, value: v }))]}
+                  onChange={(e) => setFilters((f) => ({ ...f, dueMonth: e.value }))}
+                  placeholder="All"
+                  aria-label="Filter by due month"
+                  style={{ width: "100%" }}
+                />
               </label>
 
-              <div className="RmgPager" aria-label="Pagination controls">
-                <button type="button" className="RmgButton RmgButton--small" onClick={() => setPageIndex((p) => Math.max(0, p - 1))} disabled={safePageIndex <= 0}>
-                  Prev
+              <label className="RmgField">
+                <span className="RmgFieldLabel">Quick reset</span>
+                <button type="button" className="RmgButton" onClick={() => setFilters({ status: "", dueMonth: "" })} disabled={loading}>
+                  Reset filters
                 </button>
-                <span className="RmgPagerText" aria-label="Current page">
-                  Page <strong>{safePageIndex + 1}</strong> of <strong>{totalPages}</strong>
-                </span>
-                <button type="button" className="RmgButton RmgButton--small" onClick={() => setPageIndex((p) => Math.min(totalPages - 1, p + 1))} disabled={safePageIndex >= totalPages - 1}>
-                  Next
-                </button>
-              </div>
+              </label>
             </div>
-
-            {columnPanelOpen && (
-              <div id="assessments-column-panel" className="RmgColumnPanel" role="region" aria-label="Column visibility">
-                <div className="RmgColumnPanelHeader">
-                  <div className="RmgColumnPanelTitle">Visible columns</div>
-                  <button type="button" className="RmgButton RmgButton--small" onClick={() => setColumnPanelOpen(false)} aria-label="Close column visibility panel">
-                    Close
-                  </button>
-                </div>
-
-                <div className="RmgColumnGrid">
-                  {ALL_COLUMNS.map((c) => {
-                    const checked = visibleColumnIds.includes(c.id);
-                    const isLastVisible = checked && visibleColumnIds.length === 1;
-
-                    return (
-                      <label key={c.id} className="RmgCheckbox">
-                        <input type="checkbox" checked={checked} onChange={() => toggleColumn(c.id)} disabled={isLastVisible} aria-label={`Toggle column ${c.label}`} />
-                        <span>{c.label}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-
-                {visibleColumnIds.length === 1 && (
-                  <div className="RmgHint" role="note">
-                    At least one column must remain visible.
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         )}
 
@@ -3910,20 +1975,19 @@ export function AssessmentsPage() {
           </div>
         )}
 
-        <AssessmentsTableSection
-          show={showTable}
-          loading={loading}
-          visibleColumns={visibleColumns}
-          ALL_COLUMNS={ALL_COLUMNS}
-          filteredRows={filteredRows}
-          pagedRows={pagedRows}
-          facets={facets}
-          columnFilters={columnFilters}
-          updateColumnFilter={updateColumnFilter}
-          sortState={sortState}
-          toggleSort={toggleSort}
-          renderCell={renderCell}
-        />
+        {!loading && !errorMessage && (
+          <PrimeDataTableCard
+            title="Assessments Table"
+            subtitle="PrimeReact DataTable with preserved filters/sort/pagination UX."
+            columns={ALL_COLUMNS}
+            rows={prefilteredRows}
+            loading={loading}
+            errorMessage={errorMessage}
+            alwaysInlineColumnIds={["assessmentId", "title"]}
+            rowKey={(a) => a.assessmentId}
+            renderCell={renderCell}
+          />
+        )}
       </section>
     </main>
   );

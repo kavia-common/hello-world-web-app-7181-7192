@@ -1,5 +1,17 @@
 :root {
   color-scheme: light;
+
+  /* PrimeReact theme tuning (keeps our existing palette + gradient identity) */
+  --rmg-gradient: linear-gradient(87deg, #c5168c, #034ea1);
+  --rmg-surface-glass: rgba(255, 255, 255, 0.72);
+  --rmg-surface-glass-strong: rgba(255, 255, 255, 0.86);
+  --rmg-border: rgba(15, 23, 42, 0.12);
+  --rmg-border-strong: rgba(15, 23, 42, 0.18);
+  --rmg-shadow: 0 12px 40px rgba(2, 8, 23, 0.18);
+
+  /* Prime token overrides (Lara theme reads CSS variables for some surfaces) */
+  --primary-color: #c5168c;
+  --primary-color-text: #ffffff;
 }
 
 body {
@@ -12,6 +24,67 @@ body {
   /* Fallback uses the same tokens as App.css */
   background: var(--color-bg, #f8fafc);
   color: var(--color-text, #0f172a);
+}
+
+/* PrimeReact surface tweaks to match the existing "glassy card" aesthetic */
+.p-component {
+  font-family: inherit;
+}
+
+.p-datatable .p-datatable-header {
+  background: transparent;
+  border: 0;
+  padding: 0 0 0.75rem 0;
+}
+
+.p-datatable .p-datatable-wrapper {
+  border-radius: 16px;
+}
+
+.p-datatable .p-datatable-thead > tr > th {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(10px);
+  border-color: var(--rmg-border);
+}
+
+.p-datatable .p-datatable-tbody > tr > td {
+  border-color: var(--rmg-border);
+}
+
+.p-datatable .p-sortable-column:focus-visible {
+  outline: 3px solid rgba(197, 22, 140, 0.35);
+  outline-offset: 2px;
+}
+
+.p-overlaypanel {
+  border-radius: 16px;
+  border: 1px solid var(--rmg-border);
+  background: var(--rmg-surface-glass-strong);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--rmg-shadow);
+}
+
+.p-multiselect-panel,
+.p-dropdown-panel,
+.p-calendar .p-datepicker {
+  border-radius: 14px;
+  border: 1px solid var(--rmg-border);
+  box-shadow: var(--rmg-shadow);
+}
+
+/* Button tone: keep "Tailwind-like cool palette" feel, but let Prime handle sizing */
+.p-button.p-button-secondary {
+  background: rgba(3, 78, 161, 0.12);
+  border-color: rgba(3, 78, 161, 0.2);
+  color: #0f172a;
+}
+
+.p-button:focus-visible,
+.p-inputtext:focus-visible,
+.p-dropdown:focus-visible,
+.p-multiselect:focus-visible {
+  outline: 3px solid rgba(197, 22, 140, 0.32);
+  outline-offset: 2px;
 }
 
 code {
