@@ -897,6 +897,7 @@ export function RmgTrackerPage() {
             errorMessage={errorMessage}
             rowKey={(r) => r.empId}
             renderCell={renderCell}
+            uploadEndpointPath="/uploads/rmg-tracker"
           />
         )}
       </section>
@@ -1172,6 +1173,7 @@ export function SkillFactoriesPage() {
             errorMessage={errorMessage}
             rowKey={(sf) => sf.skillFactoryId}
             renderCell={renderCell}
+            uploadEndpointPath="/uploads/skill-factories"
           />
         )}
       </section>
@@ -1386,6 +1388,7 @@ export function LearningPathsPage() {
             errorMessage={errorMessage}
             rowKey={(lp) => lp.learningPathName}
             renderCell={renderCell}
+            uploadEndpointPath="/uploads/learning-paths"
           />
         )}
       </section>
@@ -1618,6 +1621,7 @@ export function AssessmentsPage() {
             errorMessage={errorMessage}
             rowKey={(a) => a.assessmentId}
             renderCell={renderCell}
+            uploadEndpointPath="/uploads/assessments"
           />
         )}
       </section>
