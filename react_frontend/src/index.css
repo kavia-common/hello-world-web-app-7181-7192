@@ -20,6 +20,17 @@
   /* Subtle row separators (theme-aligned) */
   --rmg-table-row-border: rgba(3, 78, 161, 0.14);
 
+  /*
+    Consistent vertical spacing before ALL PrimeReact DataTables.
+    Applied to the shared `.RmgTableWrap` container used by PrimeDataTableCard.
+
+    Notes:
+    - Uses margin (not padding) to keep Prime's sticky header calculations and
+      internal scroll container behavior unchanged.
+    - Keep this modest so pages still feel compact.
+  */
+  --rmg-table-block-gap: 16px;
+
   /* Prime token overrides (Lara theme reads CSS variables for some surfaces) */
   --primary-color: #c5168c;
   --primary-color-text: #ffffff;
@@ -428,6 +439,9 @@ body {
 
 /* PrimeDataTableCard outer card may be styled in App.css; ensure fallback behavior here too */
 .RmgTableWrap {
+  /* Add vertical breathing room before tables across ALL pages */
+  margin-top: var(--rmg-table-block-gap, 16px);
+
   overflow-x: auto;
   overflow-y: visible;
   -webkit-overflow-scrolling: touch;
