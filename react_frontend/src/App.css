@@ -873,6 +873,24 @@
   box-shadow: 0 14px 32px rgba(2, 6, 23, 0.08);
 }
 
+/* PrimeReact DataTable header cell alignment helpers (used in PrimeDataTableCard) */
+.RmgPrimeHeaderCell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+
+.RmgPrimeHeaderLabel {
+  font-weight: 900;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .RmgTable {
   width: 100%;
   border-collapse: separate;

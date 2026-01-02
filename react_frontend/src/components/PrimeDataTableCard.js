@@ -516,14 +516,20 @@ export default function PrimeDataTableCard({
       ? `${colDef.label}. Filtered by ${activeCount} value${activeCount === 1 ? "" : "s"}. Activate to edit filter.`
       : `${colDef.label}. Not filtered. Activate to filter by distinct values.`;
 
+    /**
+     * NOTE:
+     * We use class-based styling (via index.css) for consistent header sizing/alignment.
+     * Inline styles previously varied across browsers and could contribute to subtle
+     * header/body column width misalignment in scrollable tables.
+     */
     return (
-      <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "space-between" }}>
-        <span style={{ fontWeight: 800 }}>{colDef.label}</span>
+      <div className="RmgPrimeHeaderCell">
+        <span className="RmgPrimeHeaderLabel">{colDef.label}</span>
 
         <Button
           type="button"
           icon="pi pi-filter"
-          className="p-button-rounded p-button-text"
+          className="p-button-rounded p-button-text p-button-icon-only"
           severity="secondary"
           aria-label={filterA11y}
           aria-haspopup="menu"
