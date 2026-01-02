@@ -63,6 +63,48 @@ test("renders RMG Tracker page and shows loading then table", async () => {
   expect(await screen.findByText("E10234")).toBeInTheDocument();
 });
 
+test("renders Skill Factories page and shows loading then table", async () => {
+  render(
+    <MemoryRouter initialEntries={["/skill-factories"]}>
+      <App />
+    </MemoryRouter>
+  );
+
+  expect(screen.getByRole("heading", { name: /skill factories/i })).toBeInTheDocument();
+  expect(screen.getByText(/fetching skill factories/i)).toBeInTheDocument();
+
+  expect(await screen.findByRole("table")).toBeInTheDocument();
+  expect(await screen.findByText("SF-PLATFORM-001")).toBeInTheDocument();
+});
+
+test("renders Learning Paths page and shows loading then table", async () => {
+  render(
+    <MemoryRouter initialEntries={["/learning-paths"]}>
+      <App />
+    </MemoryRouter>
+  );
+
+  expect(screen.getByRole("heading", { name: /learning paths/i })).toBeInTheDocument();
+  expect(screen.getByText(/fetching learning paths/i)).toBeInTheDocument();
+
+  expect(await screen.findByRole("table")).toBeInTheDocument();
+  expect(await screen.findByText("Cloud Fundamentals")).toBeInTheDocument();
+});
+
+test("renders Assessments page and shows loading then table", async () => {
+  render(
+    <MemoryRouter initialEntries={["/assessments"]}>
+      <App />
+    </MemoryRouter>
+  );
+
+  expect(screen.getByRole("heading", { name: /assessments/i })).toBeInTheDocument();
+  expect(screen.getByText(/fetching assessments/i)).toBeInTheDocument();
+
+  expect(await screen.findByRole("table")).toBeInTheDocument();
+  expect(await screen.findByText("A-001")).toBeInTheDocument();
+});
+
 test("column visibility toggling affects rendered table headers", async () => {
   render(
     <MemoryRouter initialEntries={["/rmg-tracker"]}>

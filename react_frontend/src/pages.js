@@ -1276,6 +1276,158 @@ function ColumnFilterCell({ col, facets, value, onChange, disabled, withinPopove
   );
 }
 
+function RmgTrackerTableSection({
+  show,
+  loading,
+  visibleColumns,
+  ALL_COLUMNS,
+  filteredRows,
+  pagedRows,
+  facets,
+  columnFilters,
+  updateColumnFilter,
+  sortState,
+  toggleSort,
+  renderCell,
+}) {
+  /** Table section extracted as a real component so hooks are valid and stable. */
+  const [moreFiltersOpen, setMoreFiltersOpen] = React.useState(false);
+
+  // Enable the overflow pattern when tables are very wide/dense.
+  const { inlineColumns, overflowColumns } = chooseVisibleFilterColumns(visibleColumns, {
+    enableMoreFilters: true,
+    maxInlineFilterCount: 9,
+    // Keep key identifiers inline so the user always sees "what column is what".
+    alwaysInlineColumnIds: ["empId", "name"],
+  });
+
+  const triggerId = "rmg-more-filters-trigger";
+
+  const headerDistinctFilter = useHeaderDistinctValueFilter({
+    rows: filteredRows,
+    columns: ALL_COLUMNS,
+    columnFilters,
+    onChange: updateColumnFilter,
+  });
+
+  React.useEffect(() => {
+    if (!show && moreFiltersOpen) setMoreFiltersOpen(false);
+  }, [show, moreFiltersOpen]);
+
+  if (!show) return null;
+
+  return (
+    <div className="RmgTableWrap" role="region" aria-label="RMG table">
+      {overflowColumns.length > 0 && (
+        <div className="RmgFilterRowActions" aria-label="Column filter actions">
+          <button
+            id={triggerId}
+            type="button"
+            className="RmgButton RmgButton--small"
+            onClick={() => setMoreFiltersOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={moreFiltersOpen ? "true" : "false"}
+            aria-controls="rmg-more-filters-popover"
+          >
+            More filters ({overflowColumns.length})
+          </button>
+
+          <MoreFiltersPopover
+            open={moreFiltersOpen}
+            onClose={() => setMoreFiltersOpen(false)}
+            returnFocusToId={triggerId}
+            ariaLabel="More filters"
+          >
+            <div id="rmg-more-filters-popover" className="RmgPopoverFiltersGrid">
+              {overflowColumns
+                .filter((c) => Boolean(c.filterType))
+                .map((c) => (
+                  <div key={`rmg-popover-filter-${c.id}`} className="RmgPopoverFiltersGridItem">
+                    <table className="RmgPopoverTable" aria-label={`More filters for ${c.label}`}>
+                      <thead>
+                        <tr className="RmgPopoverRow">
+                          <ColumnFilterCell
+                            col={c}
+                            facets={facets}
+                            value={columnFilters[c.id]}
+                            onChange={updateColumnFilter}
+                            disabled={loading}
+                            withinPopover
+                          />
+                        </tr>
+                      </thead>
+                    </table>
+                  </div>
+                ))}
+            </div>
+          </MoreFiltersPopover>
+        </div>
+      )}
+
+      <HeaderDistinctFilterMenu headerDistinctFilter={headerDistinctFilter} />
+
+      <table className="RmgTable">
+        <thead>
+          <tr>
+            {visibleColumns.map((c) => (
+              <ColumnHeaderTh
+                key={c.id}
+                col={c}
+                sortState={sortState}
+                onToggleSort={toggleSort}
+                headerDistinctFilter={headerDistinctFilter}
+                alignRight={c.id === "allocationPct"}
+              />
+            ))}
+          </tr>
+
+          <tr className="RmgFilterRow" aria-label="Column filters">
+            {inlineColumns.map((c) => (
+              <ColumnFilterCell
+                key={`${c.id}-filter`}
+                col={c}
+                facets={facets}
+                value={columnFilters[c.id]}
+                onChange={updateColumnFilter}
+                disabled={loading}
+              />
+            ))}
+
+            {overflowColumns.map((c) => (
+              <th key={`${c.id}-filter-overflow`} scope="col" aria-hidden="true">
+                <div className="RmgFilterControl" />
+              </th>
+            ))}
+          </tr>
+        </thead>
+
+        <tbody>
+          {pagedRows.length === 0 ? (
+            <tr>
+              <td colSpan={Math.max(1, visibleColumns.length)} className="RmgEmptyCell">
+                No records found.
+              </td>
+            </tr>
+          ) : (
+            pagedRows.map((r) => (
+              <tr key={r.empId}>
+                {visibleColumns.map((c) => (
+                  <td
+                    key={`${r.empId}-${c.id}`}
+                    style={c.id === "allocationPct" ? { textAlign: "right" } : undefined}
+                  >
+                    {renderCell(r, c.id)}
+                  </td>
+                ))}
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // PUBLIC_INTERFACE
 export function RmgTrackerPage() {
   /** RMG Tracker page that fetches (mocked) data and renders a table with loading and error states. */
@@ -1489,6 +1641,8 @@ export function RmgTrackerPage() {
     }
   }
 
+  const showTable = !loading && !errorMessage;
+
   return (
     <main className="App-main" aria-label="RMG Tracker page">
       <section className="HelloCard HelloCard--wide" aria-label="RMG Tracker content">
@@ -1691,141 +1845,20 @@ export function RmgTrackerPage() {
           </div>
         )}
 
-        {!loading && !errorMessage && (() => {
-          const [moreFiltersOpen, setMoreFiltersOpen] = React.useState(false);
-
-          // Enable the overflow pattern when tables are very wide/dense.
-          const { inlineColumns, overflowColumns } = chooseVisibleFilterColumns(visibleColumns, {
-            enableMoreFilters: true,
-            maxInlineFilterCount: 9,
-            // Keep key identifiers inline so the user always sees "what column is what".
-            alwaysInlineColumnIds: ["empId", "name"],
-          });
-
-          const triggerId = "rmg-more-filters-trigger";
-
-          const headerDistinctFilter = useHeaderDistinctValueFilter({
-            rows: filteredRows,
-            columns: ALL_COLUMNS,
-            columnFilters,
-            onChange: updateColumnFilter,
-          });
-
-          return (
-            <div className="RmgTableWrap" role="region" aria-label="RMG table">
-              {/* Filter-row helper actions (keeps the table header area from becoming too dense) */}
-              {overflowColumns.length > 0 && (
-                <div className="RmgFilterRowActions" aria-label="Column filter actions">
-                  <button
-                    id={triggerId}
-                    type="button"
-                    className="RmgButton RmgButton--small"
-                    onClick={() => setMoreFiltersOpen(true)}
-                    aria-haspopup="dialog"
-                    aria-expanded={moreFiltersOpen ? "true" : "false"}
-                    aria-controls="rmg-more-filters-popover"
-                  >
-                    More filters ({overflowColumns.length})
-                  </button>
-
-                  <MoreFiltersPopover
-                    open={moreFiltersOpen}
-                    onClose={() => setMoreFiltersOpen(false)}
-                    returnFocusToId={triggerId}
-                    ariaLabel="More filters"
-                  >
-                    <div id="rmg-more-filters-popover" className="RmgPopoverFiltersGrid">
-                      {overflowColumns
-                        .filter((c) => Boolean(c.filterType))
-                        .map((c) => (
-                          <div key={`rmg-popover-filter-${c.id}`} className="RmgPopoverFiltersGridItem">
-                            {/* render as a block (withinPopover=true) */}
-                            <table className="RmgPopoverTable" aria-label={`More filters for ${c.label}`}>
-                              <thead>
-                                <tr className="RmgPopoverRow">
-                                  <ColumnFilterCell
-                                    col={c}
-                                    facets={facets}
-                                    value={columnFilters[c.id]}
-                                    onChange={updateColumnFilter}
-                                    disabled={loading}
-                                    withinPopover
-                                  />
-                                </tr>
-                              </thead>
-                            </table>
-                          </div>
-                        ))}
-                    </div>
-                  </MoreFiltersPopover>
-                </div>
-              )}
-
-              {/* Dropdown overlay for header distinct-value filtering */}
-              <HeaderDistinctFilterMenu headerDistinctFilter={headerDistinctFilter} />
-
-              <table className="RmgTable">
-                <thead>
-                  <tr>
-                    {visibleColumns.map((c) => (
-                      <ColumnHeaderTh
-                        key={c.id}
-                        col={c}
-                        sortState={sortState}
-                        onToggleSort={toggleSort}
-                        headerDistinctFilter={headerDistinctFilter}
-                        alignRight={c.id === "allocationPct"}
-                      />
-                    ))}
-                  </tr>
-
-                  <tr className="RmgFilterRow" aria-label="Column filters">
-                    {inlineColumns.map((c) => (
-                      <ColumnFilterCell
-                        key={`${c.id}-filter`}
-                        col={c}
-                        facets={facets}
-                        value={columnFilters[c.id]}
-                        onChange={updateColumnFilter}
-                        disabled={loading}
-                      />
-                    ))}
-
-                    {/* Preserve column alignment by rendering empty filter cells for overflow columns */}
-                    {overflowColumns.map((c) => (
-                      <th key={`${c.id}-filter-overflow`} scope="col" aria-hidden="true">
-                        <div className="RmgFilterControl" />
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {pagedRows.length === 0 ? (
-                    <tr>
-                      <td colSpan={Math.max(1, visibleColumns.length)} className="RmgEmptyCell">
-                        No records found.
-                      </td>
-                    </tr>
-                  ) : (
-                    pagedRows.map((r) => (
-                      <tr key={r.empId}>
-                        {visibleColumns.map((c) => (
-                          <td
-                            key={`${r.empId}-${c.id}`}
-                            style={c.id === "allocationPct" ? { textAlign: "right" } : undefined}
-                          >
-                            {renderCell(r, c.id)}
-                          </td>
-                        ))}
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          );
-        })()}
+        <RmgTrackerTableSection
+          show={showTable}
+          loading={loading}
+          visibleColumns={visibleColumns}
+          ALL_COLUMNS={ALL_COLUMNS}
+          filteredRows={filteredRows}
+          pagedRows={pagedRows}
+          facets={facets}
+          columnFilters={columnFilters}
+          updateColumnFilter={updateColumnFilter}
+          sortState={sortState}
+          toggleSort={toggleSort}
+          renderCell={renderCell}
+        />
       </section>
     </main>
   );
@@ -2277,6 +2310,8 @@ export function SkillFactoriesPage() {
     }
   }
 
+  const showTable = !loading && !errorMessage;
+
   return (
     <main className="App-main" aria-label="Skill Factories page">
       <section className="HelloCard HelloCard--wide" aria-label="Skill Factories content">
@@ -2434,130 +2469,164 @@ export function SkillFactoriesPage() {
           </div>
         )}
 
-        {!loading && !errorMessage && (() => {
-          const [moreFiltersOpen, setMoreFiltersOpen] = React.useState(false);
-
-          const { inlineColumns, overflowColumns } = chooseVisibleFilterColumns(visibleColumns, {
-            enableMoreFilters: true,
-            maxInlineFilterCount: 8,
-            alwaysInlineColumnIds: ["skillFactoryId", "skillFactoryName"],
-          });
-
-          const triggerId = "sf-more-filters-trigger";
-
-          const headerDistinctFilter = useHeaderDistinctValueFilter({
-            rows: filteredRows,
-            columns: ALL_COLUMNS,
-            columnFilters,
-            onChange: updateColumnFilter,
-          });
-
-          return (
-            <div className="RmgTableWrap" role="region" aria-label="Skill Factories table">
-              {overflowColumns.length > 0 && (
-                <div className="RmgFilterRowActions" aria-label="Column filter actions">
-                  <button
-                    id={triggerId}
-                    type="button"
-                    className="RmgButton RmgButton--small"
-                    onClick={() => setMoreFiltersOpen(true)}
-                    aria-haspopup="dialog"
-                    aria-expanded={moreFiltersOpen ? "true" : "false"}
-                    aria-controls="sf-more-filters-popover"
-                  >
-                    More filters ({overflowColumns.length})
-                  </button>
-
-                  <MoreFiltersPopover
-                    open={moreFiltersOpen}
-                    onClose={() => setMoreFiltersOpen(false)}
-                    returnFocusToId={triggerId}
-                    ariaLabel="More filters"
-                  >
-                    <div id="sf-more-filters-popover" className="RmgPopoverFiltersGrid">
-                      {overflowColumns
-                        .filter((c) => Boolean(c.filterType))
-                        .map((c) => (
-                          <div key={`sf-popover-filter-${c.id}`} className="RmgPopoverFiltersGridItem">
-                            <table className="RmgPopoverTable" aria-label={`More filters for ${c.label}`}>
-                              <thead>
-                                <tr className="RmgPopoverRow">
-                                  <ColumnFilterCell
-                                    col={c}
-                                    facets={facets}
-                                    value={columnFilters[c.id]}
-                                    onChange={updateColumnFilter}
-                                    disabled={loading}
-                                    withinPopover
-                                  />
-                                </tr>
-                              </thead>
-                            </table>
-                          </div>
-                        ))}
-                    </div>
-                  </MoreFiltersPopover>
-                </div>
-              )}
-
-              <HeaderDistinctFilterMenu headerDistinctFilter={headerDistinctFilter} />
-
-              <table className="RmgTable">
-                <thead>
-                  <tr>
-                    {visibleColumns.map((c) => (
-                      <ColumnHeaderTh
-                        key={c.id}
-                        col={c}
-                        sortState={sortState}
-                        onToggleSort={toggleSort}
-                        headerDistinctFilter={headerDistinctFilter}
-                      />
-                    ))}
-                  </tr>
-
-                  <tr className="RmgFilterRow" aria-label="Column filters">
-                    {inlineColumns.map((c) => (
-                      <ColumnFilterCell
-                        key={`${c.id}-filter`}
-                        col={c}
-                        facets={facets}
-                        value={columnFilters[c.id]}
-                        onChange={updateColumnFilter}
-                        disabled={loading}
-                      />
-                    ))}
-                    {overflowColumns.map((c) => (
-                      <th key={`${c.id}-filter-overflow`} scope="col" aria-hidden="true">
-                        <div className="RmgFilterControl" />
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {pagedRows.length === 0 ? (
-                    <tr>
-                      <td colSpan={Math.max(1, visibleColumns.length)} className="RmgEmptyCell">
-                        No records found.
-                      </td>
-                    </tr>
-                  ) : (
-                    pagedRows.map((sf) => (
-                      <tr key={sf.skillFactoryId}>
-                        {visibleColumns.map((c) => (
-                          <td key={`${sf.skillFactoryId}-${c.id}`}>{renderCell(sf, c.id)}</td>
-                        ))}
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          );
-        })()}
+        <SkillFactoriesTableSection
+          show={showTable}
+          loading={loading}
+          visibleColumns={visibleColumns}
+          ALL_COLUMNS={ALL_COLUMNS}
+          filteredRows={filteredRows}
+          pagedRows={pagedRows}
+          facets={facets}
+          columnFilters={columnFilters}
+          updateColumnFilter={updateColumnFilter}
+          sortState={sortState}
+          toggleSort={toggleSort}
+          renderCell={renderCell}
+        />
       </section>
     </main>
+  );
+}
+
+function SkillFactoriesTableSection({
+  show,
+  loading,
+  visibleColumns,
+  ALL_COLUMNS,
+  filteredRows,
+  pagedRows,
+  facets,
+  columnFilters,
+  updateColumnFilter,
+  sortState,
+  toggleSort,
+  renderCell,
+}) {
+  const [moreFiltersOpen, setMoreFiltersOpen] = React.useState(false);
+
+  const { inlineColumns, overflowColumns } = chooseVisibleFilterColumns(visibleColumns, {
+    enableMoreFilters: true,
+    maxInlineFilterCount: 8,
+    alwaysInlineColumnIds: ["skillFactoryId", "skillFactoryName"],
+  });
+
+  const triggerId = "sf-more-filters-trigger";
+
+  const headerDistinctFilter = useHeaderDistinctValueFilter({
+    rows: filteredRows,
+    columns: ALL_COLUMNS,
+    columnFilters,
+    onChange: updateColumnFilter,
+  });
+
+  React.useEffect(() => {
+    if (!show && moreFiltersOpen) setMoreFiltersOpen(false);
+  }, [show, moreFiltersOpen]);
+
+  if (!show) return null;
+
+  return (
+    <div className="RmgTableWrap" role="region" aria-label="Skill Factories table">
+      {overflowColumns.length > 0 && (
+        <div className="RmgFilterRowActions" aria-label="Column filter actions">
+          <button
+            id={triggerId}
+            type="button"
+            className="RmgButton RmgButton--small"
+            onClick={() => setMoreFiltersOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={moreFiltersOpen ? "true" : "false"}
+            aria-controls="sf-more-filters-popover"
+          >
+            More filters ({overflowColumns.length})
+          </button>
+
+          <MoreFiltersPopover
+            open={moreFiltersOpen}
+            onClose={() => setMoreFiltersOpen(false)}
+            returnFocusToId={triggerId}
+            ariaLabel="More filters"
+          >
+            <div id="sf-more-filters-popover" className="RmgPopoverFiltersGrid">
+              {overflowColumns
+                .filter((c) => Boolean(c.filterType))
+                .map((c) => (
+                  <div key={`sf-popover-filter-${c.id}`} className="RmgPopoverFiltersGridItem">
+                    <table className="RmgPopoverTable" aria-label={`More filters for ${c.label}`}>
+                      <thead>
+                        <tr className="RmgPopoverRow">
+                          <ColumnFilterCell
+                            col={c}
+                            facets={facets}
+                            value={columnFilters[c.id]}
+                            onChange={updateColumnFilter}
+                            disabled={loading}
+                            withinPopover
+                          />
+                        </tr>
+                      </thead>
+                    </table>
+                  </div>
+                ))}
+            </div>
+          </MoreFiltersPopover>
+        </div>
+      )}
+
+      <HeaderDistinctFilterMenu headerDistinctFilter={headerDistinctFilter} />
+
+      <table className="RmgTable">
+        <thead>
+          <tr>
+            {visibleColumns.map((c) => (
+              <ColumnHeaderTh
+                key={c.id}
+                col={c}
+                sortState={sortState}
+                onToggleSort={toggleSort}
+                headerDistinctFilter={headerDistinctFilter}
+              />
+            ))}
+          </tr>
+
+          <tr className="RmgFilterRow" aria-label="Column filters">
+            {inlineColumns.map((c) => (
+              <ColumnFilterCell
+                key={`${c.id}-filter`}
+                col={c}
+                facets={facets}
+                value={columnFilters[c.id]}
+                onChange={updateColumnFilter}
+                disabled={loading}
+              />
+            ))}
+            {overflowColumns.map((c) => (
+              <th key={`${c.id}-filter-overflow`} scope="col" aria-hidden="true">
+                <div className="RmgFilterControl" />
+              </th>
+            ))}
+          </tr>
+        </thead>
+
+        <tbody>
+          {pagedRows.length === 0 ? (
+            <tr>
+              <td colSpan={Math.max(1, visibleColumns.length)} className="RmgEmptyCell">
+                No records found.
+              </td>
+            </tr>
+          ) : (
+            pagedRows.map((sf) => (
+              <tr key={sf.skillFactoryId}>
+                {visibleColumns.map((c) => (
+                  <td key={`${sf.skillFactoryId}-${c.id}`}>{renderCell(sf, c.id)}</td>
+                ))}
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -2612,6 +2681,148 @@ async function fetchLearningPathsMock({ signal } = {}) {
   }
 
   return DUMMY_LEARNING_PATHS_RESPONSE;
+}
+
+function LearningPathsTableSection({
+  show,
+  loading,
+  visibleColumns,
+  ALL_COLUMNS,
+  filteredRows,
+  pagedRows,
+  facets,
+  columnFilters,
+  updateColumnFilter,
+  sortState,
+  toggleSort,
+  renderCell,
+}) {
+  const [moreFiltersOpen, setMoreFiltersOpen] = React.useState(false);
+
+  const { inlineColumns, overflowColumns } = chooseVisibleFilterColumns(visibleColumns, {
+    enableMoreFilters: true,
+    maxInlineFilterCount: 8,
+    alwaysInlineColumnIds: ["learningPathName"],
+  });
+
+  const triggerId = "lp-more-filters-trigger";
+
+  const headerDistinctFilter = useHeaderDistinctValueFilter({
+    rows: filteredRows,
+    columns: ALL_COLUMNS,
+    columnFilters,
+    onChange: updateColumnFilter,
+  });
+
+  React.useEffect(() => {
+    if (!show && moreFiltersOpen) setMoreFiltersOpen(false);
+  }, [show, moreFiltersOpen]);
+
+  if (!show) return null;
+
+  return (
+    <div className="RmgTableWrap" role="region" aria-label="Learning Paths table">
+      {overflowColumns.length > 0 && (
+        <div className="RmgFilterRowActions" aria-label="Column filter actions">
+          <button
+            id={triggerId}
+            type="button"
+            className="RmgButton RmgButton--small"
+            onClick={() => setMoreFiltersOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={moreFiltersOpen ? "true" : "false"}
+            aria-controls="lp-more-filters-popover"
+          >
+            More filters ({overflowColumns.length})
+          </button>
+
+          <MoreFiltersPopover
+            open={moreFiltersOpen}
+            onClose={() => setMoreFiltersOpen(false)}
+            returnFocusToId={triggerId}
+            ariaLabel="More filters"
+          >
+            <div id="lp-more-filters-popover" className="RmgPopoverFiltersGrid">
+              {overflowColumns
+                .filter((c) => Boolean(c.filterType))
+                .map((c) => (
+                  <div key={`lp-popover-filter-${c.id}`} className="RmgPopoverFiltersGridItem">
+                    <table className="RmgPopoverTable" aria-label={`More filters for ${c.label}`}>
+                      <thead>
+                        <tr className="RmgPopoverRow">
+                          <ColumnFilterCell
+                            col={c}
+                            facets={facets}
+                            value={columnFilters[c.id]}
+                            onChange={updateColumnFilter}
+                            disabled={loading}
+                            withinPopover
+                          />
+                        </tr>
+                      </thead>
+                    </table>
+                  </div>
+                ))}
+            </div>
+          </MoreFiltersPopover>
+        </div>
+      )}
+
+      <HeaderDistinctFilterMenu headerDistinctFilter={headerDistinctFilter} />
+
+      <table className="RmgTable">
+        <thead>
+          <tr>
+            {visibleColumns.map((c) => (
+              <ColumnHeaderTh
+                key={c.id}
+                col={c}
+                sortState={sortState}
+                onToggleSort={toggleSort}
+                headerDistinctFilter={headerDistinctFilter}
+              />
+            ))}
+          </tr>
+
+          <tr className="RmgFilterRow" aria-label="Column filters">
+            {inlineColumns.map((c) => (
+              <ColumnFilterCell
+                key={`${c.id}-filter`}
+                col={c}
+                facets={facets}
+                value={columnFilters[c.id]}
+                onChange={updateColumnFilter}
+                disabled={loading}
+              />
+            ))}
+            {overflowColumns.map((c) => (
+              <th key={`${c.id}-filter-overflow`} scope="col" aria-hidden="true">
+                <div className="RmgFilterControl" />
+              </th>
+            ))}
+          </tr>
+        </thead>
+
+        <tbody>
+          {pagedRows.length === 0 ? (
+            <tr>
+              <td colSpan={Math.max(1, visibleColumns.length)} className="RmgEmptyCell">
+                No learning paths found.
+              </td>
+            </tr>
+          ) : (
+            pagedRows.map((lp) => (
+              <tr key={lp.learningPathName}>
+                {visibleColumns.map((c) => (
+                  <td key={`${lp.learningPathName}-${c.id}`}>{renderCell(lp, c.id)}</td>
+                ))}
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 // PUBLIC_INTERFACE
@@ -2884,6 +3095,8 @@ export function LearningPathsPage() {
     }
   }
 
+  const showTable = !loading && !errorMessage;
+
   return (
     <main className="App-main" aria-label="Learning Paths page">
       <section className="HelloCard HelloCard--wide" aria-label="Learning Paths content">
@@ -3041,128 +3254,20 @@ export function LearningPathsPage() {
           </div>
         )}
 
-        {!loading && !errorMessage && (() => {
-          const [moreFiltersOpen, setMoreFiltersOpen] = React.useState(false);
-
-          const { inlineColumns, overflowColumns } = chooseVisibleFilterColumns(visibleColumns, {
-            enableMoreFilters: true,
-            maxInlineFilterCount: 8,
-            alwaysInlineColumnIds: ["learningPathName"],
-          });
-
-          const triggerId = "lp-more-filters-trigger";
-
-          const headerDistinctFilter = useHeaderDistinctValueFilter({
-            rows: filteredRows,
-            columns: ALL_COLUMNS,
-            columnFilters,
-            onChange: updateColumnFilter,
-          });
-
-          return (
-            <div className="RmgTableWrap" role="region" aria-label="Learning Paths table">
-              {overflowColumns.length > 0 && (
-                <div className="RmgFilterRowActions" aria-label="Column filter actions">
-                  <button
-                    id={triggerId}
-                    type="button"
-                    className="RmgButton RmgButton--small"
-                    onClick={() => setMoreFiltersOpen(true)}
-                    aria-haspopup="dialog"
-                    aria-expanded={moreFiltersOpen ? "true" : "false"}
-                    aria-controls="lp-more-filters-popover"
-                  >
-                    More filters ({overflowColumns.length})
-                  </button>
-
-                  <MoreFiltersPopover
-                    open={moreFiltersOpen}
-                    onClose={() => setMoreFiltersOpen(false)}
-                    returnFocusToId={triggerId}
-                    ariaLabel="More filters"
-                  >
-                    <div id="lp-more-filters-popover" className="RmgPopoverFiltersGrid">
-                      {overflowColumns
-                        .filter((c) => Boolean(c.filterType))
-                        .map((c) => (
-                          <div key={`lp-popover-filter-${c.id}`} className="RmgPopoverFiltersGridItem">
-                            <table className="RmgPopoverTable" aria-label={`More filters for ${c.label}`}>
-                              <thead>
-                                <tr className="RmgPopoverRow">
-                                  <ColumnFilterCell
-                                    col={c}
-                                    facets={facets}
-                                    value={columnFilters[c.id]}
-                                    onChange={updateColumnFilter}
-                                    disabled={loading}
-                                    withinPopover
-                                  />
-                                </tr>
-                              </thead>
-                            </table>
-                          </div>
-                        ))}
-                    </div>
-                  </MoreFiltersPopover>
-                </div>
-              )}
-
-              <HeaderDistinctFilterMenu headerDistinctFilter={headerDistinctFilter} />
-
-              <table className="RmgTable">
-                <thead>
-                  <tr>
-                    {visibleColumns.map((c) => (
-                      <ColumnHeaderTh
-                        key={c.id}
-                        col={c}
-                        sortState={sortState}
-                        onToggleSort={toggleSort}
-                        headerDistinctFilter={headerDistinctFilter}
-                      />
-                    ))}
-                  </tr>
-
-                  <tr className="RmgFilterRow" aria-label="Column filters">
-                    {inlineColumns.map((c) => (
-                      <ColumnFilterCell
-                        key={`${c.id}-filter`}
-                        col={c}
-                        facets={facets}
-                        value={columnFilters[c.id]}
-                        onChange={updateColumnFilter}
-                        disabled={loading}
-                      />
-                    ))}
-                    {overflowColumns.map((c) => (
-                      <th key={`${c.id}-filter-overflow`} scope="col" aria-hidden="true">
-                        <div className="RmgFilterControl" />
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {pagedRows.length === 0 ? (
-                    <tr>
-                      <td colSpan={Math.max(1, visibleColumns.length)} className="RmgEmptyCell">
-                        No learning paths found.
-                      </td>
-                    </tr>
-                  ) : (
-                    pagedRows.map((lp) => (
-                      <tr key={lp.learningPathName}>
-                        {visibleColumns.map((c) => (
-                          <td key={`${lp.learningPathName}-${c.id}`}>{renderCell(lp, c.id)}</td>
-                        ))}
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          );
-        })()}
+        <LearningPathsTableSection
+          show={showTable}
+          loading={loading}
+          visibleColumns={visibleColumns}
+          ALL_COLUMNS={ALL_COLUMNS}
+          filteredRows={filteredRows}
+          pagedRows={pagedRows}
+          facets={facets}
+          columnFilters={columnFilters}
+          updateColumnFilter={updateColumnFilter}
+          sortState={sortState}
+          toggleSort={toggleSort}
+          renderCell={renderCell}
+        />
       </section>
     </main>
   );
@@ -3227,6 +3332,149 @@ async function fetchAssessmentsMock({ signal } = {}) {
   }
 
   return DUMMY_ASSESSMENTS_RESPONSE;
+}
+
+function AssessmentsTableSection({
+  show,
+  loading,
+  visibleColumns,
+  ALL_COLUMNS,
+  filteredRows,
+  pagedRows,
+  facets,
+  columnFilters,
+  updateColumnFilter,
+  sortState,
+  toggleSort,
+  renderCell,
+}) {
+  /** Table section extracted as a real component so hooks are valid and stable. */
+  const [moreFiltersOpen, setMoreFiltersOpen] = React.useState(false);
+
+  const { inlineColumns, overflowColumns } = chooseVisibleFilterColumns(visibleColumns, {
+    enableMoreFilters: true,
+    maxInlineFilterCount: 8,
+    alwaysInlineColumnIds: ["assessmentId", "title"],
+  });
+
+  const triggerId = "assessments-more-filters-trigger";
+
+  const headerDistinctFilter = useHeaderDistinctValueFilter({
+    rows: filteredRows,
+    columns: ALL_COLUMNS,
+    columnFilters,
+    onChange: updateColumnFilter,
+  });
+
+  React.useEffect(() => {
+    if (!show && moreFiltersOpen) setMoreFiltersOpen(false);
+  }, [show, moreFiltersOpen]);
+
+  if (!show) return null;
+
+  return (
+    <div className="RmgTableWrap" role="region" aria-label="Assessments table">
+      {overflowColumns.length > 0 && (
+        <div className="RmgFilterRowActions" aria-label="Column filter actions">
+          <button
+            id={triggerId}
+            type="button"
+            className="RmgButton RmgButton--small"
+            onClick={() => setMoreFiltersOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={moreFiltersOpen ? "true" : "false"}
+            aria-controls="assessments-more-filters-popover"
+          >
+            More filters ({overflowColumns.length})
+          </button>
+
+          <MoreFiltersPopover
+            open={moreFiltersOpen}
+            onClose={() => setMoreFiltersOpen(false)}
+            returnFocusToId={triggerId}
+            ariaLabel="More filters"
+          >
+            <div id="assessments-more-filters-popover" className="RmgPopoverFiltersGrid">
+              {overflowColumns
+                .filter((c) => Boolean(c.filterType))
+                .map((c) => (
+                  <div key={`assessments-popover-filter-${c.id}`} className="RmgPopoverFiltersGridItem">
+                    <table className="RmgPopoverTable" aria-label={`More filters for ${c.label}`}>
+                      <thead>
+                        <tr className="RmgPopoverRow">
+                          <ColumnFilterCell
+                            col={c}
+                            facets={facets}
+                            value={columnFilters[c.id]}
+                            onChange={updateColumnFilter}
+                            disabled={loading}
+                            withinPopover
+                          />
+                        </tr>
+                      </thead>
+                    </table>
+                  </div>
+                ))}
+            </div>
+          </MoreFiltersPopover>
+        </div>
+      )}
+
+      <HeaderDistinctFilterMenu headerDistinctFilter={headerDistinctFilter} />
+
+      <table className="RmgTable">
+        <thead>
+          <tr>
+            {visibleColumns.map((c) => (
+              <ColumnHeaderTh
+                key={c.id}
+                col={c}
+                sortState={sortState}
+                onToggleSort={toggleSort}
+                headerDistinctFilter={headerDistinctFilter}
+              />
+            ))}
+          </tr>
+
+          <tr className="RmgFilterRow" aria-label="Column filters">
+            {inlineColumns.map((c) => (
+              <ColumnFilterCell
+                key={`${c.id}-filter`}
+                col={c}
+                facets={facets}
+                value={columnFilters[c.id]}
+                onChange={updateColumnFilter}
+                disabled={loading}
+              />
+            ))}
+            {overflowColumns.map((c) => (
+              <th key={`${c.id}-filter-overflow`} scope="col" aria-hidden="true">
+                <div className="RmgFilterControl" />
+              </th>
+            ))}
+          </tr>
+        </thead>
+
+        <tbody>
+          {pagedRows.length === 0 ? (
+            <tr>
+              <td colSpan={Math.max(1, visibleColumns.length)} className="RmgEmptyCell">
+                No assessments found.
+              </td>
+            </tr>
+          ) : (
+            pagedRows.map((a) => (
+              <tr key={a.assessmentId}>
+                {visibleColumns.map((c) => (
+                  <td key={`${a.assessmentId}-${c.id}`}>{renderCell(a, c.id)}</td>
+                ))}
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 // PUBLIC_INTERFACE
@@ -3463,6 +3711,8 @@ export function AssessmentsPage() {
     }
   }
 
+  const showTable = !loading && !errorMessage;
+
   return (
     <main className="App-main" aria-label="Assessments page">
       <section className="HelloCard HelloCard--wide" aria-label="Assessments content">
@@ -3609,134 +3859,20 @@ export function AssessmentsPage() {
           </div>
         )}
 
-        {!loading && !errorMessage && (() => {
-          const [moreFiltersOpen, setMoreFiltersOpen] = React.useState(false);
-
-          const { inlineColumns, overflowColumns } = chooseVisibleFilterColumns(visibleColumns, {
-            enableMoreFilters: true,
-            maxInlineFilterCount: 8,
-            alwaysInlineColumnIds: ["assessmentId", "title"],
-          });
-
-          const triggerId = "assessments-more-filters-trigger";
-
-          const headerDistinctFilter = useHeaderDistinctValueFilter({
-            rows: filteredRows,
-            columns: ALL_COLUMNS,
-            columnFilters,
-            onChange: updateColumnFilter,
-          });
-
-          return (
-            <div className="RmgTableWrap" role="region" aria-label="Assessments table">
-              {overflowColumns.length > 0 && (
-                <div className="RmgFilterRowActions" aria-label="Column filter actions">
-                  <button
-                    id={triggerId}
-                    type="button"
-                    className="RmgButton RmgButton--small"
-                    onClick={() => setMoreFiltersOpen(true)}
-                    aria-haspopup="dialog"
-                    aria-expanded={moreFiltersOpen ? "true" : "false"}
-                    aria-controls="assessments-more-filters-popover"
-                  >
-                    More filters ({overflowColumns.length})
-                  </button>
-
-                  <MoreFiltersPopover
-                    open={moreFiltersOpen}
-                    onClose={() => setMoreFiltersOpen(false)}
-                    returnFocusToId={triggerId}
-                    ariaLabel="More filters"
-                  >
-                    <div id="assessments-more-filters-popover" className="RmgPopoverFiltersGrid">
-                      {overflowColumns
-                        .filter((c) => Boolean(c.filterType))
-                        .map((c) => (
-                          <div key={`assessments-popover-filter-${c.id}`} className="RmgPopoverFiltersGridItem">
-                            <table className="RmgPopoverTable" aria-label={`More filters for ${c.label}`}>
-                              <thead>
-                                <tr className="RmgPopoverRow">
-                                  <ColumnFilterCell
-                                    col={c}
-                                    facets={facets}
-                                    value={columnFilters[c.id]}
-                                    onChange={updateColumnFilter}
-                                    disabled={loading}
-                                    withinPopover
-                                  />
-                                </tr>
-                              </thead>
-                            </table>
-                          </div>
-                        ))}
-                    </div>
-                  </MoreFiltersPopover>
-                </div>
-              )}
-
-              <HeaderDistinctFilterMenu headerDistinctFilter={headerDistinctFilter} />
-
-              <table className="RmgTable">
-                <thead>
-                  <tr>
-                    {visibleColumns.map((c) => (
-                      <ColumnHeaderTh
-                        key={c.id}
-                        col={c}
-                        sortState={sortState}
-                        onToggleSort={toggleSort}
-                        headerDistinctFilter={headerDistinctFilter}
-                        alignRight={c.id === "marks"}
-                      />
-                    ))}
-                  </tr>
-
-                  <tr className="RmgFilterRow" aria-label="Column filters">
-                    {inlineColumns.map((c) => (
-                      <ColumnFilterCell
-                        key={`${c.id}-filter`}
-                        col={c}
-                        facets={facets}
-                        value={columnFilters[c.id]}
-                        onChange={updateColumnFilter}
-                        disabled={loading}
-                      />
-                    ))}
-                    {overflowColumns.map((c) => (
-                      <th key={`${c.id}-filter-overflow`} scope="col" aria-hidden="true">
-                        <div className="RmgFilterControl" />
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {pagedRows.length === 0 ? (
-                    <tr>
-                      <td colSpan={Math.max(1, visibleColumns.length)} className="RmgEmptyCell">
-                        No assessments found.
-                      </td>
-                    </tr>
-                  ) : (
-                    pagedRows.map((a) => (
-                      <tr key={a.assessmentId}>
-                        {visibleColumns.map((c) => (
-                          <td
-                            key={`${a.assessmentId}-${c.id}`}
-                            style={c.id === "marks" ? { textAlign: "right" } : undefined}
-                          >
-                            {renderCell(a, c.id)}
-                          </td>
-                        ))}
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          );
-        })()}
+        <AssessmentsTableSection
+          show={showTable}
+          loading={loading}
+          visibleColumns={visibleColumns}
+          ALL_COLUMNS={ALL_COLUMNS}
+          filteredRows={filteredRows}
+          pagedRows={pagedRows}
+          facets={facets}
+          columnFilters={columnFilters}
+          updateColumnFilter={updateColumnFilter}
+          sortState={sortState}
+          toggleSort={toggleSort}
+          renderCell={renderCell}
+        />
       </section>
     </main>
   );
