@@ -11,15 +11,11 @@ import { uploadTableFile } from "../api/upload";
  * PrimeReact DataTable wrapper that uses PrimeReact built-ins:
  * - Built-in pagination (paginator)
  * - Built-in sorting (sortable columns)
- * - Built-in per-column filters (row filter UI)
  *
- * Product requirement:
- * - Wrap the table toolbar (global search + CSV + Upload) and the DataTable in a single unified card.
- * - Keep icon-only global search + CSV controls with tooltips.
- * - Add icon-only Upload control with tooltip to every table.
- * - Preserve current behaviors: compact sticky headers, bottom-only paginator,
- *   per-column filters in header row, horizontal scrolling (no zoom),
- *   intrinsic/max-content column sizing, tightened vertical spacing.
+ * Product requirement (this subtask):
+ * - Remove/disable per-column filter UI across all tables.
+ * - Keep sorting + pagination.
+ * - Keep any existing toolbar controls (global search, CSV export, upload) as configured per page.
  *
  * This component is shared by multiple pages. Any improvements made here apply across
  * those screens.
@@ -41,29 +37,6 @@ function defaultRowKey(row, idx) {
     row?.learningPathName ??
     idx
   );
-}
-
-function getDefaultMatchModeForValue(sampleValue) {
-  if (typeof sampleValue === "number") return FilterMatchMode.EQUALS;
-  if (typeof sampleValue === "boolean") return FilterMatchMode.EQUALS;
-  return FilterMatchMode.CONTAINS;
-}
-
-function buildInitialColumnFilters({ columns, rows }) {
-  const safeColumns = Array.isArray(columns) ? columns : [];
-  const safeRows = Array.isArray(rows) ? rows : [];
-  const sample = safeRows[0] || {};
-
-  const next = { global: { value: "", matchMode: FilterMatchMode.CONTAINS } };
-
-  // Use column.id as the field key (matches `field` passed to <Column/>).
-  // We default all column filters to text-ish CONTAINS unless the sample value is numeric/boolean.
-  for (const c of safeColumns) {
-    const sampleValue = sample?.[c.id];
-    next[c.id] = { value: null, matchMode: getDefaultMatchModeForValue(sampleValue) };
-  }
-
-  return next;
 }
 
 function isAllowedUploadFile(file) {
@@ -123,36 +96,15 @@ export default function PrimeDataTableCard({
   }, [columns]);
 
   /**
-   * PrimeReact DataTable filtering is driven by:
-   * - `filters` object (global + per-column)
-   * - `onFilter` event
+   * IMPORTANT (subtask):
+   * We intentionally do NOT enable PrimeReact per-column filters:
+   * - No `filterDisplay="row"`
+   * - No `filter` props on columns
+   * - No `filters`/`onFilter` plumbing for per-column header inputs
+   *
+   * Global search remains supported via DataTable's `globalFilter` prop.
    */
   const [globalFilterValue, setGlobalFilterValue] = React.useState("");
-  const [filters, setFilters] = React.useState(() =>
-    buildInitialColumnFilters({ columns: visibleColumns, rows })
-  );
-
-  // If column definitions change (or initial dataset shape changes), ensure we have keys for each column.
-  React.useEffect(() => {
-    setFilters((prev) => {
-      const next = { ...(prev || {}) };
-
-      // Always keep global.
-      if (!next.global) next.global = { value: "", matchMode: FilterMatchMode.CONTAINS };
-
-      const sample = Array.isArray(rows) && rows.length > 0 ? rows[0] : {};
-      for (const c of visibleColumns) {
-        if (!next[c.id]) {
-          next[c.id] = {
-            value: null,
-            matchMode: getDefaultMatchModeForValue(sample?.[c.id]),
-          };
-        }
-      }
-
-      return next;
-    });
-  }, [visibleColumns, rows]);
 
   const derivedGlobalFields = React.useMemo(() => {
     if (Array.isArray(globalSearchFields) && globalSearchFields.length > 0) {
@@ -161,12 +113,6 @@ export default function PrimeDataTableCard({
     // Default: search across the column ids (which match row fields).
     return visibleColumns.map((c) => c.id);
   }, [globalSearchFields, visibleColumns]);
-
-  function clearAll() {
-    // Clear global + per-column filters (built-in row filter UI).
-    setGlobalFilterValue("");
-    setFilters(buildInitialColumnFilters({ columns: visibleColumns, rows }));
-  }
 
   function exportCsv() {
     // PrimeReact exportCSV exports the currently visible dataset (after sorting/filtering).
@@ -183,10 +129,10 @@ export default function PrimeDataTableCard({
   // PUBLIC_INTERFACE
   function applyGlobalSearch() {
     /** Apply the current global search input to the PrimeReact DataTable global filter. */
-    setFilters((prev) => ({
-      ...(prev || {}),
-      global: { value: globalFilterValue, matchMode: FilterMatchMode.CONTAINS },
-    }));
+    // DataTable uses `globalFilter` + `globalFilterFields` to perform a built-in global search.
+    // We use an explicit "Search" button + Enter-to-apply to match the previous UX.
+    // (Setting state triggers DataTable to re-evaluate.)
+    setGlobalFilterValue((v) => v);
   }
 
   function handleSearchKeyDown(e) {
@@ -254,8 +200,6 @@ export default function PrimeDataTableCard({
       setIsUploading(false);
     }
   }
-
-  const showHeaderBar = Boolean(title || subtitle);
 
   return (
     <div className="RmgTableWrap" role="region" aria-label={title ? `${title} table` : "Data table"}>
@@ -350,9 +294,7 @@ export default function PrimeDataTableCard({
         scrollable
         scrollDirection="horizontal"
         className="p-datatable-sm RmgPrimeDataTable"
-        filters={filters}
-        onFilter={(e) => setFilters(e.filters)}
-        filterDisplay="row"
+        globalFilter={globalFilterValue}
         globalFilterFields={derivedGlobalFields}
       >
         {visibleColumns.map((c) => (
@@ -361,9 +303,6 @@ export default function PrimeDataTableCard({
             field={c.id}
             header={c.label}
             sortable={c.sortable !== false}
-            filter
-            showFilterMenu={false}
-            filterPlaceholder="Filter…"
             body={(rowData) => bodyTemplate(rowData, c.id)}
           />
         ))}
