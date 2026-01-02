@@ -56,12 +56,29 @@
     - Used by metric cards, page cards, and table/panel wrappers.
     - Keeps visuals consistent across the app.
   --------------------------------------------------------------------- */
-  --card-bg: rgba(255, 255, 255, 0.74);
-  --card-bg-hover: rgba(255, 255, 255, 0.82);
+
+  /*
+    Requested “consistent variables”
+    These are the canonical tokens that inner/nested cards should inherit.
+    Existing card tokens are preserved and mapped to these aliases so we
+    do not break current outer-card styling.
+  */
+  --card-surface: rgba(255, 255, 255, 0.74);
+  --card-surface-hover: rgba(255, 255, 255, 0.82);
+  --card-surface-inner: rgba(255, 255, 255, 0.68);
+
   --card-border: var(--color-border);
   --card-border-strong: var(--color-border-strong);
+
   --card-shadow: var(--shadow-elev-1);
   --card-shadow-hover: var(--shadow-elev-2);
+
+  /* Focus ring for card surfaces (keeps accessibility intact) */
+  --card-focus: var(--focus-ring);
+
+  /* Backwards-compatible aliases (do not remove existing outer styles) */
+  --card-bg: var(--card-surface);
+  --card-bg-hover: var(--card-surface-hover);
 
   /* A subtle “cool palette” wash for card surfaces, with brand gradient hints */
   --card-surface-wash:
@@ -82,8 +99,9 @@
     rgba(3, 78, 161, 0.65)
   );
 
-  /* Buttons/inputs in “panel/card” contexts */
-  --control-bg: rgba(255, 255, 255, 0.76);
+  /* Controls in “panel/card” contexts */
+  --control-surface: rgba(255, 255, 255, 0.76);
+  --control-bg: var(--control-surface);
   --control-border: rgba(3, 78, 161, 0.18);
   --control-border-strong: rgba(197, 22, 140, 0.26);
 
@@ -530,6 +548,35 @@
   font-size: 0.72rem;
 }
 
+/* ---------- Inner / nested cards & panels ---------- */
+/*
+  Inner cards (sub-cards, panel blocks, checklist rows) should feel like
+  the same system as outer cards: cool palette, subtle wash, and consistent borders.
+  We avoid changing structure/behavior; only visuals via tokens.
+
+  This selector list targets existing nested surfaces in the app.
+*/
+.MetricCard-subRow,
+.HomeLpChartLegend,
+.HomeLpChartControls,
+.HomeLpChartRow,
+.HomeLpChartNum,
+.RmgState,
+.RmgError,
+.RmgOptions,
+.RmgColumnPanel,
+.RmgCheckbox,
+.RmgChip,
+.HomeMiniPill,
+.HomeLpTableWrap,
+.HomeLpChartEmpty {
+  background: var(--card-surface-wash), var(--card-surface-inner);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 10px 22px rgba(2, 6, 23, 0.06);
+  backdrop-filter: blur(10px);
+}
+
+/* Keep existing MetricCard sub-row layout intact */
 .MetricCard-subRow {
   display: flex;
   align-items: center;
@@ -538,8 +585,31 @@
 
   padding: 10px 12px;
   border-radius: 14px;
-  border: 1px solid rgba(99, 102, 241, 0.16);
-  background: rgba(255, 255, 255, 0.62);
+}
+
+/* Inner surfaces should “strengthen” on hover where applicable */
+@media (hover: hover) and (pointer: fine) {
+  .MetricCard-subRow:hover,
+  .RmgCheckbox:hover,
+  .RmgChip:hover {
+    border-color: var(--card-border-strong);
+    background: var(--card-surface-wash), rgba(255, 255, 255, 0.76);
+    box-shadow: 0 14px 28px rgba(2, 132, 199, 0.10);
+  }
+}
+
+/* Accessible focus styling for nested interactive surfaces */
+.MetricCard-subRow:focus-visible,
+.HomeLpChartControls:focus-within,
+.HomeLpChartLegend:focus-within,
+.HomeLpChartRow:focus-within,
+.HomeLpChartNum:focus-within,
+.RmgOptions:focus-within,
+.RmgColumnPanel:focus-within,
+.RmgCheckbox:focus-within,
+.RmgChip:focus-within {
+  outline: 3px solid var(--card-focus);
+  outline-offset: 3px;
 }
 
 .MetricCard-subLabel {
@@ -1433,7 +1503,10 @@
   padding: 14px 14px;
   border-radius: 18px;
   border: 1px solid var(--card-border);
-  background: var(--card-surface-wash), rgba(255, 255, 255, 0.68);
+
+  /* Use requested inner card surface token */
+  background: var(--card-surface-wash), var(--card-surface-inner);
+
   box-shadow: 0 14px 30px rgba(2, 6, 23, 0.08);
 }
 
@@ -1473,7 +1546,10 @@
   appearance: none;
   border-radius: 14px;
   border: 1px solid var(--control-border);
-  background: var(--control-bg);
+
+  /* Requested token */
+  background: var(--control-surface);
+
   padding: 10px 12px;
   font-weight: 700;
   color: rgba(15, 23, 42, 0.92);
@@ -1549,8 +1625,11 @@
   gap: 10px;
   padding: 10px 10px;
   border-radius: 14px;
-  border: 1px solid var(--control-border);
-  background: rgba(255, 255, 255, 0.66);
+
+  /* Make checklist rows feel like inner cards */
+  border: 1px solid var(--card-border);
+  background: var(--card-surface-wash), var(--card-surface-inner);
+
   font-weight: 800;
   transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
