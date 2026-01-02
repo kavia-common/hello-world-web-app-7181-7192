@@ -105,6 +105,11 @@ export default function PrimeDataTableCard({
    * Example: "/uploads/rmg-tracker"
    */
   uploadEndpointPath,
+  /**
+   * When false, hides the unified toolbar row (global search + CSV + upload).
+   * Default true to avoid affecting existing pages.
+   */
+  showUnifiedToolbar = true,
 }) {
   /** Shared table component used across pages. Provides consistent layout + Prime defaults. */
   const dtRef = React.useRef(null);
@@ -299,56 +304,58 @@ export default function PrimeDataTableCard({
         )}
 
         {/* Compact controls row: icon-only global search + Upload + CSV download */}
-        <div className="RmgTableControls" aria-label="Table controls">
-          <div className="RmgTableControls-left">
-            <span className="p-input-icon-left RmgTableSearch">
-              <i className="pi pi-search" aria-hidden="true" />
-              <InputText
-                value={globalFilterValue}
-                onChange={(e) => setGlobalFilterValue(e.target.value)}
-                onKeyDown={handleSearchKeyDown}
-                placeholder="Search…"
-                aria-label="Global search"
+        {showUnifiedToolbar && (
+          <div className="RmgTableControls" aria-label="Table controls">
+            <div className="RmgTableControls-left">
+              <span className="p-input-icon-left RmgTableSearch">
+                <i className="pi pi-search" aria-hidden="true" />
+                <InputText
+                  value={globalFilterValue}
+                  onChange={(e) => setGlobalFilterValue(e.target.value)}
+                  onKeyDown={handleSearchKeyDown}
+                  placeholder="Search…"
+                  aria-label="Global search"
+                  disabled={loading || isUploading}
+                />
+              </span>
+
+              <Button
+                type="button"
+                icon="pi pi-search"
+                className="p-button-outlined p-button-icon-only RmgIconButton"
+                onClick={applyGlobalSearch}
                 disabled={loading || isUploading}
+                aria-label="Apply global search"
+                tooltip="Search"
+                tooltipOptions={{ position: "top" }}
               />
-            </span>
 
-            <Button
-              type="button"
-              icon="pi pi-search"
-              className="p-button-outlined p-button-icon-only RmgIconButton"
-              onClick={applyGlobalSearch}
-              disabled={loading || isUploading}
-              aria-label="Apply global search"
-              tooltip="Search"
-              tooltipOptions={{ position: "top" }}
-            />
+              <Button
+                type="button"
+                icon={isUploading ? "pi pi-spin pi-spinner" : "pi pi-upload"}
+                className="p-button-outlined p-button-icon-only RmgIconButton"
+                onClick={openUploadPicker}
+                disabled={loading || isUploading || !uploadEndpointPath}
+                aria-label="Upload Excel/CSV"
+                tooltip={uploadEndpointPath ? "Upload (Excel/CSV)" : "Upload not configured"}
+                tooltipOptions={{ position: "top" }}
+              />
+            </div>
 
-            <Button
-              type="button"
-              icon={isUploading ? "pi pi-spin pi-spinner" : "pi pi-upload"}
-              className="p-button-outlined p-button-icon-only RmgIconButton"
-              onClick={openUploadPicker}
-              disabled={loading || isUploading || !uploadEndpointPath}
-              aria-label="Upload Excel/CSV"
-              tooltip={uploadEndpointPath ? "Upload (Excel/CSV)" : "Upload not configured"}
-              tooltipOptions={{ position: "top" }}
-            />
+            <div className="RmgTableControls-right">
+              <Button
+                type="button"
+                icon="pi pi-download"
+                className="p-button-outlined p-button-icon-only RmgIconButton"
+                onClick={exportCsv}
+                disabled={loading || isUploading || !Array.isArray(rows) || rows.length === 0}
+                aria-label="Download CSV"
+                tooltip="Download CSV"
+                tooltipOptions={{ position: "top" }}
+              />
+            </div>
           </div>
-
-          <div className="RmgTableControls-right">
-            <Button
-              type="button"
-              icon="pi pi-download"
-              className="p-button-outlined p-button-icon-only RmgIconButton"
-              onClick={exportCsv}
-              disabled={loading || isUploading || !Array.isArray(rows) || rows.length === 0}
-              aria-label="Download CSV"
-              tooltip="Download CSV"
-              tooltipOptions={{ position: "top" }}
-            />
-          </div>
-        </div>
+        )}
 
         <DataTable
           ref={dtRef}
