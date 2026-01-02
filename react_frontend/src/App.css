@@ -957,7 +957,7 @@
 /* Per-column filter row under headers (dedicated row, stable height) */
 .RmgTable thead tr.RmgFilterRow th {
   position: sticky;
-  top: 44px; /* matches header row height; keeps filter row visible while scrolling */
+  top: 44px; /* header row height */
   z-index: 2;
 
   background: rgba(255, 255, 255, 0.78);
@@ -969,7 +969,7 @@
   text-transform: none;
   letter-spacing: 0.02em;
 
-  /* Stable sizing prevents layout shift when controls render */
+  /* Allow filter row to grow (wrap) without overlapping content */
   padding: 10px 12px;
   vertical-align: top;
 }
@@ -999,17 +999,33 @@
 
 .RmgFilterControl--range {
   display: grid;
-  grid-template-columns: repeat(2, minmax(140px, 1fr));
-  gap: 8px;
-  align-items: center;
+  grid-template-columns: repeat(2, minmax(160px, 1fr));
+  gap: 10px;
+  align-items: start;
+}
+
+/* Range sub-field: label + input (prevents dense min/max overlap) */
+.RmgFilterRangeField {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.RmgFilterRangeLabel {
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(15, 23, 42, 0.66);
+  line-height: 1.1;
 }
 
 /* Consistent min/max widths so controls can't shrink into overlap */
 .RmgFilterInput,
 .RmgFilterSelect {
   width: 100%;
-  min-width: 140px;
-  max-width: 320px;
+  min-width: 160px;
+  max-width: 360px;
 
   appearance: none;
   border-radius: 12px;
@@ -1024,7 +1040,7 @@
 
   box-shadow: 0 10px 18px rgba(2, 6, 23, 0.05);
 
-  /* Prevent parent layout jump if the UA adds focus outline/border changes */
+  /* Prevent layout shift when focus rings appear */
   outline: none;
 }
 
@@ -1054,15 +1070,131 @@
    - let filter controls stack naturally inside each TH
    - keep range inputs stacked to avoid overlap
 */
-@media (max-width: 720px) {
+/* Filter-row auxiliary actions (e.g., More filters trigger) */
+.RmgFilterRowActions {
+  position: sticky;
+  top: 0;
+  z-index: 6; /* above table header/filter row; below navbar */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.12);
+
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(10px);
+}
+
+/* Popover overlay + panel */
+.RmgMoreFiltersOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(2, 6, 23, 0.35);
+}
+
+.RmgMoreFiltersPanel {
+  position: absolute;
+  right: 18px;
+  top: 82px; /* below sticky navbar */
+  width: min(720px, calc(100vw - 36px));
+  max-height: min(72vh, 720px);
+  overflow: auto;
+
+  border-radius: 18px;
+  border: 1px solid rgba(99, 102, 241, 0.22);
+  background: var(--card-surface-wash), rgba(255, 255, 255, 0.92);
+  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.18);
+  backdrop-filter: blur(12px);
+
+  padding: 12px 12px;
+}
+
+.RmgMoreFiltersPanel:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.RmgMoreFiltersHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 6px 10px;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.14);
+}
+
+.RmgMoreFiltersTitle {
+  font-weight: 950;
+  letter-spacing: -0.01em;
+}
+
+.RmgMoreFiltersBody {
+  padding: 12px 6px 6px;
+}
+
+/* In-popover layout: each filter becomes a block */
+.RmgPopoverFiltersGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.RmgPopoverFiltersGridItem {
+  min-width: 0;
+}
+
+.RmgPopoverFilterBlock {
+  display: grid;
+  gap: 8px;
+}
+
+.RmgPopoverFilterLabel {
+  font-size: 0.82rem;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(15, 23, 42, 0.72);
+}
+
+/* tiny helper table to reuse ColumnFilterCell without duplicating logic */
+.RmgPopoverTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.RmgPopoverRow th {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+/* <=768px: stacked filter controls inside each filter cell */
+@media (max-width: 768px) {
+  .RmgFilterControl {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .RmgFilterInput,
   .RmgFilterSelect {
-    min-width: 160px;
+    min-width: 100%;
     max-width: 100%;
   }
 
   .RmgFilterControl--range {
     grid-template-columns: 1fr;
+  }
+
+  .RmgPopoverFiltersGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .RmgMoreFiltersPanel {
+    left: 18px;
+    right: 18px;
+    top: 74px;
   }
 }
 

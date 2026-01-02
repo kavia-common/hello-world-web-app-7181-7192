@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "focus-trap-react": "^11.0.4",
     "react": "^18.2.0",
     "react-chatbotify": "^2.5.0",
     "react-dom": "^18.2.0",

@@ -1,8 +1,10 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
+import MoreFiltersPopover from "./components/MoreFiltersPopover";
 import {
   applyColumnFilters,
   buildFacetOptions,
+  chooseVisibleFilterColumns,
   sortRows,
   useTableSorting,
 } from "./components/tableUtils";
@@ -941,7 +943,7 @@ function SortableTh({ col, sortState, onToggle, alignRight }) {
   );
 }
 
-function ColumnFilterCell({ col, facets, value, onChange, disabled }) {
+function ColumnFilterCell({ col, facets, value, onChange, disabled, withinPopover = false }) {
   // Dedicated filter row cell: always renders a stable-height container to avoid overlap/shift.
   const cellKey = `${col.id}-filter`;
 
@@ -956,26 +958,44 @@ function ColumnFilterCell({ col, facets, value, onChange, disabled }) {
 
   const commonProps = { disabled };
 
+  // For dense filters, we render the control(s) inside a small labeled block.
+  // This keeps min/max and start/end date layouts readable and non-overlapping.
+  const wrapInBlock = (control, ariaLabel) => {
+    if (!withinPopover) return control;
+
+    // In the popover, we want each filter to be full width and clearly labeled.
+    return (
+      <div className="RmgPopoverFilterBlock" aria-label={ariaLabel}>
+        <div className="RmgPopoverFilterLabel">{col.label}</div>
+        {control}
+      </div>
+    );
+  };
+
   if (col.filterType === "select") {
     const options = facets?.[col.id] || [];
+    const control = (
+      <div className="RmgFilterControl">
+        <select
+          className="RmgFilterSelect"
+          value={value?.value || ""}
+          onChange={(e) => onChange(col.id, { type: "select", value: e.target.value })}
+          aria-label={`Filter ${col.label}`}
+          {...commonProps}
+        >
+          <option value="">All</option>
+          {options.map((opt) => (
+            <option key={`${col.id}-opt-${opt}`} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+
     return (
       <th key={cellKey} scope="col">
-        <div className="RmgFilterControl">
-          <select
-            className="RmgFilterSelect"
-            value={value?.value || ""}
-            onChange={(e) => onChange(col.id, { type: "select", value: e.target.value })}
-            aria-label={`Filter ${col.label}`}
-            {...commonProps}
-          >
-            <option value="">All</option>
-            {options.map((opt) => (
-              <option key={`${col.id}-opt-${opt}`} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
-        </div>
+        {wrapInBlock(control, `More filters ${col.label}`)}
       </th>
     );
   }
@@ -983,53 +1003,62 @@ function ColumnFilterCell({ col, facets, value, onChange, disabled }) {
   if (col.filterType === "multiselect") {
     const options = facets?.[col.id] || [];
     const selected = Array.isArray(value?.values) ? value.values : [];
+    const control = (
+      <div className="RmgFilterControl">
+        <select
+          multiple
+          className="RmgFilterSelect"
+          value={selected}
+          onChange={(e) => {
+            const next = Array.from(e.target.selectedOptions).map((o) => o.value);
+            onChange(col.id, { type: "multiselect", values: next });
+          }}
+          aria-label={`Filter ${col.label} (multi-select)`}
+          {...commonProps}
+        >
+          {options.map((opt) => (
+            <option key={`${col.id}-opt-${opt}`} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+
     return (
       <th key={cellKey} scope="col">
-        <div className="RmgFilterControl">
-          <select
-            multiple
-            className="RmgFilterSelect"
-            value={selected}
-            onChange={(e) => {
-              const next = Array.from(e.target.selectedOptions).map((o) => o.value);
-              onChange(col.id, { type: "multiselect", values: next });
-            }}
-            aria-label={`Filter ${col.label} (multi-select)`}
-            {...commonProps}
-          >
-            {options.map((opt) => (
-              <option key={`${col.id}-opt-${opt}`} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
-        </div>
+        {wrapInBlock(control, `More filters ${col.label}`)}
       </th>
     );
   }
 
   if (col.filterType === "text") {
+    const control = (
+      <div className="RmgFilterControl">
+        <input
+          className="RmgFilterInput"
+          type="search"
+          value={value?.value || ""}
+          onChange={(e) => onChange(col.id, { type: "text", value: e.target.value })}
+          placeholder="Filter…"
+          aria-label={`Filter ${col.label} text`}
+          {...commonProps}
+        />
+      </div>
+    );
+
     return (
       <th key={cellKey} scope="col">
-        <div className="RmgFilterControl">
-          <input
-            className="RmgFilterInput"
-            type="search"
-            value={value?.value || ""}
-            onChange={(e) => onChange(col.id, { type: "text", value: e.target.value })}
-            placeholder="Filter…"
-            aria-label={`Filter ${col.label} text`}
-            {...commonProps}
-          />
-        </div>
+        {wrapInBlock(control, `More filters ${col.label}`)}
       </th>
     );
   }
 
   if (col.filterType === "numberRange") {
-    return (
-      <th key={cellKey} scope="col">
-        <div className="RmgFilterControl RmgFilterControl--range">
+    const control = (
+      <div className="RmgFilterControl RmgFilterControl--range">
+        <div className="RmgFilterRangeField">
+          <span className="RmgFilterRangeLabel">Min</span>
           <input
             className="RmgFilterInput"
             type="number"
@@ -1042,6 +1071,10 @@ function ColumnFilterCell({ col, facets, value, onChange, disabled }) {
             aria-label={`Filter ${col.label} min`}
             {...commonProps}
           />
+        </div>
+
+        <div className="RmgFilterRangeField">
+          <span className="RmgFilterRangeLabel">Max</span>
           <input
             className="RmgFilterInput"
             type="number"
@@ -1055,31 +1088,52 @@ function ColumnFilterCell({ col, facets, value, onChange, disabled }) {
             {...commonProps}
           />
         </div>
+      </div>
+    );
+
+    return (
+      <th key={cellKey} scope="col">
+        {wrapInBlock(control, `More filters ${col.label}`)}
       </th>
     );
   }
 
   if (col.filterType === "dateRange") {
-    return (
-      <th key={cellKey} scope="col">
-        <div className="RmgFilterControl RmgFilterControl--range">
+    const control = (
+      <div className="RmgFilterControl RmgFilterControl--range">
+        <div className="RmgFilterRangeField">
+          <span className="RmgFilterRangeLabel">Start</span>
           <input
             className="RmgFilterInput"
             type="date"
             value={value?.min || ""}
-            onChange={(e) => onChange(col.id, { type: "dateRange", min: e.target.value, max: value?.max || "" })}
+            onChange={(e) =>
+              onChange(col.id, { type: "dateRange", min: e.target.value, max: value?.max || "" })
+            }
             aria-label={`Filter ${col.label} start date`}
             {...commonProps}
           />
+        </div>
+
+        <div className="RmgFilterRangeField">
+          <span className="RmgFilterRangeLabel">End</span>
           <input
             className="RmgFilterInput"
             type="date"
             value={value?.max || ""}
-            onChange={(e) => onChange(col.id, { type: "dateRange", min: value?.min || "", max: e.target.value })}
+            onChange={(e) =>
+              onChange(col.id, { type: "dateRange", min: value?.min || "", max: e.target.value })
+            }
             aria-label={`Filter ${col.label} end date`}
             {...commonProps}
           />
         </div>
+      </div>
+    );
+
+    return (
+      <th key={cellKey} scope="col">
+        {wrapInBlock(control, `More filters ${col.label}`)}
       </th>
     );
   }
@@ -1506,52 +1560,130 @@ export function RmgTrackerPage() {
           </div>
         )}
 
-        {!loading && !errorMessage && (
-          <div className="RmgTableWrap" role="region" aria-label="RMG table">
-            <table className="RmgTable">
-              <thead>
-                <tr>
-                  {visibleColumns.map((c) => (
-                    <SortableTh key={c.id} col={c} sortState={sortState} onToggle={toggleSort} alignRight={c.id === "allocationPct"} />
-                  ))}
-                </tr>
+        {!loading && !errorMessage && (() => {
+          const [moreFiltersOpen, setMoreFiltersOpen] = React.useState(false);
 
-                <tr className="RmgFilterRow" aria-label="Column filters">
-                  {visibleColumns.map((c) => (
-                    <ColumnFilterCell
-                      key={`${c.id}-filter`}
-                      col={c}
-                      facets={facets}
-                      value={columnFilters[c.id]}
-                      onChange={updateColumnFilter}
-                      disabled={loading}
-                    />
-                  ))}
-                </tr>
-              </thead>
+          // Enable the overflow pattern when tables are very wide/dense.
+          const { inlineColumns, overflowColumns } = chooseVisibleFilterColumns(visibleColumns, {
+            enableMoreFilters: true,
+            maxInlineFilterCount: 9,
+            // Keep key identifiers inline so the user always sees "what column is what".
+            alwaysInlineColumnIds: ["empId", "name"],
+          });
 
-              <tbody>
-                {pagedRows.length === 0 ? (
+          const triggerId = "rmg-more-filters-trigger";
+
+          return (
+            <div className="RmgTableWrap" role="region" aria-label="RMG table">
+              {/* Filter-row helper actions (keeps the table header area from becoming too dense) */}
+              {overflowColumns.length > 0 && (
+                <div className="RmgFilterRowActions" aria-label="Column filter actions">
+                  <button
+                    id={triggerId}
+                    type="button"
+                    className="RmgButton RmgButton--small"
+                    onClick={() => setMoreFiltersOpen(true)}
+                    aria-haspopup="dialog"
+                    aria-expanded={moreFiltersOpen ? "true" : "false"}
+                    aria-controls="rmg-more-filters-popover"
+                  >
+                    More filters ({overflowColumns.length})
+                  </button>
+
+                  <MoreFiltersPopover
+                    open={moreFiltersOpen}
+                    onClose={() => setMoreFiltersOpen(false)}
+                    returnFocusToId={triggerId}
+                    ariaLabel="More filters"
+                  >
+                    <div id="rmg-more-filters-popover" className="RmgPopoverFiltersGrid">
+                      {overflowColumns
+                        .filter((c) => Boolean(c.filterType))
+                        .map((c) => (
+                          <div key={`rmg-popover-filter-${c.id}`} className="RmgPopoverFiltersGridItem">
+                            {/* render as a block (withinPopover=true) */}
+                            <table className="RmgPopoverTable" aria-label={`More filters for ${c.label}`}>
+                              <thead>
+                                <tr className="RmgPopoverRow">
+                                  <ColumnFilterCell
+                                    col={c}
+                                    facets={facets}
+                                    value={columnFilters[c.id]}
+                                    onChange={updateColumnFilter}
+                                    disabled={loading}
+                                    withinPopover
+                                  />
+                                </tr>
+                              </thead>
+                            </table>
+                          </div>
+                        ))}
+                    </div>
+                  </MoreFiltersPopover>
+                </div>
+              )}
+
+              <table className="RmgTable">
+                <thead>
                   <tr>
-                    <td colSpan={Math.max(1, visibleColumns.length)} className="RmgEmptyCell">
-                      No records found.
-                    </td>
+                    {visibleColumns.map((c) => (
+                      <SortableTh
+                        key={c.id}
+                        col={c}
+                        sortState={sortState}
+                        onToggle={toggleSort}
+                        alignRight={c.id === "allocationPct"}
+                      />
+                    ))}
                   </tr>
-                ) : (
-                  pagedRows.map((r) => (
-                    <tr key={r.empId}>
-                      {visibleColumns.map((c) => (
-                        <td key={`${r.empId}-${c.id}`} style={c.id === "allocationPct" ? { textAlign: "right" } : undefined}>
-                          {renderCell(r, c.id)}
-                        </td>
-                      ))}
+
+                  <tr className="RmgFilterRow" aria-label="Column filters">
+                    {inlineColumns.map((c) => (
+                      <ColumnFilterCell
+                        key={`${c.id}-filter`}
+                        col={c}
+                        facets={facets}
+                        value={columnFilters[c.id]}
+                        onChange={updateColumnFilter}
+                        disabled={loading}
+                      />
+                    ))}
+
+                    {/* Preserve column alignment by rendering empty filter cells for overflow columns */}
+                    {overflowColumns.map((c) => (
+                      <th key={`${c.id}-filter-overflow`} scope="col" aria-hidden="true">
+                        <div className="RmgFilterControl" />
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {pagedRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={Math.max(1, visibleColumns.length)} className="RmgEmptyCell">
+                        No records found.
+                      </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+                  ) : (
+                    pagedRows.map((r) => (
+                      <tr key={r.empId}>
+                        {visibleColumns.map((c) => (
+                          <td
+                            key={`${r.empId}-${c.id}`}
+                            style={c.id === "allocationPct" ? { textAlign: "right" } : undefined}
+                          >
+                            {renderCell(r, c.id)}
+                          </td>
+                        ))}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
       </section>
     </main>
   );
@@ -2160,43 +2292,113 @@ export function SkillFactoriesPage() {
           </div>
         )}
 
-        {!loading && !errorMessage && (
-          <div className="RmgTableWrap" role="region" aria-label="Skill Factories table">
-            <table className="RmgTable">
-              <thead>
-                <tr>
-                  {visibleColumns.map((c) => (
-                    <SortableTh key={c.id} col={c} sortState={sortState} onToggle={toggleSort} />
-                  ))}
-                </tr>
+        {!loading && !errorMessage && (() => {
+          const [moreFiltersOpen, setMoreFiltersOpen] = React.useState(false);
 
-                <tr className="RmgFilterRow" aria-label="Column filters">
-                  {visibleColumns.map((c) => (
-                    <ColumnFilterCell key={`${c.id}-filter`} col={c} facets={facets} value={columnFilters[c.id]} onChange={updateColumnFilter} disabled={loading} />
-                  ))}
-                </tr>
-              </thead>
+          const { inlineColumns, overflowColumns } = chooseVisibleFilterColumns(visibleColumns, {
+            enableMoreFilters: true,
+            maxInlineFilterCount: 8,
+            alwaysInlineColumnIds: ["skillFactoryId", "skillFactoryName"],
+          });
 
-              <tbody>
-                {pagedRows.length === 0 ? (
+          const triggerId = "sf-more-filters-trigger";
+
+          return (
+            <div className="RmgTableWrap" role="region" aria-label="Skill Factories table">
+              {overflowColumns.length > 0 && (
+                <div className="RmgFilterRowActions" aria-label="Column filter actions">
+                  <button
+                    id={triggerId}
+                    type="button"
+                    className="RmgButton RmgButton--small"
+                    onClick={() => setMoreFiltersOpen(true)}
+                    aria-haspopup="dialog"
+                    aria-expanded={moreFiltersOpen ? "true" : "false"}
+                    aria-controls="sf-more-filters-popover"
+                  >
+                    More filters ({overflowColumns.length})
+                  </button>
+
+                  <MoreFiltersPopover
+                    open={moreFiltersOpen}
+                    onClose={() => setMoreFiltersOpen(false)}
+                    returnFocusToId={triggerId}
+                    ariaLabel="More filters"
+                  >
+                    <div id="sf-more-filters-popover" className="RmgPopoverFiltersGrid">
+                      {overflowColumns
+                        .filter((c) => Boolean(c.filterType))
+                        .map((c) => (
+                          <div key={`sf-popover-filter-${c.id}`} className="RmgPopoverFiltersGridItem">
+                            <table className="RmgPopoverTable" aria-label={`More filters for ${c.label}`}>
+                              <thead>
+                                <tr className="RmgPopoverRow">
+                                  <ColumnFilterCell
+                                    col={c}
+                                    facets={facets}
+                                    value={columnFilters[c.id]}
+                                    onChange={updateColumnFilter}
+                                    disabled={loading}
+                                    withinPopover
+                                  />
+                                </tr>
+                              </thead>
+                            </table>
+                          </div>
+                        ))}
+                    </div>
+                  </MoreFiltersPopover>
+                </div>
+              )}
+
+              <table className="RmgTable">
+                <thead>
                   <tr>
-                    <td colSpan={Math.max(1, visibleColumns.length)} className="RmgEmptyCell">
-                      No records found.
-                    </td>
+                    {visibleColumns.map((c) => (
+                      <SortableTh key={c.id} col={c} sortState={sortState} onToggle={toggleSort} />
+                    ))}
                   </tr>
-                ) : (
-                  pagedRows.map((sf) => (
-                    <tr key={sf.skillFactoryId}>
-                      {visibleColumns.map((c) => (
-                        <td key={`${sf.skillFactoryId}-${c.id}`}>{renderCell(sf, c.id)}</td>
-                      ))}
+
+                  <tr className="RmgFilterRow" aria-label="Column filters">
+                    {inlineColumns.map((c) => (
+                      <ColumnFilterCell
+                        key={`${c.id}-filter`}
+                        col={c}
+                        facets={facets}
+                        value={columnFilters[c.id]}
+                        onChange={updateColumnFilter}
+                        disabled={loading}
+                      />
+                    ))}
+                    {overflowColumns.map((c) => (
+                      <th key={`${c.id}-filter-overflow`} scope="col" aria-hidden="true">
+                        <div className="RmgFilterControl" />
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {pagedRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={Math.max(1, visibleColumns.length)} className="RmgEmptyCell">
+                        No records found.
+                      </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+                  ) : (
+                    pagedRows.map((sf) => (
+                      <tr key={sf.skillFactoryId}>
+                        {visibleColumns.map((c) => (
+                          <td key={`${sf.skillFactoryId}-${c.id}`}>{renderCell(sf, c.id)}</td>
+                        ))}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
       </section>
     </main>
   );
@@ -2682,43 +2884,113 @@ export function LearningPathsPage() {
           </div>
         )}
 
-        {!loading && !errorMessage && (
-          <div className="RmgTableWrap" role="region" aria-label="Learning Paths table">
-            <table className="RmgTable">
-              <thead>
-                <tr>
-                  {visibleColumns.map((c) => (
-                    <SortableTh key={c.id} col={c} sortState={sortState} onToggle={toggleSort} />
-                  ))}
-                </tr>
+        {!loading && !errorMessage && (() => {
+          const [moreFiltersOpen, setMoreFiltersOpen] = React.useState(false);
 
-                <tr className="RmgFilterRow" aria-label="Column filters">
-                  {visibleColumns.map((c) => (
-                    <ColumnFilterCell key={`${c.id}-filter`} col={c} facets={facets} value={columnFilters[c.id]} onChange={updateColumnFilter} disabled={loading} />
-                  ))}
-                </tr>
-              </thead>
+          const { inlineColumns, overflowColumns } = chooseVisibleFilterColumns(visibleColumns, {
+            enableMoreFilters: true,
+            maxInlineFilterCount: 8,
+            alwaysInlineColumnIds: ["learningPathName"],
+          });
 
-              <tbody>
-                {pagedRows.length === 0 ? (
+          const triggerId = "lp-more-filters-trigger";
+
+          return (
+            <div className="RmgTableWrap" role="region" aria-label="Learning Paths table">
+              {overflowColumns.length > 0 && (
+                <div className="RmgFilterRowActions" aria-label="Column filter actions">
+                  <button
+                    id={triggerId}
+                    type="button"
+                    className="RmgButton RmgButton--small"
+                    onClick={() => setMoreFiltersOpen(true)}
+                    aria-haspopup="dialog"
+                    aria-expanded={moreFiltersOpen ? "true" : "false"}
+                    aria-controls="lp-more-filters-popover"
+                  >
+                    More filters ({overflowColumns.length})
+                  </button>
+
+                  <MoreFiltersPopover
+                    open={moreFiltersOpen}
+                    onClose={() => setMoreFiltersOpen(false)}
+                    returnFocusToId={triggerId}
+                    ariaLabel="More filters"
+                  >
+                    <div id="lp-more-filters-popover" className="RmgPopoverFiltersGrid">
+                      {overflowColumns
+                        .filter((c) => Boolean(c.filterType))
+                        .map((c) => (
+                          <div key={`lp-popover-filter-${c.id}`} className="RmgPopoverFiltersGridItem">
+                            <table className="RmgPopoverTable" aria-label={`More filters for ${c.label}`}>
+                              <thead>
+                                <tr className="RmgPopoverRow">
+                                  <ColumnFilterCell
+                                    col={c}
+                                    facets={facets}
+                                    value={columnFilters[c.id]}
+                                    onChange={updateColumnFilter}
+                                    disabled={loading}
+                                    withinPopover
+                                  />
+                                </tr>
+                              </thead>
+                            </table>
+                          </div>
+                        ))}
+                    </div>
+                  </MoreFiltersPopover>
+                </div>
+              )}
+
+              <table className="RmgTable">
+                <thead>
                   <tr>
-                    <td colSpan={Math.max(1, visibleColumns.length)} className="RmgEmptyCell">
-                      No learning paths found.
-                    </td>
+                    {visibleColumns.map((c) => (
+                      <SortableTh key={c.id} col={c} sortState={sortState} onToggle={toggleSort} />
+                    ))}
                   </tr>
-                ) : (
-                  pagedRows.map((lp) => (
-                    <tr key={lp.learningPathName}>
-                      {visibleColumns.map((c) => (
-                        <td key={`${lp.learningPathName}-${c.id}`}>{renderCell(lp, c.id)}</td>
-                      ))}
+
+                  <tr className="RmgFilterRow" aria-label="Column filters">
+                    {inlineColumns.map((c) => (
+                      <ColumnFilterCell
+                        key={`${c.id}-filter`}
+                        col={c}
+                        facets={facets}
+                        value={columnFilters[c.id]}
+                        onChange={updateColumnFilter}
+                        disabled={loading}
+                      />
+                    ))}
+                    {overflowColumns.map((c) => (
+                      <th key={`${c.id}-filter-overflow`} scope="col" aria-hidden="true">
+                        <div className="RmgFilterControl" />
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {pagedRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={Math.max(1, visibleColumns.length)} className="RmgEmptyCell">
+                        No learning paths found.
+                      </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+                  ) : (
+                    pagedRows.map((lp) => (
+                      <tr key={lp.learningPathName}>
+                        {visibleColumns.map((c) => (
+                          <td key={`${lp.learningPathName}-${c.id}`}>{renderCell(lp, c.id)}</td>
+                        ))}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
       </section>
     </main>
   );
@@ -3165,45 +3437,124 @@ export function AssessmentsPage() {
           </div>
         )}
 
-        {!loading && !errorMessage && (
-          <div className="RmgTableWrap" role="region" aria-label="Assessments table">
-            <table className="RmgTable">
-              <thead>
-                <tr>
-                  {visibleColumns.map((c) => (
-                    <SortableTh key={c.id} col={c} sortState={sortState} onToggle={toggleSort} alignRight={c.id === "marks"} />
-                  ))}
-                </tr>
+        {!loading && !errorMessage && (() => {
+          const [moreFiltersOpen, setMoreFiltersOpen] = React.useState(false);
 
-                <tr className="RmgFilterRow" aria-label="Column filters">
-                  {visibleColumns.map((c) => (
-                    <ColumnFilterCell key={`${c.id}-filter`} col={c} facets={facets} value={columnFilters[c.id]} onChange={updateColumnFilter} disabled={loading} />
-                  ))}
-                </tr>
-              </thead>
+          const { inlineColumns, overflowColumns } = chooseVisibleFilterColumns(visibleColumns, {
+            enableMoreFilters: true,
+            maxInlineFilterCount: 8,
+            alwaysInlineColumnIds: ["assessmentId", "title"],
+          });
 
-              <tbody>
-                {pagedRows.length === 0 ? (
+          const triggerId = "assessments-more-filters-trigger";
+
+          return (
+            <div className="RmgTableWrap" role="region" aria-label="Assessments table">
+              {overflowColumns.length > 0 && (
+                <div className="RmgFilterRowActions" aria-label="Column filter actions">
+                  <button
+                    id={triggerId}
+                    type="button"
+                    className="RmgButton RmgButton--small"
+                    onClick={() => setMoreFiltersOpen(true)}
+                    aria-haspopup="dialog"
+                    aria-expanded={moreFiltersOpen ? "true" : "false"}
+                    aria-controls="assessments-more-filters-popover"
+                  >
+                    More filters ({overflowColumns.length})
+                  </button>
+
+                  <MoreFiltersPopover
+                    open={moreFiltersOpen}
+                    onClose={() => setMoreFiltersOpen(false)}
+                    returnFocusToId={triggerId}
+                    ariaLabel="More filters"
+                  >
+                    <div id="assessments-more-filters-popover" className="RmgPopoverFiltersGrid">
+                      {overflowColumns
+                        .filter((c) => Boolean(c.filterType))
+                        .map((c) => (
+                          <div key={`assessments-popover-filter-${c.id}`} className="RmgPopoverFiltersGridItem">
+                            <table className="RmgPopoverTable" aria-label={`More filters for ${c.label}`}>
+                              <thead>
+                                <tr className="RmgPopoverRow">
+                                  <ColumnFilterCell
+                                    col={c}
+                                    facets={facets}
+                                    value={columnFilters[c.id]}
+                                    onChange={updateColumnFilter}
+                                    disabled={loading}
+                                    withinPopover
+                                  />
+                                </tr>
+                              </thead>
+                            </table>
+                          </div>
+                        ))}
+                    </div>
+                  </MoreFiltersPopover>
+                </div>
+              )}
+
+              <table className="RmgTable">
+                <thead>
                   <tr>
-                    <td colSpan={Math.max(1, visibleColumns.length)} className="RmgEmptyCell">
-                      No assessments found.
-                    </td>
+                    {visibleColumns.map((c) => (
+                      <SortableTh
+                        key={c.id}
+                        col={c}
+                        sortState={sortState}
+                        onToggle={toggleSort}
+                        alignRight={c.id === "marks"}
+                      />
+                    ))}
                   </tr>
-                ) : (
-                  pagedRows.map((a) => (
-                    <tr key={a.assessmentId}>
-                      {visibleColumns.map((c) => (
-                        <td key={`${a.assessmentId}-${c.id}`} style={c.id === "marks" ? { textAlign: "right" } : undefined}>
-                          {renderCell(a, c.id)}
-                        </td>
-                      ))}
+
+                  <tr className="RmgFilterRow" aria-label="Column filters">
+                    {inlineColumns.map((c) => (
+                      <ColumnFilterCell
+                        key={`${c.id}-filter`}
+                        col={c}
+                        facets={facets}
+                        value={columnFilters[c.id]}
+                        onChange={updateColumnFilter}
+                        disabled={loading}
+                      />
+                    ))}
+                    {overflowColumns.map((c) => (
+                      <th key={`${c.id}-filter-overflow`} scope="col" aria-hidden="true">
+                        <div className="RmgFilterControl" />
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {pagedRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={Math.max(1, visibleColumns.length)} className="RmgEmptyCell">
+                        No assessments found.
+                      </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+                  ) : (
+                    pagedRows.map((a) => (
+                      <tr key={a.assessmentId}>
+                        {visibleColumns.map((c) => (
+                          <td
+                            key={`${a.assessmentId}-${c.id}`}
+                            style={c.id === "marks" ? { textAlign: "right" } : undefined}
+                          >
+                            {renderCell(a, c.id)}
+                          </td>
+                        ))}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
       </section>
     </main>
   );

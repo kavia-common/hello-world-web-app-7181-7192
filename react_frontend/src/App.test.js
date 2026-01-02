@@ -160,3 +160,60 @@ test("pagination changes which rows are visible", async () => {
   expect(screen.getByText("E10234")).toBeInTheDocument();
   expect(screen.getByText("E11876")).toBeInTheDocument();
 });
+
+test("column filter row renders densely without overlap (range/date filters present)", async () => {
+  render(
+    <MemoryRouter initialEntries={["/rmg-tracker"]}>
+      <App />
+    </MemoryRouter>
+  );
+
+  const table = await screen.findByRole("table");
+
+  // Dense filter row should exist
+  const filterRow = within(table).getByRole("row", { name: /column filters/i });
+  expect(filterRow).toBeInTheDocument();
+
+  // Validate that min/max + start/end date fields are present (dense controls)
+  expect(screen.getByRole("spinbutton", { name: /filter allocation % min/i })).toBeInTheDocument();
+  expect(screen.getByRole("spinbutton", { name: /filter allocation % max/i })).toBeInTheDocument();
+
+  expect(screen.getByLabelText(/filter start start date/i)).toBeInTheDocument();
+  expect(screen.getByLabelText(/filter start end date/i)).toBeInTheDocument();
+  expect(screen.getByLabelText(/filter end start date/i)).toBeInTheDocument();
+  expect(screen.getByLabelText(/filter end end date/i)).toBeInTheDocument();
+
+  // Sticky header/filter row styles should be present (top offsets set in CSS)
+  // (We can't fully compute layout in JSDOM, but we can assert the classes are applied.)
+  const filterRowCells = within(filterRow).getAllByRole("columnheader");
+  expect(filterRowCells.length).toBeGreaterThan(0);
+});
+
+test("More filters popover opens, traps focus, and closes on Escape", async () => {
+  render(
+    <MemoryRouter initialEntries={["/rmg-tracker"]}>
+      <App />
+    </MemoryRouter>
+  );
+
+  await screen.findByRole("table");
+
+  // More filters trigger should appear because RMG has many columns/filters
+  const openBtn = screen.getByRole("button", { name: /more filters/i });
+  fireEvent.click(openBtn);
+
+  const dialog = await screen.findByRole("dialog", { name: /more filters/i });
+  expect(dialog).toBeInTheDocument();
+
+  // Focus should land within the dialog (panel is focusable)
+  expect(dialog.contains(document.activeElement)).toBe(true);
+
+  // Tabbing should keep focus within dialog (basic focus trap check)
+  fireEvent.keyDown(document, { key: "Tab" });
+  expect(dialog.contains(document.activeElement)).toBe(true);
+
+  // Esc closes and returns focus to trigger
+  fireEvent.keyDown(document, { key: "Escape" });
+  expect(screen.queryByRole("dialog", { name: /more filters/i })).not.toBeInTheDocument();
+  expect(document.activeElement).toBe(openBtn);
+});

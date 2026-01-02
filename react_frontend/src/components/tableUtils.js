@@ -244,8 +244,6 @@ export function buildFacetOptions(rows, columns) {
 /**
  * ---------------------------------------------------------------------------
  * UI helpers (shared across tables)
- * These are intentionally tiny, so pages remain free to render their own UI,
- * but can share stable constants to avoid overlapping filter controls.
  * ---------------------------------------------------------------------------
  */
 
@@ -258,5 +256,86 @@ export function getStableTableHeaderHeights() {
 // PUBLIC_INTERFACE
 export function getTableFilterControlWidthBounds() {
   /** Returns recommended min/max widths for column filter controls to prevent overlap. */
-  return { minPx: 140, maxPx: 320 };
+  return { minPx: 160, maxPx: 360 };
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * Responsive filter row helpers
+ * ---------------------------------------------------------------------------
+ */
+
+function filterTypeWeight(filterType) {
+  // Heuristic: "heavier" filters are better candidates to move into "More filters".
+  if (filterType === "dateRange") return 3;
+  if (filterType === "numberRange") return 3;
+  if (filterType === "multiselect") return 2;
+  if (filterType === "text") return 2;
+  if (filterType === "select") return 1;
+  return 0;
+}
+
+// PUBLIC_INTERFACE
+export function chooseVisibleFilterColumns(columns, opts = {}) {
+  /**
+   * Chooses which filter columns to render inline vs inside a "More filters" popover.
+   *
+   * This is intentionally a simple heuristic:
+   * - If enableMoreFilters is false => render all columns inline (existing behavior).
+   * - If enabled => keep up to `maxInlineFilterCount` inline, and push the rest into the popover.
+   * - Prefer keeping simple (select) filters inline and moving heavier (range/date/multi/text) first.
+   *
+   * Returns: { inlineColumns: Column[], overflowColumns: Column[] }
+   */
+  const {
+    enableMoreFilters = false,
+    maxInlineFilterCount = 8,
+    alwaysInlineColumnIds = [],
+  } = opts;
+
+  const safeColumns = Array.isArray(columns) ? columns : [];
+  if (!enableMoreFilters) {
+    return { inlineColumns: safeColumns, overflowColumns: [] };
+  }
+
+  const alwaysInline = new Set(alwaysInlineColumnIds);
+
+  const withMeta = safeColumns.map((c, idx) => ({
+    col: c,
+    idx,
+    // Keep non-filter columns inline so structure is stable (they render empty filter cell anyway).
+    isFilterable: Boolean(c?.filterType),
+    weight: filterTypeWeight(c?.filterType),
+    alwaysInline: alwaysInline.has(c?.id),
+  }));
+
+  // Choose inline candidates:
+  // - Always inline requested ids
+  // - Then lighter filters first
+  // - Preserve original order for stability in rendering
+  const forced = withMeta.filter((x) => x.alwaysInline).map((x) => x.col);
+
+  const remaining = withMeta
+    .filter((x) => !x.alwaysInline)
+    .sort((a, b) => {
+      // lighter first
+      if (a.weight !== b.weight) return a.weight - b.weight;
+      // keep stable original order tie-break
+      return a.idx - b.idx;
+    })
+    .map((x) => x.col);
+
+  const inline = [...forced];
+  for (const c of remaining) {
+    if (inline.length >= maxInlineFilterCount) break;
+    inline.push(c);
+  }
+
+  const inlineIds = new Set(inline.map((c) => c.id));
+  const overflow = safeColumns.filter((c) => !inlineIds.has(c.id));
+
+  // Preserve original order for inline too (important so the table header layout is predictable)
+  const inlineOrdered = safeColumns.filter((c) => inlineIds.has(c.id));
+
+  return { inlineColumns: inlineOrdered, overflowColumns: overflow };
 }
