@@ -957,12 +957,11 @@ export function RmgTrackerPage() {
         {!loading && !errorMessage && (
           <PrimeDataTableCard
             title="RMG Table"
-            subtitle="PrimeReact DataTable with preserved filters/sort/pagination UX."
+            subtitle="PrimeReact DataTable with built-in pagination, filters, sorting, and global search."
             columns={ALL_COLUMNS}
             rows={prefilteredRows}
             loading={loading}
             errorMessage={errorMessage}
-            alwaysInlineColumnIds={["empId", "name"]}
             rowKey={(r) => r.empId}
             renderCell={renderCell}
           />
@@ -1355,12 +1354,11 @@ export function SkillFactoriesPage() {
         {!loading && !errorMessage && (
           <PrimeDataTableCard
             title="Skill Factories Table"
-            subtitle="PrimeReact DataTable with preserved filters/sort/pagination UX."
+            subtitle="PrimeReact DataTable with built-in pagination, filters, sorting, and global search."
             columns={ALL_COLUMNS}
             rows={prefilteredRows}
             loading={loading}
             errorMessage={errorMessage}
-            alwaysInlineColumnIds={["skillFactoryId", "skillFactoryName"]}
             rowKey={(sf) => sf.skillFactoryId}
             renderCell={renderCell}
           />
@@ -1681,12 +1679,11 @@ export function LearningPathsPage() {
         {!loading && !errorMessage && (
           <PrimeDataTableCard
             title="Learning Paths Table"
-            subtitle="PrimeReact DataTable with preserved filters/sort/pagination UX."
+            subtitle="PrimeReact DataTable with built-in pagination, filters, sorting, and global search."
             columns={ALL_COLUMNS}
             rows={prefilteredRows}
             loading={loading}
             errorMessage={errorMessage}
-            alwaysInlineColumnIds={["learningPathName"]}
             rowKey={(lp) => lp.learningPathName}
             renderCell={renderCell}
           />
@@ -1978,12 +1975,11 @@ export function AssessmentsPage() {
         {!loading && !errorMessage && (
           <PrimeDataTableCard
             title="Assessments Table"
-            subtitle="PrimeReact DataTable with preserved filters/sort/pagination UX."
+            subtitle="PrimeReact DataTable with built-in pagination, filters, sorting, and global search."
             columns={ALL_COLUMNS}
             rows={prefilteredRows}
             loading={loading}
             errorMessage={errorMessage}
-            alwaysInlineColumnIds={["assessmentId", "title"]}
             rowKey={(a) => a.assessmentId}
             renderCell={renderCell}
           />
