@@ -51,6 +51,42 @@
   /* Shared focus ring (use primary tint) */
   --focus-ring: rgba(197, 22, 140, 0.30);
 
+  /* ---------------------------------------------------------------------
+    Shared “Card” tokens
+    - Used by metric cards, page cards, and table/panel wrappers.
+    - Keeps visuals consistent across the app.
+  --------------------------------------------------------------------- */
+  --card-bg: rgba(255, 255, 255, 0.74);
+  --card-bg-hover: rgba(255, 255, 255, 0.82);
+  --card-border: var(--color-border);
+  --card-border-strong: var(--color-border-strong);
+  --card-shadow: var(--shadow-elev-1);
+  --card-shadow-hover: var(--shadow-elev-2);
+
+  /* A subtle “cool palette” wash for card surfaces, with brand gradient hints */
+  --card-surface-wash:
+    radial-gradient(680px circle at 18% 12%, rgba(14, 165, 233, 0.10), transparent 56%),
+    radial-gradient(720px circle at 92% 14%, rgba(99, 102, 241, 0.10), transparent 54%),
+    radial-gradient(520px circle at 30% 88%, rgba(197, 22, 140, 0.06), transparent 58%),
+    radial-gradient(560px circle at 78% 82%, rgba(3, 78, 161, 0.06), transparent 58%);
+
+  /* Header/title accents for cards */
+  --card-header-bg: linear-gradient(
+    87deg,
+    rgba(197, 22, 140, 0.10),
+    rgba(3, 78, 161, 0.10)
+  );
+  --card-header-border: linear-gradient(
+    87deg,
+    rgba(197, 22, 140, 0.65),
+    rgba(3, 78, 161, 0.65)
+  );
+
+  /* Buttons/inputs in “panel/card” contexts */
+  --control-bg: rgba(255, 255, 255, 0.76);
+  --control-border: rgba(3, 78, 161, 0.18);
+  --control-border-strong: rgba(197, 22, 140, 0.26);
+
   /* ---------- Digi Bot theme tokens (derived from global palette) ---------- */
   --digibot-primary: var(--color-primary);
   --digibot-secondary: var(--color-secondary);
@@ -241,11 +277,16 @@
 /* Card */
 .HelloCard {
   width: min(680px, 92vw);
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid var(--color-border);
+
+  /* Shared card surface tokens */
+  background: var(--card-surface-wash), var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-elev-1);
+  box-shadow: var(--card-shadow);
   backdrop-filter: blur(10px);
+
+  /* Gradient-accent “top border” (subtle, matches theme patterns) */
+  position: relative;
 
   padding: 34px 28px;
   text-align: center;
@@ -254,6 +295,19 @@
   transform: translateY(10px) scale(0.985);
   opacity: 0;
   animation: hello-enter 520ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.HelloCard::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 10px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--card-header-border);
+  opacity: 0.9;
+  pointer-events: none;
 }
 
 .HelloEyebrow {
@@ -322,9 +376,11 @@
 /* Hover state (gentle, playful) */
 @media (hover: hover) and (pointer: fine) {
   .HelloCard:hover {
-    box-shadow: var(--shadow-elev-2);
+    box-shadow: var(--card-shadow-hover);
     transform: translateY(6px) scale(0.99);
-    transition: transform 160ms ease, box-shadow 160ms ease;
+    transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease,
+      border-color 160ms ease;
+    border-color: var(--card-border-strong);
   }
 }
 
@@ -381,28 +437,52 @@
   text-decoration: none;
   color: rgba(15, 23, 42, 0.92);
 
-  border: 1px solid var(--color-border);
-  background:
-    radial-gradient(500px circle at 25% 20%, rgba(14, 165, 233, 0.14), transparent 55%),
-    radial-gradient(600px circle at 90% 10%, rgba(99, 102, 241, 0.14), transparent 55%),
-    rgba(255, 255, 255, 0.72);
-  box-shadow: 0 16px 34px rgba(2, 6, 23, 0.10);
+  border: 1px solid var(--card-border);
+  background: var(--card-surface-wash), var(--card-bg);
+  box-shadow: var(--card-shadow);
   backdrop-filter: blur(10px);
 
-  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+  /* Slightly stronger “metric” emphasis without losing readability */
+  position: relative;
+  overflow: hidden;
+
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.MetricCard::after {
+  /* Subtle gradient sheen (only visible a bit on hover) */
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background: var(--bg-gradient);
+  opacity: 0;
+  transform: rotate(8deg);
+  filter: blur(24px);
+  pointer-events: none;
+  transition: opacity 160ms ease;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .MetricCard:hover {
     transform: translateY(-2px);
-    box-shadow: 0 22px 50px rgba(2, 6, 23, 0.14);
-    border-color: var(--color-border-strong);
+    box-shadow: var(--card-shadow-hover);
+    border-color: var(--card-border-strong);
+    background: var(--card-surface-wash), var(--card-bg-hover);
+  }
+
+  .MetricCard:hover::after {
+    opacity: 0.14;
   }
 }
 
 .MetricCard:focus-visible {
   outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
+}
+
+.MetricCard:focus-visible::after {
+  opacity: 0.18;
 }
 
 .MetricCard-eyebrow {
@@ -595,9 +675,10 @@
 .RmgTableWrap {
   margin-top: 18px;
   border-radius: 18px;
-  border: 1px solid var(--color-border);
-  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--card-border);
+  background: var(--card-surface-wash), var(--card-bg);
   overflow: auto;
+  box-shadow: 0 14px 32px rgba(2, 6, 23, 0.08);
 }
 
 .RmgTable {
@@ -732,30 +813,51 @@
 
 .HomeLpMetricCard {
   border-radius: 18px;
-  border: 1px solid var(--color-border);
-  background:
-    radial-gradient(650px circle at 20% 15%, rgba(14, 165, 233, 0.12), transparent 55%),
-    radial-gradient(700px circle at 88% 18%, rgba(99, 102, 241, 0.12), transparent 55%),
-    rgba(255, 255, 255, 0.72);
-  box-shadow: 0 16px 34px rgba(2, 6, 23, 0.10);
+  border: 1px solid var(--card-border);
+  background: var(--card-surface-wash), var(--card-bg);
+  box-shadow: var(--card-shadow);
   backdrop-filter: blur(10px);
   padding: 14px 14px;
   display: grid;
   gap: 10px;
-  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease,
+    background-color 160ms ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.HomeLpMetricCard::after {
+  content: "";
+  position: absolute;
+  inset: -45%;
+  background: var(--bg-gradient);
+  opacity: 0;
+  transform: rotate(10deg);
+  filter: blur(26px);
+  pointer-events: none;
+  transition: opacity 160ms ease;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .HomeLpMetricCard:hover {
     transform: translateY(-2px);
-    box-shadow: 0 22px 50px rgba(2, 6, 23, 0.14);
-    border-color: var(--color-border-strong);
+    box-shadow: var(--card-shadow-hover);
+    border-color: var(--card-border-strong);
+    background: var(--card-surface-wash), var(--card-bg-hover);
+  }
+
+  .HomeLpMetricCard:hover::after {
+    opacity: 0.14;
   }
 }
 
 .HomeLpMetricCard:focus-visible {
   outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
+}
+
+.HomeLpMetricCard:focus-visible::after {
+  opacity: 0.18;
 }
 
 .HomeLpMetricCardTop {
@@ -1103,14 +1205,26 @@
 
 .SfMetricsCard {
   border-radius: 18px;
-  border: 1px solid var(--color-border);
-  background:
-    radial-gradient(700px circle at 15% 15%, rgba(14, 165, 233, 0.12), transparent 55%),
-    radial-gradient(700px circle at 85% 20%, rgba(99, 102, 241, 0.12), transparent 55%),
-    rgba(255, 255, 255, 0.72);
-  box-shadow: 0 16px 34px rgba(2, 6, 23, 0.10);
+  border: 1px solid var(--card-border);
+  background: var(--card-surface-wash), var(--card-bg);
+  box-shadow: var(--card-shadow);
   backdrop-filter: blur(10px);
   padding: 14px 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.SfMetricsCard::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 12px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--card-header-border);
+  opacity: 0.85;
+  pointer-events: none;
 }
 
 .SfMetricsCardHeader {
@@ -1160,11 +1274,27 @@
 
 .SfMetricMiniCard {
   border-radius: 16px;
-  border: 1px solid rgba(99, 102, 241, 0.16);
-  background: rgba(255, 255, 255, 0.66);
+  border: 1px solid var(--card-border);
+  background: rgba(255, 255, 255, 0.70);
   padding: 12px 12px;
   display: grid;
   gap: 6px;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .SfMetricMiniCard:hover {
+    transform: translateY(-1px);
+    border-color: var(--card-border-strong);
+    box-shadow: 0 16px 34px rgba(2, 6, 23, 0.12);
+    background: rgba(255, 255, 255, 0.80);
+  }
+}
+
+.SfMetricMiniCard:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
 }
 
 .SfMetricMiniValue {
@@ -1302,8 +1432,9 @@
   margin-top: 16px;
   padding: 14px 14px;
   border-radius: 18px;
-  border: 1px solid var(--color-border);
-  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid var(--card-border);
+  background: var(--card-surface-wash), rgba(255, 255, 255, 0.68);
+  box-shadow: 0 14px 30px rgba(2, 6, 23, 0.08);
 }
 
 .RmgOptionsRow {
@@ -1341,12 +1472,19 @@
 .RmgSelect {
   appearance: none;
   border-radius: 14px;
-  border: 1px solid rgba(99, 102, 241, 0.20);
-  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid var(--control-border);
+  background: var(--control-bg);
   padding: 10px 12px;
   font-weight: 700;
   color: rgba(15, 23, 42, 0.92);
   box-shadow: 0 10px 22px rgba(2, 6, 23, 0.06);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .RmgInput:hover,
+  .RmgSelect:hover {
+    border-color: var(--control-border-strong);
+  }
 }
 
 .RmgInput:focus-visible,
@@ -1380,13 +1518,10 @@
 .RmgColumnPanel {
   margin-top: 12px;
   border-radius: 18px;
-  border: 1px solid var(--color-border);
-  background: linear-gradient(
-    87deg,
-    rgba(197, 22, 140, 0.08),
-    rgba(3, 78, 161, 0.08)
-  );
+  border: 1px solid var(--card-border);
+  background: var(--card-header-bg), var(--card-surface-wash), rgba(255, 255, 255, 0.70);
   padding: 12px 12px;
+  box-shadow: 0 14px 32px rgba(2, 6, 23, 0.08);
 }
 
 .RmgColumnPanelHeader {
@@ -1414,9 +1549,23 @@
   gap: 10px;
   padding: 10px 10px;
   border-radius: 14px;
-  border: 1px solid rgba(99, 102, 241, 0.18);
-  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid var(--control-border);
+  background: rgba(255, 255, 255, 0.66);
   font-weight: 800;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .RmgCheckbox:hover {
+    border-color: var(--control-border-strong);
+    box-shadow: 0 12px 26px rgba(2, 6, 23, 0.08);
+    transform: translateY(-1px);
+  }
+}
+
+.RmgCheckbox:focus-within {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
 }
 
 .RmgCheckbox input {

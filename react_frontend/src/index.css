@@ -9,9 +9,9 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* Fallback (kept in sync with App.css theme) */
-  background: #f8fafc;
-  color: #0f172a;
+  /* Fallback uses the same tokens as App.css */
+  background: var(--color-bg, #f8fafc);
+  color: var(--color-text, #0f172a);
 }
 
 code {
