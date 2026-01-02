@@ -1004,6 +1004,17 @@ function HeaderDistinctFilterMenu({ headerDistinctFilter }) {
   if (!col || !openFor) return null;
 
   const selectedSet = new Set(selected.map((v) => String(v)));
+  const allValues = options.map((v) => String(v));
+  const allCount = allValues.length;
+  const selectedCount = selectedSet.size;
+
+  // "Select all" states:
+  // - checked when every option is selected
+  // - indeterminate when some (but not all) are selected
+  const isAllSelected = allCount > 0 && selectedCount === allCount;
+  const isIndeterminate = selectedCount > 0 && selectedCount < allCount;
+
+  const selectAllId = `${col.id}-distinct-select-all`;
 
   return (
     <div className="RmgHeaderMenu" role="presentation">
@@ -1032,6 +1043,29 @@ function HeaderDistinctFilterMenu({ headerDistinctFilter }) {
           </div>
         ) : (
           <ul className="RmgHeaderMenuList" role="none">
+            <li key={`${col.id}-distinct-select-all`} role="none" className="RmgHeaderMenuItem">
+              <label className="RmgHeaderMenuCheck" htmlFor={selectAllId}>
+                <input
+                  id={selectAllId}
+                  type="checkbox"
+                  checked={isAllSelected}
+                  ref={(el) => {
+                    // React doesn't have a native "indeterminate" prop; set it imperatively.
+                    if (el) el.indeterminate = isIndeterminate;
+                  }}
+                  onChange={(e) => {
+                    // If user checks -> select all options
+                    // If user unchecks -> clear selection
+                    headerDistinctFilter.applySelection(e.target.checked ? allValues : []);
+                  }}
+                  aria-label={`Select all values for ${col.label}`}
+                />
+                <span className="RmgHeaderMenuValue">
+                  Select all <span className="RmgMono">({selectedCount}/{allCount})</span>
+                </span>
+              </label>
+            </li>
+
             {options.map((v) => {
               const checked = selectedSet.has(String(v));
               return (
