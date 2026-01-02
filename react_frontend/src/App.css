@@ -865,7 +865,7 @@
 }
 
 .RmgTableWrap {
-  margin-top: 18px;
+  margin-top: 10px;
   border-radius: 18px;
   border: 1px solid var(--card-border);
   background: var(--card-surface-wash), var(--card-bg);

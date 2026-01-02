@@ -891,7 +891,6 @@ export function RmgTrackerPage() {
         {!loading && !errorMessage && (
           <PrimeDataTableCard
             title="RMG Tracker"
-            subtitle="Use per-column filters in the header row, or global search above the table."
             columns={ALL_COLUMNS}
             rows={rows}
             loading={loading}
@@ -1167,7 +1166,6 @@ export function SkillFactoriesPage() {
         {!loading && !errorMessage && (
           <PrimeDataTableCard
             title="Skill Factories"
-            subtitle="Use per-column filters in the header row, or global search above the table."
             columns={ALL_COLUMNS}
             rows={rows}
             loading={loading}
@@ -1382,7 +1380,6 @@ export function LearningPathsPage() {
         {!loading && !errorMessage && (
           <PrimeDataTableCard
             title="Learning Paths"
-            subtitle="Use per-column filters in the header row, or global search above the table."
             columns={ALL_COLUMNS}
             rows={rows}
             loading={loading}
@@ -1615,7 +1612,6 @@ export function AssessmentsPage() {
         {!loading && !errorMessage && (
           <PrimeDataTableCard
             title="Assessments"
-            subtitle="Use per-column filters in the header row, or global search above the table."
             columns={ALL_COLUMNS}
             rows={rows}
             loading={loading}

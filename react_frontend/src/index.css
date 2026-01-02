@@ -29,7 +29,7 @@
       internal scroll container behavior unchanged.
     - Keep this modest so pages still feel compact.
   */
-  --rmg-table-block-gap: 16px;
+  --rmg-table-block-gap: 10px;
 
   /* Prime token overrides (Lara theme reads CSS variables for some surfaces) */
   --primary-color: #c5168c;

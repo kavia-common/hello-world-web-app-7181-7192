@@ -2,7 +2,7 @@ import React from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
-import { Tag } from "primereact/tag";
+
 import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
 
@@ -288,17 +288,7 @@ export default function PrimeDataTableCard({
         ))}
       </DataTable>
 
-      <div style={{ marginTop: 10, opacity: 0.75, fontSize: 12 }}>
-        <Tag
-          value="PrimeReact built-ins (paginator + sort + column filters)"
-          severity="info"
-          style={{
-            background: "rgba(3, 78, 161, 0.12)",
-            color: "#0f172a",
-            border: "1px solid rgba(3, 78, 161, 0.18)",
-          }}
-        />
-      </div>
+
     </div>
   );
 }
