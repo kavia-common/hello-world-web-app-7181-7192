@@ -141,16 +141,15 @@ export default function PrimeDataTableCard({
 
       <div className="RmgOptions" aria-label="Table options">
         <div className="RmgOptionsRow" style={{ alignItems: "end" }}>
-          <label className="RmgField" style={{ minWidth: 260, flex: 1 }}>
+          <label className="RmgField" style={{ flex: 1 }}>
             <span className="RmgFieldLabel">Search</span>
-            <span className="p-input-icon-left" style={{ width: "100%" }}>
+            <span className="p-input-icon-left">
               <i className="pi pi-search" aria-hidden="true" />
               <InputText
                 value={globalQuery}
                 onChange={(e) => setGlobalQuery(e.target.value)}
                 placeholder="Search…"
                 aria-label="Global search"
-                style={{ width: "100%" }}
                 disabled={loading}
               />
             </span>

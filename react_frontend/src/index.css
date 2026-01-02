@@ -258,6 +258,45 @@ body {
   align-items: center;
 }
 
+/* ----------------------------- Global table search -----------------------------
+   Goal:
+   - Reduce global search bar width across ALL PrimeReact DataTables
+   - Keep the search icon vertically centered and correctly padded inside the input
+   - Preserve existing PrimeReact behavior + our "glassy" aesthetic
+------------------------------------------------------------------------------- */
+
+/* Constrain the global search control width (used in PrimeDataTableCard) */
+.RmgTableWrap .RmgOptions .p-input-icon-left {
+  /* allow the row to wrap on smaller screens, but keep the search narrower by default */
+  width: min(360px, 100%);
+}
+
+/* Ensure the input fills the constrained wrapper */
+.RmgTableWrap .RmgOptions .p-input-icon-left > .p-inputtext {
+  width: 100%;
+  /* Prime's icon-left pattern needs left padding so text doesn't overlap the icon */
+  padding-left: 2.35rem;
+  padding-right: 0.9rem;
+}
+
+/* Precisely position the icon inside the input (vertically centered) */
+.RmgTableWrap .RmgOptions .p-input-icon-left > i {
+  left: 0.9rem; /* matches input left padding rhythm */
+  margin-top: 0; /* override theme defaults that can shift the icon */
+  top: 50%;
+  transform: translateY(-50%);
+  line-height: 1;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Mobile: let the search take full width when space is tight */
+@media (max-width: 520px) {
+  .RmgTableWrap .RmgOptions .p-input-icon-left {
+    width: 100%;
+  }
+}
+
 /* Button tone: keep "Tailwind-like cool palette" feel, but let Prime handle sizing */
 .p-button.p-button-secondary {
   background: rgba(3, 78, 161, 0.12);
