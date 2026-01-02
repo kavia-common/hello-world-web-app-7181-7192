@@ -274,35 +274,6 @@ export default function PrimeDataTableCard({
 
       {/* Unified inner card to ensure toolbar + controls + table share one surface */}
       <div className="RmgTableCard" aria-label={title ? `${title} card` : "Table card"}>
-        {showHeaderBar && (
-          <div className="RmgToolbar" aria-label={`${title || "Table"} actions`}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "baseline",
-                gap: 12,
-                flexWrap: "wrap",
-              }}
-            >
-              {title && <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>{title}</h2>}
-              {subtitle && <span style={{ opacity: 0.8 }}>{subtitle}</span>}
-            </div>
-
-            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-              <Button
-                type="button"
-                icon="pi pi-filter-slash"
-                className="p-button-outlined p-button-icon-only RmgIconButton"
-                onClick={clearAll}
-                aria-label="Reset filters"
-                tooltip="Reset filters"
-                tooltipOptions={{ position: "top" }}
-                disabled={loading || isUploading}
-              />
-            </div>
-          </div>
-        )}
-
         {/* Compact controls row: icon-only global search + Upload + CSV download */}
         {showUnifiedToolbar && (
           <div className="RmgTableControls" aria-label="Table controls">

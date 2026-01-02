@@ -758,7 +758,13 @@
   text-align: left;
 }
 
-
+/*
+  Legacy toolbar styles removed:
+  - Old pages previously rendered helper toolbars like:
+      <div class="RmgToolbar">...</div>
+  - All table toolbars are now unified inside PrimeDataTableCard and styled via index.css
+    (.RmgTableCard + .RmgTableControls).
+*/
 
 .RmgButton {
   appearance: none;
@@ -891,6 +897,11 @@
   white-space: nowrap;
 }
 
+/*
+  NOTE: Legacy non-Prime table styling (for an older in-house table implementation)
+  remains below for compatibility, but legacy toolbar styling has been removed.
+  The unified PrimeReact table UX is handled by PrimeDataTableCard + index.css.
+*/
 .RmgTable {
   width: 100%;
   border-collapse: separate;
