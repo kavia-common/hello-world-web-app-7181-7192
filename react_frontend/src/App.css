@@ -758,13 +758,7 @@
   text-align: left;
 }
 
-.RmgToolbar {
-  margin-top: 18px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
+
 
 .RmgButton {
   appearance: none;

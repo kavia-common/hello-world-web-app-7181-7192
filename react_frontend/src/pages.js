@@ -352,24 +352,6 @@ export function HomePage() {
         <h1 className="HelloTitle">Welcome to Digi Portal</h1>
         <p className="HelloSubtitle">Build, assess, and grow your digital skills.</p>
 
-        <div className="RmgToolbar" aria-label="Dashboard actions">
-          <button
-            type="button"
-            className="RmgButton RmgIconOnlyButton"
-            onClick={load}
-            disabled={loading}
-            aria-disabled={loading ? "true" : "false"}
-            aria-label="Refresh dashboard"
-            title="Refresh"
-          >
-            <span className="pi pi-refresh" aria-hidden="true" />
-          </button>
-
-          <Link className="RmgLink" to="/learning-paths">
-            Explore Learning Paths
-          </Link>
-        </div>
-
         {loading && (
           <div className="RmgState" role="status" aria-live="polite">
             <div className="RmgSpinner" aria-hidden="true" />
@@ -438,7 +420,7 @@ export function HomePage() {
               <p className="HomeSectionSubtitle">Pool distribution snapshot (mocked API response).</p>
             </div>
 
-            <div className="RmgToolbar" aria-label="Skill Factory metrics actions" style={{ marginTop: 0 }}>
+            <div aria-label="Skill Factory metrics actions" style={{ display: "flex", gap: 10, alignItems: "center" }}>
               <button
                 type="button"
                 className="RmgButton RmgIconOnlyButton"
@@ -556,7 +538,7 @@ export function HomePage() {
               <p className="HomeSectionSubtitle">Enrollment and progress snapshot (mocked API response).</p>
             </div>
 
-            <div className="RmgToolbar" aria-label="Learning Path metrics actions" style={{ marginTop: 0 }}>
+            <div aria-label="Learning Path metrics actions" style={{ display: "flex", gap: 10, alignItems: "center" }}>
               <button
                 type="button"
                 className="RmgButton RmgIconOnlyButton"
@@ -847,24 +829,6 @@ export function RmgTrackerPage() {
         <h1 className="HelloTitle">RMG Tracker</h1>
         <p className="HelloSubtitle">Resource overview fetched from an API (mocked response for now).</p>
 
-        <div className="RmgToolbar" aria-label="RMG actions">
-          <button
-            type="button"
-            className="RmgButton RmgIconOnlyButton"
-            onClick={load}
-            disabled={loading}
-            aria-disabled={loading ? "true" : "false"}
-            aria-label="Refresh RMG Tracker"
-            title="Refresh"
-          >
-            <span className="pi pi-refresh" aria-hidden="true" />
-          </button>
-
-          <Link className="RmgLink" to="/">
-            Back to Home
-          </Link>
-        </div>
-
         {loading && (
           <div className="RmgState" role="status" aria-live="polite">
             <div className="RmgSpinner" aria-hidden="true" />
@@ -1124,24 +1088,6 @@ export function SkillFactoriesPage() {
         <h1 className="HelloTitle">Skill Factories</h1>
         <p className="HelloSubtitle">Skill Factory overview fetched from an API (mocked response for now).</p>
 
-        <div className="RmgToolbar" aria-label="Skill Factories actions">
-          <button
-            type="button"
-            className="RmgButton RmgIconOnlyButton"
-            onClick={load}
-            disabled={loading}
-            aria-disabled={loading ? "true" : "false"}
-            aria-label="Refresh Skill Factories"
-            title="Refresh"
-          >
-            <span className="pi pi-refresh" aria-hidden="true" />
-          </button>
-
-          <Link className="RmgLink" to="/">
-            Back to Home
-          </Link>
-        </div>
-
         {loading && (
           <div className="RmgState" role="status" aria-live="polite">
             <div className="RmgSpinner" aria-hidden="true" />
@@ -1338,24 +1284,6 @@ export function LearningPathsPage() {
         <p className="HelloEyebrow">Digi Portal</p>
         <h1 className="HelloTitle">Learning Paths</h1>
         <p className="HelloSubtitle">Explore structured learning plans. Data is currently loaded from a mocked API response.</p>
-
-        <div className="RmgToolbar" aria-label="Learning Paths actions">
-          <button
-            type="button"
-            className="RmgButton RmgIconOnlyButton"
-            onClick={load}
-            disabled={loading}
-            aria-disabled={loading ? "true" : "false"}
-            aria-label="Refresh Learning Paths"
-            title="Refresh"
-          >
-            <span className="pi pi-refresh" aria-hidden="true" />
-          </button>
-
-          <Link className="RmgLink" to="/">
-            Back to Home
-          </Link>
-        </div>
 
         {loading && (
           <div className="RmgState" role="status" aria-live="polite">
@@ -1572,24 +1500,6 @@ export function AssessmentsPage() {
         <h1 className="HelloTitle">Assessments</h1>
         <p className="HelloSubtitle">Assessments loaded from a mocked API response (for now).</p>
 
-        <div className="RmgToolbar" aria-label="Assessments actions">
-          <button
-            type="button"
-            className="RmgButton RmgIconOnlyButton"
-            onClick={load}
-            disabled={loading}
-            aria-disabled={loading ? "true" : "false"}
-            aria-label="Refresh Assessments"
-            title="Refresh"
-          >
-            <span className="pi pi-refresh" aria-hidden="true" />
-          </button>
-
-          <Link className="RmgLink" to="/">
-            Back to Home
-          </Link>
-        </div>
-
         {loading && (
           <div className="RmgState" role="status" aria-live="polite">
             <div className="RmgSpinner" aria-hidden="true" />
@@ -1673,12 +1583,6 @@ export function GetStartedPage() {
               <div className="MetricCard-title">Assessments</div>
             </div>
             <div className="MetricCard-footer">View →</div>
-          </Link>
-        </div>
-
-        <div className="RmgToolbar" aria-label="Get Started actions">
-          <Link className="RmgLink" to="/">
-            Back to Home
           </Link>
         </div>
       </section>
