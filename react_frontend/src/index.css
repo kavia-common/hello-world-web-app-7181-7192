@@ -403,6 +403,32 @@ body {
 
 /* ----------------------------- Table controls (search + CSV + upload) ----------------------------- */
 
+/*
+  Unified toolbar + table should appear as a single cohesive unit.
+  We wrap both in .RmgTableSurface so:
+  - the toolbar width matches the DataTable surface
+  - rounding/borders align perfectly
+*/
+.RmgTableWrap .RmgTableSurface {
+  border-radius: 18px;
+  border: 1px solid var(--card-border);
+  background: var(--card-surface-wash), var(--card-bg);
+  box-shadow: 0 14px 32px rgba(2, 6, 23, 0.08);
+  backdrop-filter: blur(10px);
+  overflow: hidden; /* clip toolbar + table to rounded corners */
+}
+
+/* When the DataTable is inside RmgTableSurface, it should not draw a second border/shadow */
+.RmgTableWrap .RmgTableSurface .RmgPrimeDataTable {
+  border-radius: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  overflow: hidden;
+}
+
+/* Toolbar: attached to the top edge of the surface (no outer margins) */
 .RmgTableWrap .RmgTableControls {
   display: flex;
   align-items: center;
@@ -411,8 +437,8 @@ body {
   flex-wrap: wrap;
 
   padding: 10px 12px;
-  margin: 10px 12px 10px;
-  border-radius: 16px;
+  margin: 0;
+  border-radius: 0;
 
   background: linear-gradient(
       87deg,
@@ -420,7 +446,7 @@ body {
       rgba(3, 78, 161, 0.06)
     ),
     var(--rmg-surface-glass);
-  border: 1px solid rgba(3, 78, 161, 0.14);
+  border-bottom: 1px solid rgba(3, 78, 161, 0.12);
   backdrop-filter: blur(10px);
 }
 
@@ -477,7 +503,7 @@ body {
 
 @media (max-width: 520px) {
   .RmgTableWrap .RmgTableControls {
-    margin: 10px 10px 0;
+    margin: 0;
     padding: 10px 10px;
   }
 

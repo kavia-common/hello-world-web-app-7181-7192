@@ -1,24 +1,21 @@
 import React from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-import { Button } from "primereact/button";
-import { InputText } from "primereact/inputtext";
-import { FilterMatchMode } from "primereact/api";
 import { Toast } from "primereact/toast";
 import { uploadTableFile } from "../api/upload";
+import RmgTableControls from "./RmgTableControls";
 
 /**
- * PrimeReact DataTable wrapper that uses PrimeReact built-ins:
- * - Built-in pagination (paginator)
- * - Built-in sorting (sortable columns)
+ * PrimeReact DataTable wrapper used across all table pages.
  *
- * Product requirement (this subtask):
- * - Remove/disable per-column filter UI across all tables.
- * - Keep sorting + pagination.
- * - Keep any existing toolbar controls (global search, CSV export, upload) as configured per page.
- *
- * This component is shared by multiple pages. Any improvements made here apply across
- * those screens.
+ * Requirements preserved:
+ * - No per-column filter UI (no filter row / filterDisplay / per-column inputs)
+ * - Sorting remains enabled (sortable columns)
+ * - Bottom-only paginator
+ * - Sticky headers (handled via CSS in index.css)
+ * - Horizontal scroll INSIDE DataTable (scrollable + scrollDirection="horizontal")
+ * - Rounded/glassy table surface (handled via CSS)
+ * - Unified toolbar above the table for every page, aligned to the table surface
  */
 
 /** Small helper: safe text normalization for display fallbacks */
@@ -80,11 +77,10 @@ export default function PrimeDataTableCard({
   uploadEndpointPath,
   /**
    * When false, hides the unified toolbar row (global search + CSV + upload).
-   * Default true to avoid affecting existing pages.
+   * (Used by some older pages; can be re-enabled at the page level.)
    */
   showUnifiedToolbar = true,
 }) {
-  /** Shared table component used across pages. Provides consistent layout + Prime defaults. */
   const dtRef = React.useRef(null);
   const toastRef = React.useRef(null);
   const uploadInputRef = React.useRef(null);
@@ -96,13 +92,9 @@ export default function PrimeDataTableCard({
   }, [columns]);
 
   /**
-   * IMPORTANT (subtask):
-   * We intentionally do NOT enable PrimeReact per-column filters:
-   * - No `filterDisplay="row"`
-   * - No `filter` props on columns
-   * - No `filters`/`onFilter` plumbing for per-column header inputs
-   *
-   * Global search remains supported via DataTable's `globalFilter` prop.
+   * IMPORTANT:
+   * We intentionally do NOT enable PrimeReact per-column filters.
+   * Global search is supported via DataTable's `globalFilter` + `globalFilterFields`.
    */
   const [globalFilterValue, setGlobalFilterValue] = React.useState("");
 
@@ -129,17 +121,9 @@ export default function PrimeDataTableCard({
   // PUBLIC_INTERFACE
   function applyGlobalSearch() {
     /** Apply the current global search input to the PrimeReact DataTable global filter. */
-    // DataTable uses `globalFilter` + `globalFilterFields` to perform a built-in global search.
-    // We use an explicit "Search" button + Enter-to-apply to match the previous UX.
-    // (Setting state triggers DataTable to re-evaluate.)
+    // DataTable re-evaluates automatically when globalFilterValue changes.
+    // Keeping this function allows a consistent "Search icon triggers apply" UX.
     setGlobalFilterValue((v) => v);
-  }
-
-  function handleSearchKeyDown(e) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      applyGlobalSearch();
-    }
   }
 
   function openUploadPicker() {
@@ -165,7 +149,6 @@ export default function PrimeDataTableCard({
 
     if (!files.length) return;
 
-    // Support selecting multiple, but we upload sequentially to keep UX predictable.
     const invalid = files.filter((f) => !isAllowedUploadFile(f));
     if (invalid.length) {
       toastRef.current?.show({
@@ -203,7 +186,6 @@ export default function PrimeDataTableCard({
 
   return (
     <div className="RmgTableWrap" role="region" aria-label={title ? `${title} table` : "Data table"}>
-      {/* Toast for upload success/error. (Rendered per card to avoid plumbing a global singleton.) */}
       <Toast ref={toastRef} position="top-right" />
 
       {/* Hidden file input (triggered by icon-only Upload button) */}
@@ -216,97 +198,58 @@ export default function PrimeDataTableCard({
         multiple
       />
 
-      {/* Compact controls row: icon-only global search + Upload + CSV download */}
-      {showUnifiedToolbar && (
-        <div className="RmgTableControls" aria-label="Table controls">
-          <div className="RmgTableControls-left">
-            <span className="p-input-icon-left RmgTableSearch">
-              <i className="pi pi-search" aria-hidden="true" />
-              <InputText
-                value={globalFilterValue}
-                onChange={(e) => setGlobalFilterValue(e.target.value)}
-                onKeyDown={handleSearchKeyDown}
-                placeholder="Search…"
-                aria-label="Global search"
-                disabled={loading || isUploading}
-              />
-            </span>
-
-            <Button
-              type="button"
-              icon="pi pi-search"
-              className="p-button-outlined p-button-icon-only RmgIconButton"
-              onClick={applyGlobalSearch}
-              disabled={loading || isUploading}
-              aria-label="Apply global search"
-              tooltip="Search"
-              tooltipOptions={{ position: "top" }}
-            />
-
-            <Button
-              type="button"
-              icon={isUploading ? "pi pi-spin pi-spinner" : "pi pi-upload"}
-              className="p-button-outlined p-button-icon-only RmgIconButton"
-              onClick={openUploadPicker}
-              disabled={loading || isUploading || !uploadEndpointPath}
-              aria-label="Upload Excel/CSV"
-              tooltip={uploadEndpointPath ? "Upload (Excel/CSV)" : "Upload not configured"}
-              tooltipOptions={{ position: "top" }}
-            />
-          </div>
-
-          <div className="RmgTableControls-right">
-            <Button
-              type="button"
-              icon="pi pi-download"
-              className="p-button-outlined p-button-icon-only RmgIconButton"
-              onClick={exportCsv}
-              disabled={loading || isUploading || !Array.isArray(rows) || rows.length === 0}
-              aria-label="Download CSV"
-              tooltip="Download CSV"
-              tooltipOptions={{ position: "top" }}
-            />
-          </div>
-        </div>
-      )}
-
-      <DataTable
-        ref={dtRef}
-        value={Array.isArray(rows) ? rows : []}
-        loading={loading || isUploading}
-        emptyMessage={errorMessage ? "No data." : "No records found."}
-        dataKey="__internalKey"
-        rowKey={(rowData) => rowKey(rowData)}
-        paginator
-        paginatorPosition="bottom"
-        rows={defaultPageSize}
-        rowsPerPageOptions={pageSizes}
-        removableSort
-        showGridlines
-        stripedRows
-        /*
-          Scroll + pagination responsibility:
-          - Pagination is owned by the DataTable (Prime paginator, bottom only).
-          - Horizontal scrolling is owned by the DataTable (scrollable="true" + scrollDirection="horizontal").
-          - No internal vertical scroll area: we intentionally do NOT set scrollHeight so the table height
-            is content-driven.
-        */
-        scrollable
-        scrollDirection="horizontal"
-        className="p-datatable-sm RmgPrimeDataTable"
-        globalFilter={globalFilterValue}
-        globalFilterFields={derivedGlobalFields}
-      >
-        {visibleColumns.map((c) => (
-          <Column
-            key={c.id}
-            field={c.id}
-            header={c.label}
-            sortable={c.sortable !== false}
-            body={(rowData) => bodyTemplate(rowData, c.id)}
+      {/* Cohesive toolbar + table surface wrapper (so widths/rounded corners align perfectly). */}
+      <div className="RmgTableSurface">
+        {showUnifiedToolbar && (
+          <RmgTableControls
+            globalFilterValue={globalFilterValue}
+            onGlobalFilterChange={setGlobalFilterValue}
+            onApplySearch={applyGlobalSearch}
+            onExportCsv={exportCsv}
+            onOpenUpload={openUploadPicker}
+            loading={loading}
+            isUploading={isUploading}
+            canUpload={Boolean(uploadEndpointPath)}
           />
-        ))}
-      </DataTable>
+        )}
+
+        <DataTable
+          ref={dtRef}
+          value={Array.isArray(rows) ? rows : []}
+          loading={loading || isUploading}
+          emptyMessage={errorMessage ? "No data." : "No records found."}
+          dataKey="__internalKey"
+          rowKey={(rowData) => rowKey(rowData)}
+          paginator
+          paginatorPosition="bottom"
+          rows={defaultPageSize}
+          rowsPerPageOptions={pageSizes}
+          removableSort
+          showGridlines
+          stripedRows
+          /*
+            Scroll + pagination responsibility:
+            - Pagination is owned by the DataTable (Prime paginator, bottom only).
+            - Horizontal scrolling is owned by the DataTable.
+            - No internal vertical scroll area: we intentionally do NOT set scrollHeight.
+          */
+          scrollable
+          scrollDirection="horizontal"
+          className="p-datatable-sm RmgPrimeDataTable"
+          globalFilter={globalFilterValue}
+          globalFilterFields={derivedGlobalFields}
+        >
+          {visibleColumns.map((c) => (
+            <Column
+              key={c.id}
+              field={c.id}
+              header={c.label}
+              sortable={c.sortable !== false}
+              body={(rowData) => bodyTemplate(rowData, c.id)}
+            />
+          ))}
+        </DataTable>
+      </div>
     </div>
   );
 }

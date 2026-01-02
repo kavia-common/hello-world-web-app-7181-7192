@@ -862,7 +862,7 @@ export function RmgTrackerPage() {
             rowKey={(r) => r.empId}
             renderCell={renderCell}
             uploadEndpointPath="/uploads/rmg-tracker"
-            showUnifiedToolbar={false}
+            showUnifiedToolbar
           />
         )}
       </section>
