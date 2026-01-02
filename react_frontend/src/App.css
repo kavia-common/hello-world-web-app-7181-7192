@@ -137,7 +137,16 @@
   --digibot-primary: var(--color-primary);
   --digibot-secondary: var(--color-secondary);
   --digibot-bg: var(--color-bg);
+
+  /* Default text on light surfaces (chat window, light chips, etc.) */
   --digibot-text: var(--color-text);
+
+  /* High-contrast text token for any dark surface (bubbles/chips/input when dark) */
+  --text-on-dark: #ffffff;
+
+  /* A flag token we can reuse to indicate a surface is dark-ish */
+  --digibot-surface-is-dark: 0;
+
   --digibot-focus: var(--focus-ring);
 }
 
@@ -2007,7 +2016,10 @@
   }
 }
 
-/* Bot and user bubbles */
+/* Bot and user bubbles
+   - Default to normal text color (light surfaces)
+   - If a dark background is ever applied by theme/customization, force high-contrast white text.
+*/
 .GlobalChatbot .rcb-bot-message {
   background: var(--digibot-bot-bg);
   border: 1px solid var(--digibot-bot-border);
@@ -2022,6 +2034,47 @@
   border-radius: 18px;
 }
 
+/* ---------------------------------------------------------------------
+   Digi Bot: "dark surface" text enforcement
+   We cannot reliably detect background brightness in CSS, so we bind to
+   tokens and provide explicit "dark" variants. If any of these elements
+   are customized to a dark background (via react-chatbotify styles or
+   future theme changes), add/keep the background token and the text will
+   remain readable (white).
+------------------------------------------------------------------------ */
+
+/* Message bubbles: ensure descendants inherit white when bubble is dark */
+.GlobalChatbot .rcb-bot-message[style*="background"],
+.GlobalChatbot .rcb-user-message[style*="background"] {
+  /* Keep base behavior; this selector is a best-effort for inline dark backgrounds.
+     (No behavior changes; only text color gets forced to improve contrast.) */
+  color: var(--digibot-text);
+}
+
+/* If a dark background is used (by setting these tokens), use white text */
+.GlobalChatbot {
+  /* Dark bubble tokens (safe defaults remain light-ish unless overridden elsewhere) */
+  --digibot-bot-bg-dark: rgba(15, 23, 42, 0.92);
+  --digibot-user-bg-dark: rgba(2, 6, 23, 0.92);
+
+  /* Dark chip/input token (used when a dark treatment is applied) */
+  --digibot-control-bg-dark: rgba(15, 23, 42, 0.92);
+
+  /* Public "text-on-dark" token */
+  --digibot-text-on-dark: var(--text-on-dark);
+}
+
+/* Optional dark variants (only take effect if you switch the background tokens to the *-dark ones) */
+.GlobalChatbot .rcb-bot-message.rcb-bot-message--dark,
+.GlobalChatbot .rcb-user-message.rcb-user-message--dark {
+  color: var(--digibot-text-on-dark);
+}
+
+.GlobalChatbot .rcb-bot-message.rcb-bot-message--dark *,
+.GlobalChatbot .rcb-user-message.rcb-user-message--dark * {
+  color: inherit;
+}
+
 /* Typing indicator dots */
 .GlobalChatbot .rcb-dot {
   background: rgba(197, 22, 140, 0.72);
@@ -2034,13 +2087,31 @@
   backdrop-filter: blur(10px);
 }
 
-/* Text area (input field) */
+/* Text area (input field)
+   - Light surface default uses normal text token
+   - If input background is changed to a dark control surface, force white text + placeholder.
+*/
 .GlobalChatbot .rcb-chat-input-textarea {
   color: var(--digibot-text);
 }
 
 .GlobalChatbot .rcb-chat-input-textarea::placeholder {
   color: rgba(15, 23, 42, 0.58);
+}
+
+/* Dark input surface support (token-bound) */
+.GlobalChatbot .rcb-chat-input[style*="background"],
+.GlobalChatbot .rcb-chat-input-textarea[style*="background"] {
+  color: var(--digibot-text);
+}
+
+.GlobalChatbot .rcb-chat-input--dark,
+.GlobalChatbot .rcb-chat-input--dark .rcb-chat-input-textarea {
+  color: var(--digibot-text-on-dark);
+}
+
+.GlobalChatbot .rcb-chat-input--dark .rcb-chat-input-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.72);
 }
 
 /* Some versions wrap textarea; ensure focus ring is visible */
@@ -2050,15 +2121,35 @@
   outline-offset: 3px;
 }
 
-/* Quick reply chips */
+/* Quick reply chips
+   - Light surface default uses normal text
+   - Dark chip variant forces white text for contrast
+*/
 .GlobalChatbot .rcb-options {
   border-radius: 999px;
   border: 1px solid var(--digibot-control-border);
   background: rgba(255, 255, 255, 0.72);
-  color: rgba(15, 23, 42, 0.88);
+  color: var(--digibot-text);
   font-weight: 800;
   transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease,
     background 160ms ease;
+}
+
+/* If a dark background is applied inline (best-effort), keep text readable */
+.GlobalChatbot .rcb-options[style*="background"] {
+  color: var(--digibot-text);
+}
+
+/* Explicit dark option variant (token-bound) */
+.GlobalChatbot .rcb-options.rcb-options--dark {
+  background: var(--digibot-control-bg-dark);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: var(--digibot-text-on-dark);
+}
+
+.GlobalChatbot .rcb-options.rcb-options--dark:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(15, 23, 42, 0.96);
 }
 
 @media (hover: hover) and (pointer: fine) {

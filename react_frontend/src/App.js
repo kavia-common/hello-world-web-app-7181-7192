@@ -90,10 +90,8 @@ function useDigiPortalChatFlow() {
       const n = normalizeText(raw);
 
       // Commands
-      if (n === "help" || n === "shortcuts" || n === "show shortcuts")
-        return "help";
-      if (n === "overview" || n === "what's here" || n === "whats here")
-        return "overview";
+      if (n === "help" || n === "shortcuts" || n === "show shortcuts") return "help";
+      if (n === "overview" || n === "what's here" || n === "whats here") return "overview";
 
       // Destinations (typed)
       if (n.includes("learning path")) return "/learning-paths";
@@ -243,7 +241,12 @@ function App() {
              * Most visual styling is handled via CSS overrides (App.css) so we can theme
              * header/launcher/bubbles/input/scrollbars consistently.
              *
-             * Here we only ensure readable text as a safe fallback.
+             * Here we provide token-bound fallbacks so contrast stays correct if any
+             * chatbot surfaces are customized to dark backgrounds:
+             * - Light surfaces -> --digibot-text
+             * - Dark surfaces  -> --text-on-dark (handled in CSS via --text-on-dark token)
+             *
+             * No behavior changes; these are only foreground color defaults.
              */
             botBubbleStyle: {
               color:
@@ -252,6 +255,23 @@ function App() {
                   .trim() || "#0f172a",
             },
             userBubbleStyle: {
+              color:
+                getComputedStyle(document.documentElement)
+                  .getPropertyValue("--digibot-text")
+                  .trim() || "#0f172a",
+            },
+
+            /**
+             * Best-effort quick reply and input text colors (depends on library support for these keys).
+             * If the library ignores them, our CSS overrides still enforce contrast.
+             */
+            optionStyle: {
+              color:
+                getComputedStyle(document.documentElement)
+                  .getPropertyValue("--digibot-text")
+                  .trim() || "#0f172a",
+            },
+            chatInputStyle: {
               color:
                 getComputedStyle(document.documentElement)
                   .getPropertyValue("--digibot-text")
