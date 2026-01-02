@@ -564,10 +564,12 @@ export default function PrimeDataTableCard({
 
           <Button
             type="button"
-            label="Columns"
             icon="pi pi-table"
-            className="p-button-outlined"
+            className="p-button-outlined p-button-icon-only"
             onClick={() => setColumnPanelOpen((v) => !v)}
+            aria-label="Toggle column visibility panel"
+            tooltip="Columns"
+            tooltipOptions={{ position: "top" }}
             aria-expanded={columnPanelOpen ? "true" : "false"}
             aria-controls="prime-columns-panel"
             disabled={loading}
@@ -575,21 +577,24 @@ export default function PrimeDataTableCard({
 
           <Button
             type="button"
-            label="Reset"
             icon="pi pi-refresh"
-            className="p-button-outlined"
+            className="p-button-outlined p-button-icon-only"
             onClick={clearAll}
+            aria-label="Reset table filters and sorting"
+            tooltip="Reset"
+            tooltipOptions={{ position: "top" }}
             disabled={loading}
           />
 
           <Button
             type="button"
-            label="Export CSV"
             icon="pi pi-download"
-            className="p-button-outlined"
+            className="p-button-outlined p-button-icon-only"
             onClick={exportCsv}
             disabled={loading || total === 0}
             aria-label="Export table to CSV"
+            tooltip="Export CSV"
+            tooltipOptions={{ position: "top" }}
           />
         </div>
       </div>
@@ -613,16 +618,15 @@ export default function PrimeDataTableCard({
 
           {overflowColumns.filter((c) => Boolean(c.filterType)).length > 0 && (
             <div className="RmgField" style={{ minWidth: 220 }}>
-              <span className="RmgFieldLabel" style={{ display: "block" }}>
-                Filters
-              </span>
               <Button
                 type="button"
-                label={`More filters (${overflowColumns.filter((c) => Boolean(c.filterType)).length})`}
                 icon="pi pi-sliders-h"
-                className="p-button-outlined"
+                className="p-button-outlined p-button-icon-only"
                 onClick={(e) => overlayRef.current?.toggle(e)}
                 aria-haspopup="dialog"
+                aria-label={`Open more filters (${overflowColumns.filter((c) => Boolean(c.filterType)).length})`}
+                tooltip={`More filters (${overflowColumns.filter((c) => Boolean(c.filterType)).length})`}
+                tooltipOptions={{ position: "top" }}
               />
               <OverlayPanel ref={overlayRef} dismissable showCloseIcon aria-label="More filters">
                 <div className="RmgPopoverFiltersGrid" style={{ width: 420, maxWidth: "85vw" }}>
@@ -645,11 +649,12 @@ export default function PrimeDataTableCard({
               <div className="RmgColumnPanelTitle">Visible columns</div>
               <Button
                 type="button"
-                label="Close"
                 icon="pi pi-times"
-                className="p-button-text p-button-sm"
+                className="p-button-text p-button-sm p-button-icon-only"
                 onClick={() => setColumnPanelOpen(false)}
                 aria-label="Close column visibility panel"
+                tooltip="Close"
+                tooltipOptions={{ position: "top" }}
               />
             </div>
 
@@ -688,15 +693,17 @@ export default function PrimeDataTableCard({
             <div className="RmgHeaderMenuTitle">
               Filter: {columns.find((c) => c.id === headerFilterColumnId)?.label || "Column"}
             </div>
-            <button
+
+            <Button
               type="button"
-              className="RmgHeaderMenuClearBtn"
+              icon="pi pi-times"
+              className="p-button-text p-button-sm p-button-icon-only"
               onClick={() => applyHeaderSelection([])}
               aria-label="Clear filter"
+              tooltip="Clear"
+              tooltipOptions={{ position: "top" }}
               disabled={headerSelected.length === 0}
-            >
-              Clear
-            </button>
+            />
           </div>
 
           {headerFilterOptions.length === 0 ? (
@@ -749,7 +756,15 @@ export default function PrimeDataTableCard({
           )}
 
           <div className="RmgHeaderMenuFooter" style={{ marginTop: 12 }}>
-            <Button type="button" label="Done" className="p-button-sm" onClick={() => headerFilterOverlayRef.current?.hide()} />
+            <Button
+              type="button"
+              icon="pi pi-check"
+              className="p-button-sm p-button-icon-only"
+              onClick={() => headerFilterOverlayRef.current?.hide()}
+              aria-label="Done"
+              tooltip="Done"
+              tooltipOptions={{ position: "top" }}
+            />
           </div>
         </div>
       </OverlayPanel>
