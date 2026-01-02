@@ -10,11 +10,15 @@
   --rmg-shadow: 0 12px 40px rgba(2, 8, 23, 0.18);
 
   /* Consistent table sizing (prevents header/body misalignments) */
-  --rmg-table-row-min-height: 44px;
+  --rmg-table-header-height: 38px; /* compact header */
+  --rmg-table-row-min-height: 44px; /* comfortable body row */
   --rmg-table-cell-py: 10px;
   --rmg-table-cell-px: 12px;
   --rmg-table-header-font-size: 0.82rem;
   --rmg-table-body-font-size: 0.95rem;
+
+  /* Subtle row separators (theme-aligned) */
+  --rmg-table-row-border: rgba(3, 78, 161, 0.14);
 
   /* Prime token overrides (Lara theme reads CSS variables for some surfaces) */
   --primary-color: #c5168c;
@@ -50,6 +54,20 @@ body {
 /* ----------------------------- DataTable polish ----------------------------- */
 
 /*
+  Global PrimeReact DataTable visual settings (applies across the app):
+  1) Compact header height
+  2) Sticky header on scroll for all tables
+  3) Paginator at bottom only
+  4) Subtle row borders + comfortable row height
+  5) Consistent header label/icon alignment; no overlap with sticky areas
+
+  Notes:
+  - We do NOT re-enable filters. These styles only affect layout/visuals.
+  - PrimeDataTableCard already uses `scrollable` + explicit `scrollHeight`,
+    which is required for sticky headers.
+*/
+
+/*
   PrimeReact DataTable alignment/sticky fixes (applies to all pages via PrimeDataTableCard):
   - Stable column widths between thead/tbody (fixed layout)
   - Correct sticky header layering (thead + filter row)
@@ -76,7 +94,7 @@ body {
 /* Filter row (row filters) should stick just below the header row */
 .RmgTableWrap .p-datatable .p-datatable-thead > tr.p-filter-row > th {
   position: sticky;
-  top: var(--rmg-table-row-min-height);
+  top: var(--rmg-table-header-height);
   z-index: 4;
 }
 
@@ -123,10 +141,25 @@ body {
   flex: 0 0 auto;
 }
 
-/* Paginator: add breathing room so it never visually overlaps the scroll area */
+/* Paginator: bottom only + breathing room so it never visually overlaps the scroll area */
 .RmgTableWrap .p-datatable .p-paginator {
   margin-top: 10px;
-  padding-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(3, 78, 161, 0.12);
+  background: linear-gradient(
+      87deg,
+      rgba(197, 22, 140, 0.06),
+      rgba(3, 78, 161, 0.06)
+    ),
+    rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(10px);
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
+}
+
+/* Hide any accidental top paginator if introduced by future changes */
+.RmgTableWrap .p-datatable .p-paginator-top {
+  display: none;
 }
 
 /* Make wrapper not add unexpected padding/margins */
@@ -150,17 +183,30 @@ body {
   text-overflow: ellipsis;
 }
 
-/* Stable row height to match UX across pages */
+/* Compact header height + stable layout (prevents sticky overlap / label drift) */
 .RmgTableWrap .p-datatable .p-datatable-thead > tr > th {
-  min-height: var(--rmg-table-row-min-height);
-  height: var(--rmg-table-row-min-height);
+  min-height: var(--rmg-table-header-height);
+  height: var(--rmg-table-header-height);
   font-size: var(--rmg-table-header-font-size);
+  padding-top: 8px;
+  padding-bottom: 8px;
 }
 
+/* Comfortable body rows */
 .RmgTableWrap .p-datatable .p-datatable-tbody > tr > td {
   min-height: var(--rmg-table-row-min-height);
   height: var(--rmg-table-row-min-height);
   font-size: var(--rmg-table-body-font-size);
+}
+
+/* Header content: ensure icons and labels align and never wrap into a second line */
+.RmgTableWrap .p-datatable .p-datatable-thead > tr > th .p-column-header-content {
+  min-height: var(--rmg-table-header-height);
+  align-items: center;
+}
+
+.RmgTableWrap .p-datatable .p-datatable-thead > tr > th .p-column-title {
+  line-height: 1.1;
 }
 
 /* Header styling aligned with gradient/glass aesthetic */
@@ -174,9 +220,15 @@ body {
   color: var(--color-text, #0f172a);
 }
 
-/* Body borders aligned with theme */
+/* Body borders aligned with theme (subtle row separators) */
 .p-datatable .p-datatable-tbody > tr > td {
-  border-color: var(--rmg-border);
+  border-color: var(--rmg-table-row-border);
+}
+
+/* Slightly soften the gridline look (keep gridlines enabled but not heavy) */
+.p-datatable.p-datatable-gridlines .p-datatable-thead > tr > th,
+.p-datatable.p-datatable-gridlines .p-datatable-tbody > tr > td {
+  border-color: rgba(3, 78, 161, 0.12);
 }
 
 /* Keep sort icon + filter icon aligned in header cells */

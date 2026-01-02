@@ -153,6 +153,7 @@ export default function PrimeDataTableCard({
         dataKey="__internalKey"
         rowKey={(rowData) => rowKey(rowData)}
         paginator
+        paginatorPosition="bottom"
         rows={defaultPageSize}
         rowsPerPageOptions={pageSizes}
         removableSort
