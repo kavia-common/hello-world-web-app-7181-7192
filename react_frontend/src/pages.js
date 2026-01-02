@@ -986,8 +986,9 @@ function ColumnHeaderTh({
             }}
             title="Filter"
           >
-            <span className="RmgHeaderIconGlyph" aria-hidden="true">⏷</span>
-            <span className="RmgHeaderIconFunnel" aria-hidden="true">⎇</span>
+            <span className="RmgHeaderIconFunnel" aria-hidden="true">
+              ⌄
+            </span>
           </button>
         )}
       </div>
@@ -1000,6 +1001,7 @@ function HeaderDistinctFilterMenu({ headerDistinctFilter }) {
   const openFor = headerDistinctFilter?.openForColumnId;
   const options = headerDistinctFilter?.activeOptions || [];
   const selected = headerDistinctFilter?.activeSelected || [];
+  const pos = headerDistinctFilter?.menuPosition || null;
 
   if (!col || !openFor) return null;
 
@@ -1016,6 +1018,17 @@ function HeaderDistinctFilterMenu({ headerDistinctFilter }) {
 
   const selectAllId = `${col.id}-distinct-select-all`;
 
+  const panelStyle = pos
+    ? {
+        position: "fixed",
+        top: pos.top,
+        left: pos.left,
+        zIndex: 3000,
+        minWidth: pos.minWidth || 280,
+        maxWidth: pos.maxWidth || 360,
+      }
+    : undefined;
+
   return (
     <div className="RmgHeaderMenu" role="presentation">
       <div
@@ -1023,6 +1036,7 @@ function HeaderDistinctFilterMenu({ headerDistinctFilter }) {
         className="RmgHeaderMenuPanel"
         role="menu"
         aria-label={`Filter ${col.label}`}
+        style={panelStyle}
       >
         <div className="RmgHeaderMenuTitleRow">
           <div className="RmgHeaderMenuTitle">Filter: {col.label}</div>

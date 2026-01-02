@@ -55,19 +55,54 @@ export function useHeaderDistinctValueFilter({ rows, columns, columnFilters, onC
    * - Escape closes
    * - click outside closes
    * - focus returns to trigger
+   * - dropdown is positioned adjacent to the icon trigger (stable across all tables)
    */
   const [openForColumnId, setOpenForColumnId] = React.useState("");
   const triggerRefs = React.useRef({});
   const menuRef = React.useRef(null);
 
+  // Keep a computed fixed position so the menu can be rendered anywhere in the DOM
+  // but still appear anchored near the trigger icon.
+  const [menuPosition, setMenuPosition] = React.useState(null);
+
   const open = React.useCallback((colId) => setOpenForColumnId(colId), []);
-  const close = React.useCallback(() => setOpenForColumnId(""), []);
+  const close = React.useCallback(() => {
+    setOpenForColumnId("");
+    setMenuPosition(null);
+  }, []);
   const toggle = React.useCallback((colId) => {
     setOpenForColumnId((prev) => (prev === colId ? "" : colId));
   }, []);
 
+  const computeAndSetMenuPosition = React.useCallback(() => {
+    if (!openForColumnId) return;
+
+    const triggerEl = triggerRefs.current?.[openForColumnId];
+    if (!triggerEl || typeof triggerEl.getBoundingClientRect !== "function") {
+      setMenuPosition(null);
+      return;
+    }
+
+    const rect = triggerEl.getBoundingClientRect();
+
+    // Anchor to the bottom-right of the icon, with a small offset.
+    // We use fixed positioning so scrolling containers don't cause drift.
+    const top = Math.max(8, rect.bottom + 6);
+    const left = Math.max(8, rect.right - 320); // default "near right edge"; adjusted later after measuring
+
+    setMenuPosition({
+      top,
+      left,
+      minWidth: 280,
+      maxWidth: 360,
+    });
+  }, [openForColumnId]);
+
   React.useEffect(() => {
     if (!openForColumnId) return undefined;
+
+    // Initial position on open
+    computeAndSetMenuPosition();
 
     const onKeyDown = (e) => {
       if (e.key === "Escape") {
@@ -89,16 +124,61 @@ export function useHeaderDistinctValueFilter({ rows, columns, columnFilters, onC
       close();
     };
 
+    const onReposition = () => computeAndSetMenuPosition();
+
     document.addEventListener("keydown", onKeyDown);
     document.addEventListener("mousedown", onPointerDown);
     document.addEventListener("touchstart", onPointerDown, { passive: true });
+
+    // Reposition on scroll/resize so it stays next to the icon
+    window.addEventListener("resize", onReposition);
+    // capture=true so we can respond to scroll events from nested scroll containers too
+    window.addEventListener("scroll", onReposition, true);
 
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("mousedown", onPointerDown);
       document.removeEventListener("touchstart", onPointerDown);
+      window.removeEventListener("resize", onReposition);
+      window.removeEventListener("scroll", onReposition, true);
     };
-  }, [openForColumnId, close]);
+  }, [openForColumnId, close, computeAndSetMenuPosition]);
+
+  // After the menu mounts, measure it and clamp into the viewport while keeping it near the icon.
+  React.useLayoutEffect(() => {
+    if (!openForColumnId) return;
+    const panel = menuRef.current;
+    const triggerEl = triggerRefs.current?.[openForColumnId];
+    if (!panel || !triggerEl) return;
+
+    const triggerRect = triggerEl.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+
+    const margin = 8;
+    const viewportW = window.innerWidth || 1024;
+    const viewportH = window.innerHeight || 768;
+
+    // Prefer aligning the panel's right edge with the trigger's right edge.
+    let left = triggerRect.right - panelRect.width;
+    // If that would push off the left, place it with left aligned to trigger.
+    if (left < margin) left = triggerRect.left;
+    // Clamp to viewport.
+    left = Math.min(Math.max(margin, left), Math.max(margin, viewportW - panelRect.width - margin));
+
+    // Prefer below; if not enough room, place above.
+    let top = triggerRect.bottom + 6;
+    if (top + panelRect.height + margin > viewportH) {
+      top = triggerRect.top - panelRect.height - 6;
+    }
+    top = Math.min(Math.max(margin, top), Math.max(margin, viewportH - panelRect.height - margin));
+
+    setMenuPosition((prev) => {
+      const next = { ...(prev || {}), top, left };
+      // Prevent re-render loops if nothing actually changed.
+      if (prev && prev.top === next.top && prev.left === next.left) return prev;
+      return next;
+    });
+  }, [openForColumnId]);
 
   const activeColumn = React.useMemo(
     () => columns?.find((c) => c.id === openForColumnId) || null,
@@ -150,6 +230,7 @@ export function useHeaderDistinctValueFilter({ rows, columns, columnFilters, onC
     activeSelected,
     menuRef,
     triggerRefs,
+    menuPosition,
     open,
     close,
     toggle,
