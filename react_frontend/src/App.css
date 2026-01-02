@@ -866,20 +866,17 @@
 
 .RmgTableWrap {
   margin-top: 10px;
-  border-radius: 18px;
-  border: 1px solid var(--card-border);
-  background: var(--card-surface-wash), var(--card-bg);
 
   /*
-    Important:
-    - Let PrimeReact manage vertical scrolling inside the DataTable wrapper
-      (so sticky headers + column width calculations stay consistent).
-    - Keep horizontal scrolling at the card level for very wide tables.
+    IMPORTANT:
+    PrimeDataTableCard now renders an inner unified card (.RmgTableCard) that contains:
+    - header toolbar
+    - icon-only search/CSV controls
+    - PrimeReact DataTable
+    Therefore, this outer wrapper should ONLY be responsible for horizontal scrolling.
   */
   overflow-x: auto;
   overflow-y: visible;
-
-  box-shadow: 0 14px 32px rgba(2, 6, 23, 0.08);
 }
 
 /* PrimeReact DataTable header cell alignment helpers (used in PrimeDataTableCard) */

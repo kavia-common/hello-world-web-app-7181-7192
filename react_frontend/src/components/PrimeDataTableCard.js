@@ -2,7 +2,6 @@ import React from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
-
 import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
 
@@ -13,11 +12,14 @@ import { FilterMatchMode } from "primereact/api";
  * - Built-in per-column filters (row filter UI)
  *
  * Product requirement:
- * - Remove custom/top filter panel.
- * - Keep compact global search control + CSV download button before each table.
+ * - Wrap the table toolbar (global search + CSV) and the DataTable in a single unified card.
+ * - Keep icon-only global search + CSV controls with tooltips.
+ * - Preserve current behaviors: compact sticky headers, bottom-only paginator,
+ *   per-column filters in header row, horizontal scrolling (no zoom),
+ *   intrinsic/max-content column sizing, tightened vertical spacing.
  *
- * This component is shared by multiple pages (RMG Tracker, Skill Factories, Learning Paths,
- * and Assessments). Any layout improvements made here apply across those screens.
+ * This component is shared by multiple pages. Any improvements made here apply across
+ * those screens.
  */
 
 /** Small helper: safe text normalization for display fallbacks */
@@ -178,117 +180,118 @@ export default function PrimeDataTableCard({
       role="region"
       aria-label={title ? `${title} table` : "Data table"}
     >
-      {showHeaderBar && (
-        <div className="RmgToolbar" aria-label={`${title || "Table"} actions`}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "baseline",
-              gap: 12,
-              flexWrap: "wrap",
-            }}
-          >
-            {title && <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>{title}</h2>}
-            {subtitle && <span style={{ opacity: 0.8 }}>{subtitle}</span>}
-          </div>
+      {/* Unified inner card to ensure toolbar + controls + table share one surface */}
+      <div className="RmgTableCard" aria-label={title ? `${title} card` : "Table card"}>
+        {showHeaderBar && (
+          <div className="RmgToolbar" aria-label={`${title || "Table"} actions`}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                gap: 12,
+                flexWrap: "wrap",
+              }}
+            >
+              {title && <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>{title}</h2>}
+              {subtitle && <span style={{ opacity: 0.8 }}>{subtitle}</span>}
+            </div>
 
-          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+              <Button
+                type="button"
+                icon="pi pi-filter-slash"
+                className="p-button-outlined p-button-icon-only RmgIconButton"
+                onClick={clearAll}
+                aria-label="Reset filters"
+                tooltip="Reset filters"
+                tooltipOptions={{ position: "top" }}
+                disabled={loading}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Compact controls row: icon-only global search + CSV download */}
+        <div className="RmgTableControls" aria-label="Table controls">
+          <div className="RmgTableControls-left">
+            <span className="p-input-icon-left RmgTableSearch">
+              <i className="pi pi-search" aria-hidden="true" />
+              <InputText
+                value={globalFilterValue}
+                onChange={(e) => setGlobalFilterValue(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                placeholder="Search…"
+                aria-label="Global search"
+                disabled={loading}
+              />
+            </span>
+
             <Button
               type="button"
-              icon="pi pi-filter-slash"
-              className="p-button-outlined p-button-icon-only"
-              onClick={clearAll}
-              aria-label="Reset filters"
-              tooltip="Reset filters"
-              tooltipOptions={{ position: "top" }}
+              icon="pi pi-search"
+              className="p-button-outlined p-button-icon-only RmgIconButton"
+              onClick={applyGlobalSearch}
               disabled={loading}
+              aria-label="Apply global search"
+              tooltip="Search"
+              tooltipOptions={{ position: "top" }}
+            />
+          </div>
+
+          <div className="RmgTableControls-right">
+            <Button
+              type="button"
+              icon="pi pi-download"
+              className="p-button-outlined p-button-icon-only RmgIconButton"
+              onClick={exportCsv}
+              disabled={loading || !Array.isArray(rows) || rows.length === 0}
+              aria-label="Download CSV"
+              tooltip="Download CSV"
+              tooltipOptions={{ position: "top" }}
             />
           </div>
         </div>
-      )}
 
-      {/* Compact controls row: global search + Search button + CSV download */}
-      <div className="RmgTableControls" aria-label="Table controls">
-        <div className="RmgTableControls-left">
-          <span className="p-input-icon-left RmgTableSearch">
-            <i className="pi pi-search" aria-hidden="true" />
-            <InputText
-              value={globalFilterValue}
-              onChange={(e) => setGlobalFilterValue(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
-              placeholder="Search…"
-              aria-label="Global search"
-              disabled={loading}
+        <DataTable
+          ref={dtRef}
+          value={Array.isArray(rows) ? rows : []}
+          loading={loading}
+          emptyMessage={errorMessage ? "No data." : "No records found."}
+          dataKey="__internalKey"
+          rowKey={(rowData) => rowKey(rowData)}
+          paginator
+          paginatorPosition="bottom"
+          rows={defaultPageSize}
+          rowsPerPageOptions={pageSizes}
+          removableSort
+          showGridlines
+          stripedRows
+          scrollable
+          /*
+            Critical for header/body alignment + sticky headers:
+            - Provide a real scroll container height so Prime can compute column widths consistently.
+          */
+          scrollHeight="60vh"
+          className="p-datatable-sm RmgPrimeDataTable"
+          filters={filters}
+          onFilter={(e) => setFilters(e.filters)}
+          filterDisplay="row"
+          globalFilterFields={derivedGlobalFields}
+        >
+          {visibleColumns.map((c) => (
+            <Column
+              key={c.id}
+              field={c.id}
+              header={c.label}
+              sortable={c.sortable !== false}
+              filter
+              showFilterMenu={false}
+              filterPlaceholder="Filter…"
+              body={(rowData) => bodyTemplate(rowData, c.id)}
             />
-          </span>
-
-          <Button
-            type="button"
-            icon="pi pi-search"
-            className="p-button-outlined p-button-icon-only RmgIconButton"
-            onClick={applyGlobalSearch}
-            disabled={loading}
-            aria-label="Apply global search"
-            tooltip="Search"
-            tooltipOptions={{ position: "top" }}
-          />
-        </div>
-
-        <div className="RmgTableControls-right">
-          <Button
-            type="button"
-            icon="pi pi-download"
-            className="p-button-outlined p-button-icon-only RmgIconButton"
-            onClick={exportCsv}
-            disabled={loading || !Array.isArray(rows) || rows.length === 0}
-            aria-label="Download CSV"
-            tooltip="Download CSV"
-            tooltipOptions={{ position: "top" }}
-          />
-        </div>
+          ))}
+        </DataTable>
       </div>
-
-      <DataTable
-        ref={dtRef}
-        value={Array.isArray(rows) ? rows : []}
-        loading={loading}
-        emptyMessage={errorMessage ? "No data." : "No records found."}
-        dataKey="__internalKey"
-        rowKey={(rowData) => rowKey(rowData)}
-        paginator
-        paginatorPosition="bottom"
-        rows={defaultPageSize}
-        rowsPerPageOptions={pageSizes}
-        removableSort
-        showGridlines
-        stripedRows
-        scrollable
-        /*
-          Critical for header/body alignment + sticky headers:
-          - Provide a real scroll container height so Prime can compute column widths consistently.
-        */
-        scrollHeight="60vh"
-        className="p-datatable-sm RmgPrimeDataTable"
-        filters={filters}
-        onFilter={(e) => setFilters(e.filters)}
-        filterDisplay="row"
-        globalFilterFields={derivedGlobalFields}
-      >
-        {visibleColumns.map((c) => (
-          <Column
-            key={c.id}
-            field={c.id}
-            header={c.label}
-            sortable={c.sortable !== false}
-            filter
-            showFilterMenu={false}
-            filterPlaceholder="Filter…"
-            body={(rowData) => bodyTemplate(rowData, c.id)}
-          />
-        ))}
-      </DataTable>
-
-
     </div>
   );
 }

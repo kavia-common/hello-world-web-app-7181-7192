@@ -201,7 +201,8 @@ body {
 }
 
 .p-datatable .p-datatable-wrapper {
-  border-radius: 16px;
+  /* Let the unified card control the outer rounding; keep only subtle rounding on the scroll viewport */
+  border-radius: 14px;
 }
 
 /* Prevent tiny header/body offsets caused by default padding/line-heights */
@@ -377,8 +378,9 @@ body {
   gap: 10px;
   flex-wrap: wrap;
 
+  /* Keep compact, but make it feel like part of the unified card */
   padding: 10px 12px;
-  margin: 12px 12px 0; /* keep inside the card, above the table wrapper */
+  margin: 10px 12px 10px; /* spacing within unified card */
   border-radius: 16px;
 
   background: linear-gradient(
@@ -532,15 +534,30 @@ body {
   margin-top: var(--rmg-table-block-gap, 16px);
 
   /*
-    Layout polish:
-    Add a small right-side padding so wide tables with horizontal scroll
-    don't visually touch the card edge (especially noticeable on desktop).
+    Outer wrapper owns HORIZONTAL scrolling for wide/intrinsic tables.
+    We keep this outside the unified card so the card keeps consistent padding,
+    while still allowing max-content table sizing + horizontal scroll.
   */
-  padding-right: 12px;
-
   overflow-x: auto;
   overflow-y: visible;
   -webkit-overflow-scrolling: touch;
+}
+
+/*
+  Unified table card:
+  - Single surface for header toolbar + controls + datatable
+  - Keeps consistent padding, borders, and glassy styling across pages
+  - Does not alter Prime's internal scroll wrapper (vertical scroll stays inside .p-datatable-wrapper)
+*/
+.RmgTableWrap .RmgTableCard {
+  border-radius: 18px;
+  border: 1px solid var(--card-border);
+  background: var(--card-surface-wash), var(--card-bg);
+  box-shadow: 0 14px 32px rgba(2, 6, 23, 0.08);
+  backdrop-filter: blur(10px);
+
+  /* Card padding for toolbar; DataTable manages its own internal layout */
+  padding: 12px 0 0;
 }
 
 /* Avoid wrapping by default to keep rows compact; horizontal scroll will expose overflow */
