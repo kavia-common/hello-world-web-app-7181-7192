@@ -85,6 +85,21 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+
+  /* Critical: prevent any inherited "gradient text" or transparency from global styles */
+  color: var(--color-text, #0f172a);
+}
+
+/* Critical: ensure the whole header content area doesn't inherit transparent text */
+.RmgTableWrap .p-datatable .p-datatable-thead > tr > th .p-column-header-content,
+.RmgTableWrap .p-datatable .p-datatable-thead > tr > th {
+  color: var(--color-text, #0f172a);
+}
+
+/* Make sortable headers keep readable text even in focused/active states */
+.RmgTableWrap .p-datatable .p-sortable-column:not(.p-highlight) .p-column-title,
+.RmgTableWrap .p-datatable .p-sortable-column.p-highlight .p-column-title {
+  color: var(--color-text, #0f172a);
 }
 
 /* Keep filter inputs aligned and full-width inside header cells */
@@ -150,9 +165,13 @@ body {
 
 /* Header styling aligned with gradient/glass aesthetic */
 .p-datatable .p-datatable-thead > tr > th {
-  background: rgba(255, 255, 255, 0.45);
+  /* Slightly stronger surface so header labels are always readable */
+  background:
+    linear-gradient(87deg, rgba(197, 22, 140, 0.10), rgba(3, 78, 161, 0.10)),
+    rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(10px);
   border-color: var(--rmg-border);
+  color: var(--color-text, #0f172a);
 }
 
 /* Body borders aligned with theme */
