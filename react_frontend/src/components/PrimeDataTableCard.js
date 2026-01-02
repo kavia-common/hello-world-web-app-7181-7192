@@ -342,12 +342,15 @@ export default function PrimeDataTableCard({
           removableSort
           showGridlines
           stripedRows
-          scrollable
           /*
-            Critical for header/body alignment + sticky headers:
-            - Provide a real scroll container height so Prime can compute column widths consistently.
+            Scroll + pagination responsibility:
+            - Pagination is owned by the DataTable (Prime paginator, bottom only).
+            - Horizontal scrolling is owned by the DataTable (scrollable="true" + scrollDirection="horizontal").
+            - No internal vertical scroll area: we intentionally do NOT set scrollHeight so the table height
+              is content-driven.
           */
-          scrollHeight="60vh"
+          scrollable
+          scrollDirection="horizontal"
           className="p-datatable-sm RmgPrimeDataTable"
           filters={filters}
           onFilter={(e) => setFilters(e.filters)}

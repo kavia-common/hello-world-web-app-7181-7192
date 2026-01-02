@@ -97,14 +97,18 @@ body {
   min-width: 100%;
 }
 
-/* Ensure the Prime internal scroll wrapper is the only vertical scroll container */
+/*
+  Prime internal wrapper:
+  - Do NOT create an internal vertical scrolling viewport (no fixed scrollHeight).
+  - Let DataTable manage horizontal overflow when scrollable + scrollDirection="horizontal".
+*/
 .RmgTableWrap .p-datatable .p-datatable-wrapper {
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: visible;
 
   /*
-    Critical: let the unified card own the rounding and clip the DataTable internals
+    Let the unified card own the rounding and clip the DataTable internals
     so the header/body/paginator follow the same radii as the card.
-    (We keep sticky headers working by clipping at the wrapper viewport level.)
   */
   border-radius: inherit;
 }
@@ -368,10 +372,14 @@ body {
   background-clip: padding-box;
 }
 
-/* Scrollbar gutter stability helps avoid column-width shifts when scrollbars appear */
+/*
+  Scrollbar gutter stability:
+  With horizontal-only scrolling, keeping a stable gutter on "both-edges" can
+  introduce unwanted space (and can imply vertical scrolling). Keep it minimal.
+*/
 @supports (scrollbar-gutter: stable) {
   .RmgTableWrap .p-datatable .p-datatable-wrapper {
-    scrollbar-gutter: stable both-edges;
+    scrollbar-gutter: stable;
   }
 }
 
@@ -611,13 +619,10 @@ body {
   margin-top: var(--rmg-table-block-gap, 16px);
 
   /*
-    Outer wrapper owns HORIZONTAL scrolling for wide/intrinsic tables.
-    We keep this outside the unified card so the card keeps consistent padding,
-    while still allowing max-content table sizing + horizontal scroll.
+    Outer wrapper should NOT manage scrollbars/pagination.
+    DataTable now owns horizontal scroll; height remains content-driven.
   */
-  overflow-x: auto;
-  overflow-y: visible;
-  -webkit-overflow-scrolling: touch;
+  overflow: visible;
 }
 
 /*
