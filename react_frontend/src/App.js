@@ -211,9 +211,20 @@ function App() {
            */
           settings={{
             general: {
-              // Tailwind-like cool palette to match the updated UI
-              primaryColor: "#0EA5E9", // sky-500
-              secondaryColor: "#6366F1", // indigo-500
+              /**
+               * Theme binding:
+               * Use the same palette as the app (CSS variables in App.css) so the chatbot stays
+               * consistent with the gradient theme. We keep a safe fallback for environments
+               * where variables may not be available yet.
+               */
+              primaryColor:
+                getComputedStyle(document.documentElement)
+                  .getPropertyValue("--digibot-primary")
+                  .trim() || "#c5168c",
+              secondaryColor:
+                getComputedStyle(document.documentElement)
+                  .getPropertyValue("--digibot-secondary")
+                  .trim() || "#034ea1",
               fontFamily:
                 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif',
             },
@@ -229,11 +240,23 @@ function App() {
           }}
           styles={{
             /**
-             * Keep bubble colors aligned with the updated palette.
-             * (v2 supports style overrides for fine-grained control; these are safe and non-breaking.)
+             * Most visual styling is handled via CSS overrides (App.css) so we can theme
+             * header/launcher/bubbles/input/scrollbars consistently.
+             *
+             * Here we only ensure readable text as a safe fallback.
              */
-            botBubbleStyle: { backgroundColor: "#0EA5E9" },
-            userBubbleStyle: { backgroundColor: "#6366F1" },
+            botBubbleStyle: {
+              color:
+                getComputedStyle(document.documentElement)
+                  .getPropertyValue("--digibot-text")
+                  .trim() || "#0f172a",
+            },
+            userBubbleStyle: {
+              color:
+                getComputedStyle(document.documentElement)
+                  .getPropertyValue("--digibot-text")
+                  .trim() || "#0f172a",
+            },
           }}
         />
       </div>
