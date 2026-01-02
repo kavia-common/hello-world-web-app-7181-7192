@@ -172,8 +172,14 @@ export default function PrimeDataTableCard({
         showGridlines
         stripedRows
         scrollable
-        scrollHeight="flex"
-        className="p-datatable-sm"
+        /*
+          Critical for header/body alignment + sticky headers:
+          - Provide a real scroll container height so Prime can compute column widths consistently.
+          - `scrollHeight="flex"` can cause transient width calc mismatches when the parent has
+            its own scrolling / overflow rules.
+        */
+        scrollHeight="60vh"
+        className="p-datatable-sm RmgPrimeDataTable"
       >
         {visibleColumns.map((c) => (
           <Column

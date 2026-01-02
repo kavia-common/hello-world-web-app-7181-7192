@@ -49,10 +49,69 @@ body {
 
 /* ----------------------------- DataTable polish ----------------------------- */
 
-/* Ensure scrollable table uses consistent fixed layout so header and body columns align. */
+/*
+  PrimeReact DataTable alignment/sticky fixes (applies to all pages via PrimeDataTableCard):
+  - Stable column widths between thead/tbody (fixed layout)
+  - Correct sticky header layering (thead + filter row)
+  - Consistent control/icon alignment
+  - Prevent overlap with paginator/filters by avoiding double-scroll containers
+*/
 .RmgTableWrap .p-datatable .p-datatable-table {
   table-layout: fixed;
   width: 100%;
+}
+
+/* Ensure the Prime internal scroll wrapper is the only vertical scroll container */
+.RmgTableWrap .p-datatable .p-datatable-wrapper {
+  overflow: auto;
+}
+
+/* Sticky header: keep header above body and above filter row */
+.RmgTableWrap .p-datatable .p-datatable-thead > tr > th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+/* Filter row (row filters) should stick just below the header row */
+.RmgTableWrap .p-datatable .p-datatable-thead > tr.p-filter-row > th {
+  position: sticky;
+  top: var(--rmg-table-row-min-height);
+  z-index: 4;
+}
+
+/* Avoid header content wrapping that causes header height changes and misalignment */
+.RmgTableWrap .p-datatable .p-datatable-thead > tr > th .p-column-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Keep filter inputs aligned and full-width inside header cells */
+.RmgTableWrap .p-datatable .p-datatable-thead > tr.p-filter-row > th .p-column-filter,
+.RmgTableWrap .p-datatable .p-datatable-thead > tr.p-filter-row > th .p-inputtext {
+  width: 100%;
+}
+
+/* Normalize column header content layout: label + sort icon + (possible) menu icon */
+.RmgTableWrap .p-datatable .p-column-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Ensure sort icon doesn't vertically misalign with text */
+.RmgTableWrap .p-datatable .p-sortable-column-icon {
+  flex: 0 0 auto;
+}
+
+/* Paginator: add breathing room so it never visually overlaps the scroll area */
+.RmgTableWrap .p-datatable .p-paginator {
+  margin-top: 10px;
+  padding-top: 6px;
 }
 
 /* Make wrapper not add unexpected padding/margins */

@@ -869,7 +869,16 @@
   border-radius: 18px;
   border: 1px solid var(--card-border);
   background: var(--card-surface-wash), var(--card-bg);
-  overflow: auto;
+
+  /*
+    Important:
+    - Let PrimeReact manage vertical scrolling inside the DataTable wrapper
+      (so sticky headers + column width calculations stay consistent).
+    - Keep horizontal scrolling at the card level for very wide tables.
+  */
+  overflow-x: auto;
+  overflow-y: visible;
+
   box-shadow: 0 14px 32px rgba(2, 6, 23, 0.08);
 }
 
