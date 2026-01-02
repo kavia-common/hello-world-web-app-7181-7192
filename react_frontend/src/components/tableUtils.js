@@ -5,6 +5,158 @@ import React from "react";
  * Used by all existing pages to keep UX consistent without changing their mocked fetching logic.
  */
 
+/**
+ * ---------------------------------------------------------------------------
+ * Header filter dropdown (distinct values per column)
+ * ---------------------------------------------------------------------------
+ */
+
+function getCellValueForDistinct(row, col) {
+  const raw = typeof col.filterAccessor === "function" ? col.filterAccessor(row) : col?.accessor?.(row);
+
+  if (raw !== undefined) return raw;
+
+  return typeof col.accessor === "function" ? col.accessor(row) : row?.[col.id];
+}
+
+function normalizeDistinctValue(value) {
+  if (value === null || value === undefined) return "";
+  return String(value).trim();
+}
+
+function extractDistinctValuesFromCell(value) {
+  if (value === null || value === undefined) return [];
+  if (Array.isArray(value)) return value.map((v) => normalizeDistinctValue(v)).filter(Boolean);
+  const s = normalizeDistinctValue(value);
+  return s ? [s] : [];
+}
+
+// PUBLIC_INTERFACE
+export function getDistinctColumnValues(rows, col) {
+  /** Returns sorted unique, user-visible values for a given column. */
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const values = [];
+
+  for (const r of safeRows) {
+    const cell = getCellValueForDistinct(r, col);
+    values.push(...extractDistinctValuesFromCell(cell));
+  }
+
+  // Filter out common placeholder-ish values
+  const cleaned = values.filter((v) => v && v !== "—" && v !== "-");
+  return Array.from(new Set(cleaned)).sort((a, b) => String(a).localeCompare(String(b)));
+}
+
+// PUBLIC_INTERFACE
+export function useHeaderDistinctValueFilter({ rows, columns, columnFilters, onChange }) {
+  /**
+   * Manages which column's distinct-value dropdown is open.
+   * Ensures:
+   * - Escape closes
+   * - click outside closes
+   * - focus returns to trigger
+   */
+  const [openForColumnId, setOpenForColumnId] = React.useState("");
+  const triggerRefs = React.useRef({});
+  const menuRef = React.useRef(null);
+
+  const open = React.useCallback((colId) => setOpenForColumnId(colId), []);
+  const close = React.useCallback(() => setOpenForColumnId(""), []);
+  const toggle = React.useCallback((colId) => {
+    setOpenForColumnId((prev) => (prev === colId ? "" : colId));
+  }, []);
+
+  React.useEffect(() => {
+    if (!openForColumnId) return undefined;
+
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        close();
+        const el = triggerRefs.current?.[openForColumnId];
+        if (el && typeof el.focus === "function") el.focus();
+      }
+    };
+
+    const onPointerDown = (e) => {
+      const menuEl = menuRef.current;
+      const triggerEl = triggerRefs.current?.[openForColumnId];
+      const target = e.target;
+
+      if (menuEl && menuEl.contains(target)) return;
+      if (triggerEl && triggerEl.contains(target)) return;
+
+      close();
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown, { passive: true });
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+    };
+  }, [openForColumnId, close]);
+
+  const activeColumn = React.useMemo(
+    () => columns?.find((c) => c.id === openForColumnId) || null,
+    [columns, openForColumnId]
+  );
+
+  const activeOptions = React.useMemo(() => {
+    if (!activeColumn) return [];
+    return getDistinctColumnValues(rows, activeColumn);
+  }, [rows, activeColumn]);
+
+  const activeSelected = React.useMemo(() => {
+    if (!activeColumn) return [];
+    const f = columnFilters?.[activeColumn.id];
+    if (!f) return [];
+
+    if (f.type === "select" && f.value) return [String(f.value)];
+    if (f.type === "multiselect" && Array.isArray(f.values)) return f.values.map((v) => String(v));
+    // Allow dropdown even if existing filter is "text"; treat it as empty selection.
+    return [];
+  }, [columnFilters, activeColumn]);
+
+  // PUBLIC_INTERFACE
+  function applySelection(nextSelected) {
+    /** Updates per-column filters while preserving other filter types. */
+    if (!activeColumn) return;
+
+    const id = activeColumn.id;
+    const unique = Array.from(new Set((nextSelected || []).map((v) => String(v))));
+
+    // If no selection => clear this column filter
+    if (unique.length === 0) {
+      onChange(id, null);
+      return;
+    }
+
+    // Choose select vs multiselect based on count for best compatibility with current filter logic.
+    if (unique.length === 1) {
+      onChange(id, { type: "select", value: unique[0] });
+    } else {
+      onChange(id, { type: "multiselect", values: unique });
+    }
+  }
+
+  return {
+    openForColumnId,
+    activeColumn,
+    activeOptions,
+    activeSelected,
+    menuRef,
+    triggerRefs,
+    open,
+    close,
+    toggle,
+    applySelection,
+  };
+}
+
 function normalizeText(value) {
   if (value === null || value === undefined) return "";
   if (Array.isArray(value)) return value.join(" ");

@@ -6,6 +6,7 @@ import {
   buildFacetOptions,
   chooseVisibleFilterColumns,
   sortRows,
+  useHeaderDistinctValueFilter,
   useTableSorting,
 } from "./components/tableUtils";
 
@@ -916,30 +917,160 @@ function normalizeAssessmentStatus(value) {
 }
 
 /**
- * Shared renderer for sortable column headers.
- * Uses a real <button> for keyboard accessibility.
+ * Shared renderer for sortable column headers + distinct-values dropdown filter.
+ * Uses real <button>s for keyboard accessibility.
  */
-function SortableTh({ col, sortState, onToggle, alignRight }) {
-  const isActive = sortState.columnId === col.id && sortState.direction !== "none";
-  const dir = isActive ? sortState.direction : "none";
+function ColumnHeaderTh({
+  col,
+  sortState,
+  onToggleSort,
+  headerDistinctFilter,
+  alignRight,
+}) {
+  const isSorted = sortState.columnId === col.id && sortState.direction !== "none";
+  const dir = isSorted ? sortState.direction : "none";
   const icon = sortIconFor(dir);
 
-  const a11y =
+  const hasFacetFilter = Boolean(col?.id);
+  const isFilterOpen = headerDistinctFilter?.openForColumnId === col.id;
+
+  const sortA11y =
     dir === "asc"
       ? `${col.label}. Sorted ascending. Activate to sort descending.`
       : dir === "desc"
         ? `${col.label}. Sorted descending. Activate to clear sorting.`
         : `${col.label}. Not sorted. Activate to sort ascending.`;
 
+  const selected = headerDistinctFilter?.activeColumn?.id === col.id ? headerDistinctFilter.activeSelected : [];
+  const selectedCount = Array.isArray(selected) ? selected.length : 0;
+
+  const filterA11y = selectedCount
+    ? `${col.label}. Filtered by ${selectedCount} value${selectedCount === 1 ? "" : "s"}. Activate to edit filter.`
+    : `${col.label}. Not filtered. Activate to filter by distinct values.`;
+
   return (
-    <th key={col.id} scope="col" style={alignRight ? { textAlign: "right" } : undefined}>
-      <button type="button" className="RmgThButton" onClick={() => onToggle(col.id)} aria-label={a11y}>
-        <span>{col.label}</span>
-        <span className={`RmgSortIcon${isActive ? " RmgSortIcon--active" : ""}`} aria-hidden="true">
-          {icon}
-        </span>
-      </button>
+    <th
+      key={col.id}
+      scope="col"
+      style={alignRight ? { textAlign: "right" } : undefined}
+      className="RmgTh"
+    >
+      <div className="RmgThInner">
+        <button
+          type="button"
+          className="RmgThButton"
+          onClick={() => onToggleSort(col.id)}
+          aria-label={sortA11y}
+        >
+          <span>{col.label}</span>
+          <span className={`RmgSortIcon${isSorted ? " RmgSortIcon--active" : ""}`} aria-hidden="true">
+            {icon}
+          </span>
+        </button>
+
+        {hasFacetFilter && (
+          <button
+            type="button"
+            className={`RmgHeaderIconBtn${selectedCount ? " RmgHeaderIconBtn--active" : ""}`}
+            aria-label={filterA11y}
+            aria-haspopup="menu"
+            aria-expanded={isFilterOpen ? "true" : "false"}
+            onClick={(e) => {
+              // Prevent header click interactions from fighting with other controls
+              e.stopPropagation();
+              headerDistinctFilter?.toggle(col.id);
+            }}
+            ref={(el) => {
+              if (!headerDistinctFilter?.triggerRefs?.current) return;
+              headerDistinctFilter.triggerRefs.current[col.id] = el;
+            }}
+            title="Filter"
+          >
+            <span className="RmgHeaderIconGlyph" aria-hidden="true">⏷</span>
+            <span className="RmgHeaderIconFunnel" aria-hidden="true">⎇</span>
+          </button>
+        )}
+      </div>
     </th>
+  );
+}
+
+function HeaderDistinctFilterMenu({ headerDistinctFilter }) {
+  const col = headerDistinctFilter?.activeColumn;
+  const openFor = headerDistinctFilter?.openForColumnId;
+  const options = headerDistinctFilter?.activeOptions || [];
+  const selected = headerDistinctFilter?.activeSelected || [];
+
+  if (!col || !openFor) return null;
+
+  const selectedSet = new Set(selected.map((v) => String(v)));
+
+  return (
+    <div className="RmgHeaderMenu" role="presentation">
+      <div
+        ref={headerDistinctFilter.menuRef}
+        className="RmgHeaderMenuPanel"
+        role="menu"
+        aria-label={`Filter ${col.label}`}
+      >
+        <div className="RmgHeaderMenuTitleRow">
+          <div className="RmgHeaderMenuTitle">Filter: {col.label}</div>
+          <button
+            type="button"
+            className="RmgHeaderMenuClearBtn"
+            onClick={() => headerDistinctFilter.applySelection([])}
+            aria-label={`Clear filter for ${col.label}`}
+            disabled={selected.length === 0}
+          >
+            Clear
+          </button>
+        </div>
+
+        {options.length === 0 ? (
+          <div className="RmgHeaderMenuEmpty" role="status">
+            No values available.
+          </div>
+        ) : (
+          <ul className="RmgHeaderMenuList" role="none">
+            {options.map((v) => {
+              const checked = selectedSet.has(String(v));
+              return (
+                <li key={`${col.id}-distinct-${v}`} role="none" className="RmgHeaderMenuItem">
+                  <label className="RmgHeaderMenuCheck">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        const next = new Set(selectedSet);
+                        if (e.target.checked) next.add(String(v));
+                        else next.delete(String(v));
+                        headerDistinctFilter.applySelection(Array.from(next));
+                      }}
+                      aria-label={`Filter by ${v}`}
+                    />
+                    <span className="RmgHeaderMenuValue">{v}</span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        <div className="RmgHeaderMenuFooter">
+          <button
+            type="button"
+            className="RmgButton RmgButton--small"
+            onClick={() => {
+              headerDistinctFilter.close();
+              const el = headerDistinctFilter.triggerRefs.current?.[col.id];
+              if (el && typeof el.focus === "function") el.focus();
+            }}
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1573,6 +1704,13 @@ export function RmgTrackerPage() {
 
           const triggerId = "rmg-more-filters-trigger";
 
+          const headerDistinctFilter = useHeaderDistinctValueFilter({
+            rows: filteredRows,
+            columns: ALL_COLUMNS,
+            columnFilters,
+            onChange: updateColumnFilter,
+          });
+
           return (
             <div className="RmgTableWrap" role="region" aria-label="RMG table">
               {/* Filter-row helper actions (keeps the table header area from becoming too dense) */}
@@ -1623,15 +1761,19 @@ export function RmgTrackerPage() {
                 </div>
               )}
 
+              {/* Dropdown overlay for header distinct-value filtering */}
+              <HeaderDistinctFilterMenu headerDistinctFilter={headerDistinctFilter} />
+
               <table className="RmgTable">
                 <thead>
                   <tr>
                     {visibleColumns.map((c) => (
-                      <SortableTh
+                      <ColumnHeaderTh
                         key={c.id}
                         col={c}
                         sortState={sortState}
-                        onToggle={toggleSort}
+                        onToggleSort={toggleSort}
+                        headerDistinctFilter={headerDistinctFilter}
                         alignRight={c.id === "allocationPct"}
                       />
                     ))}
@@ -2303,6 +2445,13 @@ export function SkillFactoriesPage() {
 
           const triggerId = "sf-more-filters-trigger";
 
+          const headerDistinctFilter = useHeaderDistinctValueFilter({
+            rows: filteredRows,
+            columns: ALL_COLUMNS,
+            columnFilters,
+            onChange: updateColumnFilter,
+          });
+
           return (
             <div className="RmgTableWrap" role="region" aria-label="Skill Factories table">
               {overflowColumns.length > 0 && (
@@ -2351,11 +2500,19 @@ export function SkillFactoriesPage() {
                 </div>
               )}
 
+              <HeaderDistinctFilterMenu headerDistinctFilter={headerDistinctFilter} />
+
               <table className="RmgTable">
                 <thead>
                   <tr>
                     {visibleColumns.map((c) => (
-                      <SortableTh key={c.id} col={c} sortState={sortState} onToggle={toggleSort} />
+                      <ColumnHeaderTh
+                        key={c.id}
+                        col={c}
+                        sortState={sortState}
+                        onToggleSort={toggleSort}
+                        headerDistinctFilter={headerDistinctFilter}
+                      />
                     ))}
                   </tr>
 
@@ -2895,6 +3052,13 @@ export function LearningPathsPage() {
 
           const triggerId = "lp-more-filters-trigger";
 
+          const headerDistinctFilter = useHeaderDistinctValueFilter({
+            rows: filteredRows,
+            columns: ALL_COLUMNS,
+            columnFilters,
+            onChange: updateColumnFilter,
+          });
+
           return (
             <div className="RmgTableWrap" role="region" aria-label="Learning Paths table">
               {overflowColumns.length > 0 && (
@@ -2943,11 +3107,19 @@ export function LearningPathsPage() {
                 </div>
               )}
 
+              <HeaderDistinctFilterMenu headerDistinctFilter={headerDistinctFilter} />
+
               <table className="RmgTable">
                 <thead>
                   <tr>
                     {visibleColumns.map((c) => (
-                      <SortableTh key={c.id} col={c} sortState={sortState} onToggle={toggleSort} />
+                      <ColumnHeaderTh
+                        key={c.id}
+                        col={c}
+                        sortState={sortState}
+                        onToggleSort={toggleSort}
+                        headerDistinctFilter={headerDistinctFilter}
+                      />
                     ))}
                   </tr>
 
@@ -3448,6 +3620,13 @@ export function AssessmentsPage() {
 
           const triggerId = "assessments-more-filters-trigger";
 
+          const headerDistinctFilter = useHeaderDistinctValueFilter({
+            rows: filteredRows,
+            columns: ALL_COLUMNS,
+            columnFilters,
+            onChange: updateColumnFilter,
+          });
+
           return (
             <div className="RmgTableWrap" role="region" aria-label="Assessments table">
               {overflowColumns.length > 0 && (
@@ -3496,15 +3675,18 @@ export function AssessmentsPage() {
                 </div>
               )}
 
+              <HeaderDistinctFilterMenu headerDistinctFilter={headerDistinctFilter} />
+
               <table className="RmgTable">
                 <thead>
                   <tr>
                     {visibleColumns.map((c) => (
-                      <SortableTh
+                      <ColumnHeaderTh
                         key={c.id}
                         col={c}
                         sortState={sortState}
-                        onToggle={toggleSort}
+                        onToggleSort={toggleSort}
+                        headerDistinctFilter={headerDistinctFilter}
                         alignRight={c.id === "marks"}
                       />
                     ))}

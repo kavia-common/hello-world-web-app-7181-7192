@@ -945,6 +945,186 @@
 }
 
 /* ---------------------------------------------------------------------
+   Header filter icon + distinct-values dropdown menu
+------------------------------------------------------------------------ */
+
+.RmgTh {
+  /* allow dropdown overlay positioning relative to table header cells */
+  position: relative;
+}
+
+.RmgThInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.RmgHeaderIconBtn {
+  appearance: none;
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  background: rgba(255, 255, 255, 0.55);
+  color: rgba(15, 23, 42, 0.78);
+  min-width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding: 0;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease,
+    background 160ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .RmgHeaderIconBtn:hover {
+    transform: translateY(-1px);
+    border-color: var(--color-border-strong);
+    background: rgba(255, 255, 255, 0.72);
+    box-shadow: 0 12px 24px rgba(2, 6, 23, 0.10);
+  }
+}
+
+.RmgHeaderIconBtn:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.RmgHeaderIconBtn--active {
+  border-color: var(--color-border-strong);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 12px 24px rgba(2, 6, 23, 0.10);
+}
+
+.RmgHeaderIconGlyph {
+  font-size: 0.72rem;
+  line-height: 1;
+  display: inline-block;
+  transform: translateY(-0.5px);
+}
+
+.RmgHeaderIconFunnel {
+  /* tiny 2nd glyph to hint filter; keeps it playful without importing an icon library */
+  font-size: 0.72rem;
+  line-height: 1;
+  display: inline-block;
+  margin-left: 1px;
+  opacity: 0.85;
+  transform: translateY(-0.5px);
+}
+
+/* Dropdown wrapper sits above table header/filter rows */
+.RmgHeaderMenu {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  pointer-events: none; /* only panel should receive events */
+}
+
+/* Panel: positioned relative to the table wrapper (sticky header area), not the viewport */
+.RmgHeaderMenuPanel {
+  pointer-events: auto;
+  position: absolute;
+  right: 12px;
+  top: 44px;
+  width: min(320px, calc(100vw - 64px));
+  max-height: min(320px, 55vh);
+  overflow: auto;
+
+  border-radius: 16px;
+  border: 1px solid rgba(99, 102, 241, 0.22);
+  background: var(--card-surface-wash), rgba(255, 255, 255, 0.94);
+  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.18);
+  backdrop-filter: blur(12px);
+
+  padding: 10px 10px;
+}
+
+.RmgHeaderMenuTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.14);
+  margin-bottom: 8px;
+}
+
+.RmgHeaderMenuTitle {
+  font-weight: 950;
+  letter-spacing: -0.01em;
+  font-size: 0.95rem;
+}
+
+.RmgHeaderMenuClearBtn {
+  appearance: none;
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  background: rgba(255, 255, 255, 0.70);
+  border-radius: 999px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.RmgHeaderMenuClearBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.RmgHeaderMenuClearBtn:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.RmgHeaderMenuList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.RmgHeaderMenuItem {
+  border-radius: 12px;
+  border: 1px solid rgba(99, 102, 241, 0.14);
+  background: rgba(255, 255, 255, 0.72);
+  padding: 8px 10px;
+}
+
+.RmgHeaderMenuCheck {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.RmgHeaderMenuCheck input {
+  width: 16px;
+  height: 16px;
+}
+
+.RmgHeaderMenuValue {
+  color: rgba(15, 23, 42, 0.90);
+}
+
+.RmgHeaderMenuFooter {
+  padding-top: 10px;
+  border-top: 1px solid rgba(99, 102, 241, 0.14);
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.RmgHeaderMenuEmpty {
+  padding: 10px 4px;
+  font-weight: 800;
+  color: rgba(15, 23, 42, 0.70);
+}
+
+/* ---------------------------------------------------------------------
    Table header + filter-row stacking
    Goal: filters never overlap headers or each other; popovers/lists stack above table.
 ------------------------------------------------------------------------ */
