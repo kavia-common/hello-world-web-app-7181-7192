@@ -100,40 +100,44 @@ export default function PrimeDataTableCard({
     return normalizeText(value) || "—";
   }
 
+  const showHeaderBar = Boolean(title || subtitle || extraControls);
+
   return (
     <div className="RmgTableWrap" role="region" aria-label={title ? `${title} table` : "Data table"}>
-      <div className="RmgToolbar" aria-label={`${title || "Table"} actions`}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
-          {title && <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>{title}</h2>}
-          {subtitle && <span style={{ opacity: 0.8 }}>{subtitle}</span>}
+      {showHeaderBar && (
+        <div className="RmgToolbar" aria-label={`${title || "Table"} actions`}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+            {title && <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>{title}</h2>}
+            {subtitle && <span style={{ opacity: 0.8 }}>{subtitle}</span>}
+          </div>
+
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            {extraControls}
+
+            <Button
+              type="button"
+              icon="pi pi-refresh"
+              className="p-button-outlined p-button-icon-only"
+              onClick={clearAll}
+              aria-label="Reset table filters"
+              tooltip="Reset"
+              tooltipOptions={{ position: "top" }}
+              disabled={loading}
+            />
+
+            <Button
+              type="button"
+              icon="pi pi-download"
+              className="p-button-outlined p-button-icon-only"
+              onClick={exportCsv}
+              disabled={loading || !Array.isArray(rows) || rows.length === 0}
+              aria-label="Export table to CSV"
+              tooltip="Export CSV"
+              tooltipOptions={{ position: "top" }}
+            />
+          </div>
         </div>
-
-        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          {extraControls}
-
-          <Button
-            type="button"
-            icon="pi pi-refresh"
-            className="p-button-outlined p-button-icon-only"
-            onClick={clearAll}
-            aria-label="Reset table filters"
-            tooltip="Reset"
-            tooltipOptions={{ position: "top" }}
-            disabled={loading}
-          />
-
-          <Button
-            type="button"
-            icon="pi pi-download"
-            className="p-button-outlined p-button-icon-only"
-            onClick={exportCsv}
-            disabled={loading || !Array.isArray(rows) || rows.length === 0}
-            aria-label="Export table to CSV"
-            tooltip="Export CSV"
-            tooltipOptions={{ position: "top" }}
-          />
-        </div>
-      </div>
+      )}
 
       <div className="RmgOptions" aria-label="Table options">
         <div className="RmgOptionsRow" style={{ alignItems: "end" }}>

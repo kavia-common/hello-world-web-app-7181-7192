@@ -956,8 +956,6 @@ export function RmgTrackerPage() {
 
         {!loading && !errorMessage && (
           <PrimeDataTableCard
-            title="RMG Table"
-            subtitle="PrimeReact DataTable with built-in pagination, filters, sorting, and global search."
             columns={ALL_COLUMNS}
             rows={prefilteredRows}
             loading={loading}
@@ -1353,8 +1351,6 @@ export function SkillFactoriesPage() {
 
         {!loading && !errorMessage && (
           <PrimeDataTableCard
-            title="Skill Factories Table"
-            subtitle="PrimeReact DataTable with built-in pagination, filters, sorting, and global search."
             columns={ALL_COLUMNS}
             rows={prefilteredRows}
             loading={loading}
@@ -1678,8 +1674,6 @@ export function LearningPathsPage() {
 
         {!loading && !errorMessage && (
           <PrimeDataTableCard
-            title="Learning Paths Table"
-            subtitle="PrimeReact DataTable with built-in pagination, filters, sorting, and global search."
             columns={ALL_COLUMNS}
             rows={prefilteredRows}
             loading={loading}
@@ -1974,8 +1968,6 @@ export function AssessmentsPage() {
 
         {!loading && !errorMessage && (
           <PrimeDataTableCard
-            title="Assessments Table"
-            subtitle="PrimeReact DataTable with built-in pagination, filters, sorting, and global search."
             columns={ALL_COLUMNS}
             rows={prefilteredRows}
             loading={loading}
