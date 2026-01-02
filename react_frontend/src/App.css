@@ -2255,6 +2255,49 @@
   color: rgba(255, 255, 255, 0.82) !important;
 }
 
+/* ---------------------------------------------------------------------
+   Targeted FIX: Force white text for USER message bubbles (react-chatbotify v2)
+   - Mirrors the bot-bubble contrast fix above
+   - High-specificity and !important to beat library defaults without touching backgrounds
+   - Ensures message text, links, inline code, and timestamps inherit white
+------------------------------------------------------------------------ */
+
+/* Base: apply to the user bubble container AND common inner text nodes */
+.GlobalChatbot .rcb-user-message,
+.GlobalChatbot .rcb-user-message :where(p, span, div, small, time, pre, code, a, strong, em, li, ul, ol),
+.GlobalChatbot :where(.rcb-user, .rcb-user-bubble, .chatbotify__user-message, .chatbotify__message.user, .chatbotify__user-message-bubble),
+.GlobalChatbot
+  :where(.rcb-user, .rcb-user-bubble, .chatbotify__user-message, .chatbotify__message.user, .chatbotify__user-message-bubble)
+  :where(p, span, div, small, time, pre, code, a, strong, em, li, ul, ol) {
+  color: #fff !important;
+}
+
+/* Links inside user bubbles: keep them readable on dark backgrounds */
+.GlobalChatbot .rcb-user-message a,
+.GlobalChatbot
+  :where(.rcb-user, .rcb-user-bubble, .chatbotify__user-message, .chatbotify__message.user, .chatbotify__user-message-bubble)
+  a {
+  color: #fff !important;
+  text-decoration-color: rgba(255, 255, 255, 0.55);
+}
+
+/* Inline code/pre blocks inside user bubbles: readable foreground without changing background */
+.GlobalChatbot .rcb-user-message code,
+.GlobalChatbot .rcb-user-message pre,
+.GlobalChatbot
+  :where(.rcb-user, .rcb-user-bubble, .chatbotify__user-message, .chatbotify__message.user, .chatbotify__user-message-bubble)
+  :where(code, pre) {
+  color: #fff !important;
+}
+
+/* Timestamps / meta (best-effort common selectors) */
+.GlobalChatbot .rcb-user-message :where(.rcb-message-time, .rcb-message-timestamp, .timestamp, .time),
+.GlobalChatbot
+  :where(.rcb-user, .rcb-user-bubble, .chatbotify__user-message, .chatbotify__message.user, .chatbotify__user-message-bubble)
+  :where(.rcb-message-time, .rcb-message-timestamp, .timestamp, .time) {
+  color: rgba(255, 255, 255, 0.82) !important;
+}
+
 /* Ensure tooltips remain readable (explicitly keep current light tooltip text color) */
 .GlobalChatbot .rcb-tooltip,
 .GlobalChatbot .rcb-tooltip :where(p, span, div, small, a) {
