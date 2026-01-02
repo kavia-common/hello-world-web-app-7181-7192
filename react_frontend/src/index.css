@@ -383,12 +383,18 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
+}
+
+/* Search cluster: keep input + search button adjacent */
+.RmgTableWrap .RmgTableControls-left {
+  flex-wrap: nowrap;
 }
 
 /* Search input width defaults to compact */
 .RmgTableWrap .RmgTableSearch {
   width: min(320px, 100%);
+  flex: 1 1 auto;
+  min-width: 220px; /* prevents the input from collapsing too aggressively */
 }
 
 /* Ensure the input fills the constrained wrapper */
@@ -511,6 +517,13 @@ body {
 .RmgTableWrap {
   /* Add vertical breathing room before tables across ALL pages */
   margin-top: var(--rmg-table-block-gap, 16px);
+
+  /*
+    Layout polish:
+    Add a small right-side padding so wide tables with horizontal scroll
+    don't visually touch the card edge (especially noticeable on desktop).
+  */
+  padding-right: 12px;
 
   overflow-x: auto;
   overflow-y: visible;
