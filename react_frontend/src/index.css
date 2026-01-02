@@ -100,6 +100,13 @@ body {
 /* Ensure the Prime internal scroll wrapper is the only vertical scroll container */
 .RmgTableWrap .p-datatable .p-datatable-wrapper {
   overflow: auto;
+
+  /*
+    Critical: let the unified card own the rounding and clip the DataTable internals
+    so the header/body/paginator follow the same radii as the card.
+    (We keep sticky headers working by clipping at the wrapper viewport level.)
+  */
+  border-radius: inherit;
 }
 
 /* Sticky header: keep header above body and above filter row */
@@ -172,11 +179,18 @@ body {
   flex: 0 0 auto;
 }
 
-/* Paginator: bottom only + breathing room so it never visually overlaps the scroll area */
+/* Paginator: bottom only + flush to card, with matching bottom radii */
 .RmgTableWrap .p-datatable .p-paginator {
-  margin-top: 10px;
+  /*
+    Keep the paginator visually “attached” to the table content area and inside
+    the same unified card shape.
+  */
+  margin-top: 0;
   padding-top: 10px;
+
+  /* Single separator line between scroll viewport and paginator (avoid double borders) */
   border-top: 1px solid rgba(3, 78, 161, 0.12);
+
   background: linear-gradient(
       87deg,
       rgba(197, 22, 140, 0.06),
@@ -184,8 +198,12 @@ body {
     ),
     rgba(255, 255, 255, 0.55);
   backdrop-filter: blur(10px);
-  border-bottom-left-radius: 16px;
-  border-bottom-right-radius: 16px;
+
+  border-bottom-left-radius: 18px;
+  border-bottom-right-radius: 18px;
+
+  /* Ensure paginator content never bleeds outside rounded corners */
+  overflow: hidden;
 }
 
 /* Hide any accidental top paginator if introduced by future changes */
@@ -201,8 +219,67 @@ body {
 }
 
 .p-datatable .p-datatable-wrapper {
-  /* Let the unified card control the outer rounding; keep only subtle rounding on the scroll viewport */
-  border-radius: 14px;
+  /*
+    The unified card controls rounding; the wrapper should inherit and not introduce
+    a second radius that can cause “double corners”.
+  */
+  border-radius: 0;
+}
+
+/* ---- Rounded-corner DataTable “skin” for PrimeDataTableCard ----
+   Goal: the table content area is visually part of the same rounded card:
+   - top rounding comes from the header area (sticky thead) within the scroll viewport
+   - bottom rounding comes from the paginator/footer
+   - clip overflow so scrollbars/content don't escape the rounded edges
+*/
+.RmgTableWrap .RmgPrimeDataTable {
+  /* Avoid any outer borders from the DataTable itself fighting the card border */
+  border: 0;
+  background: transparent;
+}
+
+/* Clip the scroll viewport to the card’s top radii (works with sticky header) */
+.RmgTableWrap .RmgPrimeDataTable .p-datatable-wrapper {
+  /* clip both header and body content to rounded corners */
+  overflow: auto;
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* Ensure the internal table surface doesn’t draw its own border/background edges */
+.RmgTableWrap .RmgPrimeDataTable .p-datatable-table {
+  border-radius: 0;
+}
+
+/* Top corners: apply to the first/last header cells so gridlines don't “square off” */
+.RmgTableWrap .RmgPrimeDataTable .p-datatable-thead > tr:first-child > th:first-child {
+  border-top-left-radius: 18px;
+}
+.RmgTableWrap .RmgPrimeDataTable .p-datatable-thead > tr:first-child > th:last-child {
+  border-top-right-radius: 18px;
+}
+
+/* If the filter row is the first row (edge case), keep corners consistent */
+.RmgTableWrap
+  .RmgPrimeDataTable
+  .p-datatable-thead
+  > tr.p-filter-row:first-child
+  > th:first-child {
+  border-top-left-radius: 18px;
+}
+.RmgTableWrap
+  .RmgPrimeDataTable
+  .p-datatable-thead
+  > tr.p-filter-row:first-child
+  > th:last-child {
+  border-top-right-radius: 18px;
+}
+
+/* Remove the DataTable's own bottom border so we don't get a double line above paginator */
+.RmgTableWrap .RmgPrimeDataTable .p-datatable-wrapper {
+  border-bottom: 0;
 }
 
 /* Prevent tiny header/body offsets caused by default padding/line-heights */
@@ -555,6 +632,13 @@ body {
   background: var(--card-surface-wash), var(--card-bg);
   box-shadow: 0 14px 32px rgba(2, 6, 23, 0.08);
   backdrop-filter: blur(10px);
+
+  /*
+    IMPORTANT:
+    This unified card must clip the DataTable so the header/body/paginator all appear
+    within the same rounded surface (no square inner corners / overflow bleed).
+  */
+  overflow: hidden;
 
   /* Card padding for toolbar; DataTable manages its own internal layout */
   padding: 12px 0 0;
