@@ -1,5 +1,11 @@
 import React from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import {
+  applyColumnFilters,
+  buildFacetOptions,
+  sortRows,
+  useTableSorting,
+} from "./components/tableUtils";
 
 /**
  * Simple pages used by the app router.
@@ -158,8 +164,6 @@ function metricLabelOrDash(value) {
   return num === null ? "—" : String(num);
 }
 
-
-
 function getMetricCardA11yText({ title, mainValue, mainLabel, secondary }) {
   const parts = [title];
   if (mainLabel) parts.push(`${mainLabel} ${mainValue}`);
@@ -229,7 +233,31 @@ function poolParamToLabel(param) {
   return "";
 }
 
- // PUBLIC_INTERFACE
+function formatDateOrDash(value) {
+  if (!value) return "—";
+  return value;
+}
+
+function normalizeText(value) {
+  if (value === null || value === undefined) return "";
+  if (Array.isArray(value)) return value.join(" ");
+  return String(value);
+}
+
+function uniqueSorted(values) {
+  return Array.from(new Set(values.filter(Boolean))).sort((a, b) =>
+    String(a).localeCompare(String(b))
+  );
+}
+
+function formatIsoDateTimeOrDash(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toISOString().replace(".000Z", "Z");
+}
+
+// PUBLIC_INTERFACE
 export function HomePage() {
   /** Home page that renders a dashboard-style overview using mocked API metrics. */
 
@@ -544,11 +572,7 @@ export function HomePage() {
                               ? buildSkillFactoriesQuery({ q: baseQ, employeePool: "in" })
                               : m.key === "notInPoolCount"
                                 ? buildSkillFactoriesQuery({ q: baseQ, employeePool: "not-in" })
-                                : m.key === "mentorCount"
-                                  ? buildSkillFactoriesQuery({ q: baseQ })
-                                  : m.key === "employeeCount"
-                                    ? buildSkillFactoriesQuery({ q: baseQ })
-                                    : buildSkillFactoriesQuery({ q: baseQ });
+                                : buildSkillFactoriesQuery({ q: baseQ });
 
                           const titleHint =
                             m.key === "inPoolCount"
@@ -634,7 +658,7 @@ export function HomePage() {
                   const agg = aggregateHomeLearningPathMetrics(lpMetricsRows);
                   const completionRate = agg.enrolled > 0 ? agg.completed / agg.enrolled : null;
 
-                  const cards = [
+                  const cards2 = [
                     {
                       key: "enrolled",
                       title: "Enrolled",
@@ -671,7 +695,7 @@ export function HomePage() {
 
                   return (
                     <div className="HomeLpMetricCardsGrid" role="list" aria-label="Learning Path metric cards">
-                      {cards.map((c) => (
+                      {cards2.map((c) => (
                         <Link
                           key={c.key}
                           className="HomeLpMetricCard"
@@ -700,8 +724,6 @@ export function HomePage() {
     </main>
   );
 }
-
-
 
 /**
  * Mocked/dummy response used for the RMG Tracker table.
@@ -784,7 +806,6 @@ async function fetchRmgTrackerDataMock({ signal } = {}) {
   });
 
   // Simulate a rare failure to ensure error UI works.
-  // (Deterministic enough for users; tests do not depend on it.)
   const shouldFail = false;
 
   if (shouldFail) {
@@ -794,22 +815,265 @@ async function fetchRmgTrackerDataMock({ signal } = {}) {
   return DUMMY_RMG_RESPONSE;
 }
 
-function formatDateOrDash(value) {
+function sortIconFor(direction) {
+  if (direction === "asc") return "▲";
+  if (direction === "desc") return "▼";
+  return "↕";
+}
+
+function formatRatingOrDash(value) {
+  if (value === null || value === undefined) return "—";
+  const num = Number(value);
+  if (Number.isNaN(num)) return "—";
+  return num.toFixed(1);
+}
+
+function yesNo(value) {
+  if (value === true) return "Yes";
+  if (value === false) return "No";
+  return "—";
+}
+
+function flattenPoolFlags(sf) {
+  const flags = [];
+  if (Array.isArray(sf.mentors)) {
+    flags.push(...sf.mentors.map((m) => m?.isInPool));
+  }
+  if (Array.isArray(sf.employees)) {
+    flags.push(...sf.employees.map((e) => e?.isInPool));
+  }
+  return flags.some(Boolean);
+}
+
+function getMentorPoolStatus(sf) {
+  if (!Array.isArray(sf.mentors) || sf.mentors.length === 0) return "—";
+  return sf.mentors.some((m) => m?.isInPool) ? "In pool" : "Not in pool";
+}
+
+function getEmployeePoolStatus(sf) {
+  if (!Array.isArray(sf.employees) || sf.employees.length === 0) return "—";
+  return sf.employees.some((e) => e?.isInPool) ? "In pool" : "Not in pool";
+}
+
+function safeArrayCount(value) {
+  if (!Array.isArray(value)) return 0;
+  return value.length;
+}
+
+function safeNumberOrDash(value) {
+  if (value === null || value === undefined) return "—";
+  const num = Number(value);
+  return Number.isFinite(num) ? String(num) : "—";
+}
+
+function parseLearningPathsQuery(locationSearch) {
+  const params = new URLSearchParams(locationSearch || "");
+  const q = (params.get("q") || "").trim();
+  const status = (params.get("status") || "").trim();
+  return { q, status };
+}
+
+function normalizeLpStatusFilter(value) {
+  const v = String(value || "").trim().toLowerCase();
+  if (v === "completed") return "completed";
+  if (v === "inprogress" || v === "in_progress" || v === "in-progress") return "inProgress";
+  if (v === "inprogresscount") return "inProgress";
+  return "";
+}
+
+function formatAssessmentsIsoDateTimeOrDash(value) {
   if (!value) return "—";
-  // Keep it simple: display YYYY-MM-DD if already in ISO-like format.
-  return value;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toISOString().replace(".000Z", "Z");
 }
 
-function normalizeText(value) {
-  if (value === null || value === undefined) return "";
-  if (Array.isArray(value)) return value.join(" ");
-  return String(value);
+function formatMarkOrDash(value) {
+  if (value === null || value === undefined) return "—";
+  const num = Number(value);
+  return Number.isFinite(num) ? String(num) : "—";
 }
 
-function uniqueSorted(values) {
-  return Array.from(new Set(values.filter(Boolean))).sort((a, b) =>
-    String(a).localeCompare(String(b))
+function firstAssigneeOrDash(assignedTo) {
+  if (!Array.isArray(assignedTo) || assignedTo.length === 0) return "—";
+  const a = assignedTo[0];
+  const label = `${a?.employeeName || "—"} (${a?.employeeId || "—"})`;
+  return label;
+}
+
+function assigneeContactOrDash(assignedTo) {
+  if (!Array.isArray(assignedTo) || assignedTo.length === 0) return "—";
+  const a = assignedTo[0];
+  const parts = [a?.email, a?.employeeId].filter(Boolean);
+  return parts.length ? parts.join(" • ") : "—";
+}
+
+function normalizeAssessmentStatus(value) {
+  if (!value) return "";
+  return String(value).trim().toLowerCase().replace(/\s+/g, "-");
+}
+
+/**
+ * Shared renderer for sortable column headers.
+ * Uses a real <button> for keyboard accessibility.
+ */
+function SortableTh({ col, sortState, onToggle, alignRight }) {
+  const isActive = sortState.columnId === col.id && sortState.direction !== "none";
+  const dir = isActive ? sortState.direction : "none";
+  const icon = sortIconFor(dir);
+
+  const a11y =
+    dir === "asc"
+      ? `${col.label}. Sorted ascending. Activate to sort descending.`
+      : dir === "desc"
+        ? `${col.label}. Sorted descending. Activate to clear sorting.`
+        : `${col.label}. Not sorted. Activate to sort ascending.`;
+
+  return (
+    <th key={col.id} scope="col" style={alignRight ? { textAlign: "right" } : undefined}>
+      <button type="button" className="RmgThButton" onClick={() => onToggle(col.id)} aria-label={a11y}>
+        <span>{col.label}</span>
+        <span className={`RmgSortIcon${isActive ? " RmgSortIcon--active" : ""}`} aria-hidden="true">
+          {icon}
+        </span>
+      </button>
+    </th>
   );
+}
+
+function ColumnFilterCell({ col, facets, value, onChange, disabled }) {
+  // Render nothing for columns without filtering.
+  if (!col.filterType) {
+    return <th key={`${col.id}-filter`} scope="col" />;
+  }
+
+  const commonProps = { disabled };
+
+  if (col.filterType === "select") {
+    const options = facets?.[col.id] || [];
+    return (
+      <th key={`${col.id}-filter`} scope="col">
+        <div className="RmgFilterControl">
+          <select
+            className="RmgFilterSelect"
+            value={value?.value || ""}
+            onChange={(e) => onChange(col.id, { type: "select", value: e.target.value })}
+            aria-label={`Filter ${col.label}`}
+            {...commonProps}
+          >
+            <option value="">All</option>
+            {options.map((opt) => (
+              <option key={`${col.id}-opt-${opt}`} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+        </div>
+      </th>
+    );
+  }
+
+  if (col.filterType === "multiselect") {
+    const options = facets?.[col.id] || [];
+    const selected = Array.isArray(value?.values) ? value.values : [];
+    return (
+      <th key={`${col.id}-filter`} scope="col">
+        <div className="RmgFilterControl">
+          <select
+            multiple
+            className="RmgFilterSelect"
+            value={selected}
+            onChange={(e) => {
+              const next = Array.from(e.target.selectedOptions).map((o) => o.value);
+              onChange(col.id, { type: "multiselect", values: next });
+            }}
+            aria-label={`Filter ${col.label} (multi-select)`}
+            {...commonProps}
+          >
+            {options.map((opt) => (
+              <option key={`${col.id}-opt-${opt}`} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+        </div>
+      </th>
+    );
+  }
+
+  if (col.filterType === "text") {
+    return (
+      <th key={`${col.id}-filter`} scope="col">
+        <div className="RmgFilterControl">
+          <input
+            className="RmgFilterInput"
+            type="search"
+            value={value?.value || ""}
+            onChange={(e) => onChange(col.id, { type: "text", value: e.target.value })}
+            placeholder="Filter…"
+            aria-label={`Filter ${col.label} text`}
+            {...commonProps}
+          />
+        </div>
+      </th>
+    );
+  }
+
+  if (col.filterType === "numberRange") {
+    return (
+      <th key={`${col.id}-filter`} scope="col">
+        <div className="RmgFilterControl RmgFilterControl--range">
+          <input
+            className="RmgFilterInput"
+            type="number"
+            inputMode="numeric"
+            value={value?.min || ""}
+            onChange={(e) => onChange(col.id, { type: "numberRange", min: e.target.value, max: value?.max || "" })}
+            placeholder="Min"
+            aria-label={`Filter ${col.label} min`}
+            {...commonProps}
+          />
+          <input
+            className="RmgFilterInput"
+            type="number"
+            inputMode="numeric"
+            value={value?.max || ""}
+            onChange={(e) => onChange(col.id, { type: "numberRange", min: value?.min || "", max: e.target.value })}
+            placeholder="Max"
+            aria-label={`Filter ${col.label} max`}
+            {...commonProps}
+          />
+        </div>
+      </th>
+    );
+  }
+
+  if (col.filterType === "dateRange") {
+    return (
+      <th key={`${col.id}-filter`} scope="col">
+        <div className="RmgFilterControl RmgFilterControl--range">
+          <input
+            className="RmgFilterInput"
+            type="date"
+            value={value?.min || ""}
+            onChange={(e) => onChange(col.id, { type: "dateRange", min: e.target.value, max: value?.max || "" })}
+            aria-label={`Filter ${col.label} start date`}
+            {...commonProps}
+          />
+          <input
+            className="RmgFilterInput"
+            type="date"
+            value={value?.max || ""}
+            onChange={(e) => onChange(col.id, { type: "dateRange", min: value?.min || "", max: e.target.value })}
+            aria-label={`Filter ${col.label} end date`}
+            {...commonProps}
+          />
+        </div>
+      </th>
+    );
+  }
+
+  return <th key={`${col.id}-filter`} scope="col" />;
 }
 
 // PUBLIC_INTERFACE
@@ -830,34 +1094,47 @@ export function RmgTrackerPage() {
 
   const ALL_COLUMNS = React.useMemo(
     () => [
-      { id: "empId", label: "Emp ID" },
-      { id: "name", label: "Name" },
-      { id: "role", label: "Role" },
-      { id: "project", label: "Project" },
-      { id: "allocationPct", label: "Allocation %" },
-      { id: "status", label: "Status" },
-      { id: "currentStatus", label: "Current Status" },
-      { id: "employeeType", label: "Employee Type" },
-      { id: "grade", label: "Grade" },
-      { id: "manager", label: "Manager" },
-      { id: "location", label: "Location" },
-      { id: "startDate", label: "Start" },
-      { id: "endDate", label: "End" },
-      { id: "skills", label: "Skills" },
+      { id: "empId", label: "Emp ID", sortType: "text", filterType: "text" },
+      { id: "name", label: "Name", sortType: "text", filterType: "text" },
+      { id: "role", label: "Role", sortType: "text", filterType: "select" },
+      { id: "project", label: "Project", sortType: "text", filterType: "select" },
+      { id: "allocationPct", label: "Allocation %", sortType: "number", filterType: "numberRange" },
+      { id: "status", label: "Status", sortType: "text", filterType: "select" },
+      { id: "currentStatus", label: "Current Status", sortType: "text", filterType: "select" },
+      { id: "employeeType", label: "Employee Type", sortType: "text", filterType: "select" },
+      { id: "grade", label: "Grade", sortType: "text", filterType: "select" },
+      { id: "manager", label: "Manager", sortType: "text", filterType: "select" },
+      { id: "location", label: "Location", sortType: "text", filterType: "select" },
+      { id: "startDate", label: "Start", sortType: "date", filterType: "dateRange" },
+      { id: "endDate", label: "End", sortType: "date", filterType: "dateRange" },
+      { id: "skills", label: "Skills", sortType: "text", filterType: "multiselect", filterAccessor: (r) => r?.skills || [] },
     ],
     []
   );
 
-  const DEFAULT_VISIBLE_COLUMN_IDS = React.useMemo(
-    () => ALL_COLUMNS.map((c) => c.id),
-    [ALL_COLUMNS]
-  );
+  const DEFAULT_VISIBLE_COLUMN_IDS = React.useMemo(() => ALL_COLUMNS.map((c) => c.id), [ALL_COLUMNS]);
 
-  const [visibleColumnIds, setVisibleColumnIds] = React.useState(
-    DEFAULT_VISIBLE_COLUMN_IDS
-  );
-
+  const [visibleColumnIds, setVisibleColumnIds] = React.useState(DEFAULT_VISIBLE_COLUMN_IDS);
   const [columnPanelOpen, setColumnPanelOpen] = React.useState(false);
+
+  // Sorting + per-column filters (new)
+  const { sortState, toggleSort, clearSort } = useTableSorting();
+  const [columnFilters, setColumnFilters] = React.useState({});
+
+  function updateColumnFilter(colId, nextValue) {
+    setColumnFilters((prev) => {
+      const next = { ...prev, [colId]: nextValue };
+      // Clean up empty filters so state stays readable.
+      const v = next[colId];
+      if (!v) return next;
+      if (v.type === "text" && !String(v.value || "").trim()) delete next[colId];
+      if (v.type === "select" && !String(v.value || "").trim()) delete next[colId];
+      if (v.type === "multiselect" && (!Array.isArray(v.values) || v.values.length === 0)) delete next[colId];
+      if (v.type === "numberRange" && !String(v.min || "").trim() && !String(v.max || "").trim()) delete next[colId];
+      if (v.type === "dateRange" && !String(v.min || "").trim() && !String(v.max || "").trim()) delete next[colId];
+      return next;
+    });
+  }
 
   // Pagination
   const PAGE_SIZES = React.useMemo(() => [3, 5, 10, 20], []);
@@ -891,8 +1168,6 @@ export function RmgTrackerPage() {
 
   React.useEffect(() => {
     let cleanup = null;
-
-    // Avoid making useEffect callback async directly.
     (async () => {
       cleanup = await load();
     })();
@@ -912,24 +1187,19 @@ export function RmgTrackerPage() {
     return { employeeType, currentStatus, location, grade };
   }, [rows]);
 
-  // Apply filters + global search
+  // Facets for the per-column filters (select/multi-select)
+  const facets = React.useMemo(() => buildFacetOptions(rows, ALL_COLUMNS), [rows, ALL_COLUMNS]);
+
+  // Apply filters + global search + per-column filtering + sorting
   const filteredRows = React.useMemo(() => {
     const query = searchText.trim().toLowerCase();
 
-    return rows.filter((r) => {
+    const basicFiltered = rows.filter((r) => {
       // Basic dropdown filters (exact match)
-      if (filters.employeeType && normalizeText(r.employeeType) !== filters.employeeType) {
-        return false;
-      }
-      if (filters.currentStatus && normalizeText(r.currentStatus) !== filters.currentStatus) {
-        return false;
-      }
-      if (filters.location && normalizeText(r.location) !== filters.location) {
-        return false;
-      }
-      if (filters.grade && normalizeText(r.grade) !== filters.grade) {
-        return false;
-      }
+      if (filters.employeeType && normalizeText(r.employeeType) !== filters.employeeType) return false;
+      if (filters.currentStatus && normalizeText(r.currentStatus) !== filters.currentStatus) return false;
+      if (filters.location && normalizeText(r.location) !== filters.location) return false;
+      if (filters.grade && normalizeText(r.grade) !== filters.grade) return false;
 
       // Global search: match any cell (across ALL columns, not only visible ones).
       if (!query) return true;
@@ -941,9 +1211,12 @@ export function RmgTrackerPage() {
 
       return anyMatch;
     });
-  }, [rows, filters, searchText, ALL_COLUMNS]);
 
-  // Reset pagination when the dataset changes (search/filters/pageSize)
+    const columnFiltered = applyColumnFilters(basicFiltered, ALL_COLUMNS, columnFilters);
+    return sortRows(columnFiltered, ALL_COLUMNS, sortState);
+  }, [rows, filters, searchText, ALL_COLUMNS, columnFilters, sortState]);
+
+  // Reset pagination when the dataset changes (search/filters/pageSize/columnFilters/sort)
   React.useEffect(() => {
     setPageIndex(0);
   }, [
@@ -953,6 +1226,9 @@ export function RmgTrackerPage() {
     filters.location,
     filters.grade,
     pageSize,
+    JSON.stringify(columnFilters),
+    sortState.columnId,
+    sortState.direction,
   ]);
 
   const totalRows = filteredRows.length;
@@ -972,8 +1248,6 @@ export function RmgTrackerPage() {
       const set = new Set(prev);
       if (set.has(colId)) set.delete(colId);
       else set.add(colId);
-
-      // Ensure at least 1 column is always visible for usability.
       if (set.size === 0) return prev;
       return Array.from(set);
     });
@@ -982,6 +1256,8 @@ export function RmgTrackerPage() {
   function clearFilters() {
     setFilters({ employeeType: "", currentStatus: "", location: "", grade: "" });
     setSearchText("");
+    setColumnFilters({});
+    clearSort();
   }
 
   function renderCell(r, colId) {
@@ -991,11 +1267,7 @@ export function RmgTrackerPage() {
       case "allocationPct":
         return <span style={{ display: "inline-block", minWidth: 30 }}>{r.allocationPct}</span>;
       case "status":
-        return (
-          <span className={`RmgPill RmgPill--${String(r.status).toLowerCase()}`}>
-            {r.status}
-          </span>
-        );
+        return <span className={`RmgPill RmgPill--${String(r.status).toLowerCase()}`}>{r.status}</span>;
       case "startDate":
         return <span className="RmgMono">{formatDateOrDash(r.startDate)}</span>;
       case "endDate":
@@ -1022,18 +1294,10 @@ export function RmgTrackerPage() {
       <section className="HelloCard HelloCard--wide" aria-label="RMG Tracker content">
         <p className="HelloEyebrow">Digi Portal</p>
         <h1 className="HelloTitle">RMG Tracker</h1>
-        <p className="HelloSubtitle">
-          Resource overview fetched from an API (mocked response for now).
-        </p>
+        <p className="HelloSubtitle">Resource overview fetched from an API (mocked response for now).</p>
 
         <div className="RmgToolbar" aria-label="RMG actions">
-          <button
-            type="button"
-            className="RmgButton"
-            onClick={load}
-            disabled={loading}
-            aria-disabled={loading ? "true" : "false"}
-          >
+          <button type="button" className="RmgButton" onClick={load} disabled={loading} aria-disabled={loading ? "true" : "false"}>
             {loading ? "Loading…" : "Refresh"}
           </button>
 
@@ -1048,12 +1312,7 @@ export function RmgTrackerPage() {
             Columns
           </button>
 
-          <button
-            type="button"
-            className="RmgButton"
-            onClick={clearFilters}
-            disabled={loading}
-          >
+          <button type="button" className="RmgButton" onClick={clearFilters} disabled={loading}>
             Reset
           </button>
 
@@ -1083,9 +1342,7 @@ export function RmgTrackerPage() {
                 <select
                   className="RmgSelect"
                   value={filters.employeeType}
-                  onChange={(e) =>
-                    setFilters((f) => ({ ...f, employeeType: e.target.value }))
-                  }
+                  onChange={(e) => setFilters((f) => ({ ...f, employeeType: e.target.value }))}
                   aria-label="Filter by employee type"
                 >
                   <option value="">All</option>
@@ -1102,9 +1359,7 @@ export function RmgTrackerPage() {
                 <select
                   className="RmgSelect"
                   value={filters.currentStatus}
-                  onChange={(e) =>
-                    setFilters((f) => ({ ...f, currentStatus: e.target.value }))
-                  }
+                  onChange={(e) => setFilters((f) => ({ ...f, currentStatus: e.target.value }))}
                   aria-label="Filter by current status"
                 >
                   <option value="">All</option>
@@ -1121,9 +1376,7 @@ export function RmgTrackerPage() {
                 <select
                   className="RmgSelect"
                   value={filters.location}
-                  onChange={(e) =>
-                    setFilters((f) => ({ ...f, location: e.target.value }))
-                  }
+                  onChange={(e) => setFilters((f) => ({ ...f, location: e.target.value }))}
                   aria-label="Filter by location"
                 >
                   <option value="">All</option>
@@ -1161,12 +1414,7 @@ export function RmgTrackerPage() {
 
               <label className="RmgField RmgField--inline">
                 <span className="RmgFieldLabel">Page size</span>
-                <select
-                  className="RmgSelect"
-                  value={pageSize}
-                  onChange={(e) => setPageSize(Number(e.target.value))}
-                  aria-label="Select page size"
-                >
+                <select className="RmgSelect" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} aria-label="Select page size">
                   {PAGE_SIZES.map((s) => (
                     <option key={`pageSize-${s}`} value={s}>
                       {s}
@@ -1176,12 +1424,7 @@ export function RmgTrackerPage() {
               </label>
 
               <div className="RmgPager" aria-label="Pagination controls">
-                <button
-                  type="button"
-                  className="RmgButton RmgButton--small"
-                  onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
-                  disabled={safePageIndex <= 0}
-                >
+                <button type="button" className="RmgButton RmgButton--small" onClick={() => setPageIndex((p) => Math.max(0, p - 1))} disabled={safePageIndex <= 0}>
                   Prev
                 </button>
                 <span className="RmgPagerText" aria-label="Current page">
@@ -1202,12 +1445,7 @@ export function RmgTrackerPage() {
               <div id="rmg-column-panel" className="RmgColumnPanel" role="region" aria-label="Column visibility">
                 <div className="RmgColumnPanelHeader">
                   <div className="RmgColumnPanelTitle">Visible columns</div>
-                  <button
-                    type="button"
-                    className="RmgButton RmgButton--small"
-                    onClick={() => setColumnPanelOpen(false)}
-                    aria-label="Close column visibility panel"
-                  >
+                  <button type="button" className="RmgButton RmgButton--small" onClick={() => setColumnPanelOpen(false)} aria-label="Close column visibility panel">
                     Close
                   </button>
                 </div>
@@ -1219,13 +1457,7 @@ export function RmgTrackerPage() {
 
                     return (
                       <label key={c.id} className="RmgCheckbox">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleColumn(c.id)}
-                          disabled={isLastVisible}
-                          aria-label={`Toggle column ${c.label}`}
-                        />
+                        <input type="checkbox" checked={checked} onChange={() => toggleColumn(c.id)} disabled={isLastVisible} aria-label={`Toggle column ${c.label}`} />
                         <span>{c.label}</span>
                       </label>
                     );
@@ -1265,9 +1497,20 @@ export function RmgTrackerPage() {
               <thead>
                 <tr>
                   {visibleColumns.map((c) => (
-                    <th key={c.id} scope="col" style={c.id === "allocationPct" ? { textAlign: "right" } : undefined}>
-                      {c.label}
-                    </th>
+                    <SortableTh key={c.id} col={c} sortState={sortState} onToggle={toggleSort} alignRight={c.id === "allocationPct"} />
+                  ))}
+                </tr>
+
+                <tr className="RmgFilterRow" aria-label="Column filters">
+                  {visibleColumns.map((c) => (
+                    <ColumnFilterCell
+                      key={`${c.id}-filter`}
+                      col={c}
+                      facets={facets}
+                      value={columnFilters[c.id]}
+                      onChange={updateColumnFilter}
+                      disabled={loading}
+                    />
                   ))}
                 </tr>
               </thead>
@@ -1379,45 +1622,6 @@ function formatLearningPathsIsoDateTimeOrDash(value) {
   return date.toISOString().replace(".000Z", "Z");
 }
 
-function formatRatingOrDash(value) {
-  if (value === null || value === undefined) return "—";
-  const num = Number(value);
-  if (Number.isNaN(num)) return "—";
-  return num.toFixed(1);
-}
-
-function yesNo(value) {
-  if (value === true) return "Yes";
-  if (value === false) return "No";
-  return "—";
-}
-
-function flattenPoolFlags(sf) {
-  const flags = [];
-  if (Array.isArray(sf.mentors)) {
-    flags.push(...sf.mentors.map((m) => m?.isInPool));
-  }
-  if (Array.isArray(sf.employees)) {
-    flags.push(...sf.employees.map((e) => e?.isInPool));
-  }
-  return flags.some(Boolean);
-}
-
-function getMentorPoolStatus(sf) {
-  if (!Array.isArray(sf.mentors) || sf.mentors.length === 0) return "—";
-  return sf.mentors.some((m) => m?.isInPool) ? "In pool" : "Not in pool";
-}
-
-function getEmployeePoolStatus(sf) {
-  if (!Array.isArray(sf.employees) || sf.employees.length === 0) return "—";
-  return sf.employees.some((e) => e?.isInPool) ? "In pool" : "Not in pool";
-}
-
-function safeArrayCount(value) {
-  if (!Array.isArray(value)) return 0;
-  return value.length;
-}
-
 // PUBLIC_INTERFACE
 export function SkillFactoriesPage() {
   /** Skill Factories page that fetches (mocked) data and renders a table with loading and error states + client-side table UX. */
@@ -1435,12 +1639,28 @@ export function SkillFactoriesPage() {
     employeePoolStatus: "",
   });
 
+  // New per-column filters + sorting
+  const { sortState, toggleSort, clearSort } = useTableSorting();
+  const [columnFilters, setColumnFilters] = React.useState({});
+  function updateColumnFilter(colId, nextValue) {
+    setColumnFilters((prev) => {
+      const next = { ...prev, [colId]: nextValue };
+      const v = next[colId];
+      if (!v) return next;
+      if (v.type === "text" && !String(v.value || "").trim()) delete next[colId];
+      if (v.type === "select" && !String(v.value || "").trim()) delete next[colId];
+      if (v.type === "multiselect" && (!Array.isArray(v.values) || v.values.length === 0)) delete next[colId];
+      if (v.type === "numberRange" && !String(v.min || "").trim() && !String(v.max || "").trim()) delete next[colId];
+      if (v.type === "dateRange" && !String(v.min || "").trim() && !String(v.max || "").trim()) delete next[colId];
+      return next;
+    });
+  }
+
   // Apply URL query parameters to pre-populate controls (mirrors LearningPathsPage approach).
   const hasAppliedQueryRef = React.useRef(false);
   React.useEffect(() => {
     const { q, mentorPool, employeePool } = parseSkillFactoriesQuery(location.search);
 
-    // Keep the search input in sync with URL (supports manual edits and navigation changes).
     setSearchText(q);
 
     const normalizedMentorPool = normalizePoolParam(mentorPool);
@@ -1450,7 +1670,6 @@ export function SkillFactoriesPage() {
     const nextEmployeeLabel = poolParamToLabel(normalizedEmployeePool);
 
     if (!hasAppliedQueryRef.current) {
-      // Apply once on first mount.
       setFilters((f) => ({
         ...f,
         mentorPoolStatus: nextMentorLabel || "",
@@ -1460,7 +1679,6 @@ export function SkillFactoriesPage() {
       return;
     }
 
-    // If URL changes while on the page, update accordingly.
     setFilters((f) => ({
       ...f,
       mentorPoolStatus: nextMentorLabel || "",
@@ -1470,25 +1688,76 @@ export function SkillFactoriesPage() {
 
   const ALL_COLUMNS = React.useMemo(
     () => [
-      { id: "skillFactoryId", label: "Skill Factory ID" },
-      { id: "skillFactoryName", label: "Skill Factory Name" },
-      { id: "mentorCount", label: "Mentors (#)" },
-      { id: "employeeCount", label: "Employees (#)" },
-      { id: "mentorPoolStatus", label: "Mentors Pool" },
-      { id: "employeePoolStatus", label: "Employees Pool" },
-      { id: "hasAnyPoolMembers", label: "Any In Pool" },
-      { id: "mentors", label: "Mentors" },
-      { id: "employees", label: "Employees" },
-      { id: "createdAt", label: "Created At" },
-      { id: "updatedAt", label: "Updated At" },
+      { id: "skillFactoryId", label: "Skill Factory ID", sortType: "text", filterType: "text" },
+      { id: "skillFactoryName", label: "Skill Factory Name", sortType: "text", filterType: "select" },
+      {
+        id: "mentorCount",
+        label: "Mentors (#)",
+        sortType: "number",
+        filterType: "numberRange",
+        accessor: (sf) => safeArrayCount(sf.mentors),
+        filterAccessor: (sf) => safeArrayCount(sf.mentors),
+      },
+      {
+        id: "employeeCount",
+        label: "Employees (#)",
+        sortType: "number",
+        filterType: "numberRange",
+        accessor: (sf) => safeArrayCount(sf.employees),
+        filterAccessor: (sf) => safeArrayCount(sf.employees),
+      },
+      {
+        id: "mentorPoolStatus",
+        label: "Mentors Pool",
+        sortType: "text",
+        filterType: "select",
+        accessor: (sf) => getMentorPoolStatus(sf),
+        filterAccessor: (sf) => getMentorPoolStatus(sf),
+      },
+      {
+        id: "employeePoolStatus",
+        label: "Employees Pool",
+        sortType: "text",
+        filterType: "select",
+        accessor: (sf) => getEmployeePoolStatus(sf),
+        filterAccessor: (sf) => getEmployeePoolStatus(sf),
+      },
+      {
+        id: "hasAnyPoolMembers",
+        label: "Any In Pool",
+        sortType: "text",
+        filterType: "select",
+        accessor: (sf) => yesNo(flattenPoolFlags(sf)),
+        filterAccessor: (sf) => yesNo(flattenPoolFlags(sf)),
+      },
+      {
+        id: "mentors",
+        label: "Mentors",
+        sortType: "text",
+        filterType: "text",
+        accessor: (sf) => (Array.isArray(sf.mentors) ? sf.mentors.map((m) => m?.mentorName).join(" ") : ""),
+        filterAccessor: (sf) => (Array.isArray(sf.mentors) ? sf.mentors.map((m) => `${m?.mentorName || ""} ${m?.mentorEmail || ""}`).join(" ") : ""),
+      },
+      {
+        id: "employees",
+        label: "Employees",
+        sortType: "text",
+        filterType: "text",
+        accessor: (sf) => (Array.isArray(sf.employees) ? sf.employees.map((e) => e?.name).join(" ") : ""),
+        filterAccessor: (sf) =>
+          Array.isArray(sf.employees)
+            ? sf.employees
+                .map((e) => `${e?.id || ""} ${e?.name || ""} ${e?.email || ""} ${formatRatingOrDash(e?.currentRating)}`)
+                .join(" ")
+            : "",
+      },
+      { id: "createdAt", label: "Created At", sortType: "date", filterType: "dateRange" },
+      { id: "updatedAt", label: "Updated At", sortType: "date", filterType: "dateRange" },
     ],
     []
   );
 
-  const DEFAULT_VISIBLE_COLUMN_IDS = React.useMemo(
-    () => ALL_COLUMNS.map((c) => c.id),
-    [ALL_COLUMNS]
-  );
+  const DEFAULT_VISIBLE_COLUMN_IDS = React.useMemo(() => ALL_COLUMNS.map((c) => c.id), [ALL_COLUMNS]);
 
   const [visibleColumnIds, setVisibleColumnIds] = React.useState(DEFAULT_VISIBLE_COLUMN_IDS);
   const [columnPanelOpen, setColumnPanelOpen] = React.useState(false);
@@ -1525,8 +1794,6 @@ export function SkillFactoriesPage() {
 
   React.useEffect(() => {
     let cleanup = null;
-
-    // Avoid making useEffect callback async directly.
     (async () => {
       cleanup = await load();
     })();
@@ -1538,33 +1805,33 @@ export function SkillFactoriesPage() {
 
   const filterOptions = React.useMemo(() => {
     const skillFactoryName = uniqueSorted(rows.map((r) => r.skillFactoryName));
-
-    // Keep the dropdowns very clear (and consistent with RMG Tracker “All” UX)
     const mentorPoolStatus = ["In pool", "Not in pool"];
     const employeePoolStatus = ["In pool", "Not in pool"];
-
     return { skillFactoryName, mentorPoolStatus, employeePoolStatus };
   }, [rows]);
+
+  const facets = React.useMemo(() => {
+    const base = buildFacetOptions(rows, ALL_COLUMNS);
+    // Ensure derived select columns have stable options even if there are missing values.
+    base.mentorPoolStatus = ["In pool", "Not in pool"];
+    base.employeePoolStatus = ["In pool", "Not in pool"];
+    base.hasAnyPoolMembers = ["Yes", "No"];
+    return base;
+  }, [rows, ALL_COLUMNS]);
 
   const filteredRows = React.useMemo(() => {
     const query = searchText.trim().toLowerCase();
 
-    return rows.filter((sf) => {
+    const basicFiltered = rows.filter((sf) => {
       const sfName = normalizeText(sf.skillFactoryName);
 
-      if (filters.skillFactoryName && sfName !== filters.skillFactoryName) {
-        return false;
-      }
+      if (filters.skillFactoryName && sfName !== filters.skillFactoryName) return false;
 
       const mentorsPool = getMentorPoolStatus(sf);
-      if (filters.mentorPoolStatus && mentorsPool !== filters.mentorPoolStatus) {
-        return false;
-      }
+      if (filters.mentorPoolStatus && mentorsPool !== filters.mentorPoolStatus) return false;
 
       const employeesPool = getEmployeePoolStatus(sf);
-      if (filters.employeePoolStatus && employeesPool !== filters.employeePoolStatus) {
-        return false;
-      }
+      if (filters.employeePoolStatus && employeesPool !== filters.employeePoolStatus) return false;
 
       // Global search across all columns (not only visible ones)
       if (!query) return true;
@@ -1612,12 +1879,24 @@ export function SkillFactoriesPage() {
 
       return anyMatch;
     });
-  }, [rows, filters, searchText, ALL_COLUMNS]);
 
-  // Reset pagination when data set changes (search/filters/pageSize), matching RMG Tracker behavior
+    const columnFiltered = applyColumnFilters(basicFiltered, ALL_COLUMNS, columnFilters);
+    return sortRows(columnFiltered, ALL_COLUMNS, sortState);
+  }, [rows, filters, searchText, ALL_COLUMNS, columnFilters, sortState]);
+
+  // Reset pagination when data set changes (search/filters/pageSize/columnFilters/sort)
   React.useEffect(() => {
     setPageIndex(0);
-  }, [searchText, filters.skillFactoryName, filters.mentorPoolStatus, filters.employeePoolStatus, pageSize]);
+  }, [
+    searchText,
+    filters.skillFactoryName,
+    filters.mentorPoolStatus,
+    filters.employeePoolStatus,
+    pageSize,
+    JSON.stringify(columnFilters),
+    sortState.columnId,
+    sortState.direction,
+  ]);
 
   const totalRows = filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
@@ -1636,8 +1915,6 @@ export function SkillFactoriesPage() {
       const set = new Set(prev);
       if (set.has(colId)) set.delete(colId);
       else set.add(colId);
-
-      // Ensure at least 1 column is always visible for usability.
       if (set.size === 0) return prev;
       return Array.from(set);
     });
@@ -1646,6 +1923,8 @@ export function SkillFactoriesPage() {
   function clearFilters() {
     setFilters({ skillFactoryName: "", mentorPoolStatus: "", employeePoolStatus: "" });
     setSearchText("");
+    setColumnFilters({});
+    clearSort();
   }
 
   function renderMentorChips(sf) {
@@ -1653,11 +1932,7 @@ export function SkillFactoriesPage() {
     return (
       <div className="RmgChips" aria-label={`${sf.skillFactoryName} mentors`}>
         {sf.mentors.map((m) => (
-          <span
-            key={m.mentorId}
-            className="RmgChip"
-            title={`${m.mentorEmail} • ${m.isInPool ? "In pool" : "Not in pool"}`}
-          >
+          <span key={m.mentorId} className="RmgChip" title={`${m.mentorEmail} • ${m.isInPool ? "In pool" : "Not in pool"}`}>
             {m.mentorName}
           </span>
         ))}
@@ -1673,9 +1948,7 @@ export function SkillFactoriesPage() {
           <span
             key={e.id}
             className="RmgChip"
-            title={`${e.email} • Initial ${formatRatingOrDash(e.initialRating)} • Current ${formatRatingOrDash(
-              e.currentRating
-            )} • ${e.isInPool ? "In pool" : "Not in pool"}`}
+            title={`${e.email} • Initial ${formatRatingOrDash(e.initialRating)} • Current ${formatRatingOrDash(e.currentRating)} • ${e.isInPool ? "In pool" : "Not in pool"}`}
           >
             <span className="RmgMono" style={{ marginRight: 8 }}>
               {e.id}
@@ -1702,11 +1975,7 @@ export function SkillFactoriesPage() {
       case "employeePoolStatus":
         return getEmployeePoolStatus(sf);
       case "hasAnyPoolMembers":
-        return (
-          <span className={`RmgPill ${flattenPoolFlags(sf) ? "RmgPill--billable" : "RmgPill--bench"}`}>
-            {yesNo(flattenPoolFlags(sf))}
-          </span>
-        );
+        return <span className={`RmgPill ${flattenPoolFlags(sf) ? "RmgPill--billable" : "RmgPill--bench"}`}>{yesNo(flattenPoolFlags(sf))}</span>;
       case "mentors":
         return renderMentorChips(sf);
       case "employees":
@@ -1757,24 +2026,12 @@ export function SkillFactoriesPage() {
             <div className="RmgOptionsRow">
               <label className="RmgField">
                 <span className="RmgFieldLabel">Search</span>
-                <input
-                  className="RmgInput"
-                  type="search"
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                  placeholder="Search any field…"
-                  aria-label="Global search"
-                />
+                <input className="RmgInput" type="search" value={searchText} onChange={(e) => setSearchText(e.target.value)} placeholder="Search any field…" aria-label="Global search" />
               </label>
 
               <label className="RmgField">
                 <span className="RmgFieldLabel">Skill Factory</span>
-                <select
-                  className="RmgSelect"
-                  value={filters.skillFactoryName}
-                  onChange={(e) => setFilters((f) => ({ ...f, skillFactoryName: e.target.value }))}
-                  aria-label="Filter by skill factory name"
-                >
+                <select className="RmgSelect" value={filters.skillFactoryName} onChange={(e) => setFilters((f) => ({ ...f, skillFactoryName: e.target.value }))} aria-label="Filter by skill factory name">
                   <option value="">All</option>
                   {filterOptions.skillFactoryName.map((v) => (
                     <option key={`skillFactoryName-${v}`} value={v}>
@@ -1786,12 +2043,7 @@ export function SkillFactoriesPage() {
 
               <label className="RmgField">
                 <span className="RmgFieldLabel">Mentors Pool</span>
-                <select
-                  className="RmgSelect"
-                  value={filters.mentorPoolStatus}
-                  onChange={(e) => setFilters((f) => ({ ...f, mentorPoolStatus: e.target.value }))}
-                  aria-label="Filter by mentors pool status"
-                >
+                <select className="RmgSelect" value={filters.mentorPoolStatus} onChange={(e) => setFilters((f) => ({ ...f, mentorPoolStatus: e.target.value }))} aria-label="Filter by mentors pool status">
                   <option value="">All</option>
                   {filterOptions.mentorPoolStatus.map((v) => (
                     <option key={`mentorPool-${v}`} value={v}>
@@ -1803,12 +2055,7 @@ export function SkillFactoriesPage() {
 
               <label className="RmgField">
                 <span className="RmgFieldLabel">Employees Pool</span>
-                <select
-                  className="RmgSelect"
-                  value={filters.employeePoolStatus}
-                  onChange={(e) => setFilters((f) => ({ ...f, employeePoolStatus: e.target.value }))}
-                  aria-label="Filter by employees pool status"
-                >
+                <select className="RmgSelect" value={filters.employeePoolStatus} onChange={(e) => setFilters((f) => ({ ...f, employeePoolStatus: e.target.value }))} aria-label="Filter by employees pool status">
                   <option value="">All</option>
                   {filterOptions.employeePoolStatus.map((v) => (
                     <option key={`employeePool-${v}`} value={v}>
@@ -1821,8 +2068,7 @@ export function SkillFactoriesPage() {
 
             <div className="RmgOptionsRow RmgOptionsRow--meta" aria-label="Skill Factories table meta">
               <div className="RmgMetaText" aria-live="polite">
-                Showing <strong>{totalRows === 0 ? 0 : start + 1}</strong>–<strong>{Math.min(end, totalRows)}</strong> of{" "}
-                <strong>{totalRows}</strong>
+                Showing <strong>{totalRows === 0 ? 0 : start + 1}</strong>–<strong>{Math.min(end, totalRows)}</strong> of <strong>{totalRows}</strong>
               </div>
 
               <label className="RmgField RmgField--inline">
@@ -1843,12 +2089,7 @@ export function SkillFactoriesPage() {
                 <span className="RmgPagerText" aria-label="Current page">
                   Page <strong>{safePageIndex + 1}</strong> of <strong>{totalPages}</strong>
                 </span>
-                <button
-                  type="button"
-                  className="RmgButton RmgButton--small"
-                  onClick={() => setPageIndex((p) => Math.min(totalPages - 1, p + 1))}
-                  disabled={safePageIndex >= totalPages - 1}
-                >
+                <button type="button" className="RmgButton RmgButton--small" onClick={() => setPageIndex((p) => Math.min(totalPages - 1, p + 1))} disabled={safePageIndex >= totalPages - 1}>
                   Next
                 </button>
               </div>
@@ -1910,9 +2151,13 @@ export function SkillFactoriesPage() {
               <thead>
                 <tr>
                   {visibleColumns.map((c) => (
-                    <th key={c.id} scope="col">
-                      {c.label}
-                    </th>
+                    <SortableTh key={c.id} col={c} sortState={sortState} onToggle={toggleSort} />
+                  ))}
+                </tr>
+
+                <tr className="RmgFilterRow" aria-label="Column filters">
+                  {visibleColumns.map((c) => (
+                    <ColumnFilterCell key={`${c.id}-filter`} col={c} facets={facets} value={columnFilters[c.id]} onChange={updateColumnFilter} disabled={loading} />
                   ))}
                 </tr>
               </thead>
@@ -1995,35 +2240,6 @@ async function fetchLearningPathsMock({ signal } = {}) {
   return DUMMY_LEARNING_PATHS_RESPONSE;
 }
 
-function formatAssessmentsIsoDateTimeOrDash(value) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return date.toISOString().replace(".000Z", "Z");
-}
-
-function safeNumberOrDash(value) {
-  if (value === null || value === undefined) return "—";
-  const num = Number(value);
-  return Number.isFinite(num) ? String(num) : "—";
-}
-
-function parseLearningPathsQuery(locationSearch) {
-  const params = new URLSearchParams(locationSearch || "");
-  const q = (params.get("q") || "").trim();
-  const status = (params.get("status") || "").trim();
-  return { q, status };
-}
-
-function normalizeLpStatusFilter(value) {
-  // Accept a couple spellings, keep it simple.
-  const v = String(value || "").trim().toLowerCase();
-  if (v === "completed") return "completed";
-  if (v === "inprogress" || v === "in_progress" || v === "in-progress") return "inProgress";
-  if (v === "inprogresscount") return "inProgress";
-  return "";
-}
-
 // PUBLIC_INTERFACE
 export function LearningPathsPage() {
   /** Learning Paths page that fetches (mocked) data and renders a table with loading and error states + client-side table UX. */
@@ -2038,22 +2254,38 @@ export function LearningPathsPage() {
   const [filters, setFilters] = React.useState({
     duration: "",
     tag: "",
-    // New: filter results by status derived from counts (completed / inProgress)
     status: "",
   });
 
+  // New per-column filters + sorting
+  const { sortState, toggleSort, clearSort } = useTableSorting();
+  const [columnFilters, setColumnFilters] = React.useState({});
+  function updateColumnFilter(colId, nextValue) {
+    setColumnFilters((prev) => {
+      const next = { ...prev, [colId]: nextValue };
+      const v = next[colId];
+      if (!v) return next;
+      if (v.type === "text" && !String(v.value || "").trim()) delete next[colId];
+      if (v.type === "select" && !String(v.value || "").trim()) delete next[colId];
+      if (v.type === "multiselect" && (!Array.isArray(v.values) || v.values.length === 0)) delete next[colId];
+      if (v.type === "numberRange" && !String(v.min || "").trim() && !String(v.max || "").trim()) delete next[colId];
+      if (v.type === "dateRange" && !String(v.min || "").trim() && !String(v.max || "").trim()) delete next[colId];
+      return next;
+    });
+  }
+
   const ALL_COLUMNS = React.useMemo(
     () => [
-      { id: "learningPathName", label: "Learning Path Name" },
-      { id: "description", label: "Description" },
-      { id: "tags", label: "Tags" },
-      { id: "courseLinks", label: "Course Links" },
-      { id: "duration", label: "Duration" },
-      { id: "enrolledCount", label: "Enrolled" },
-      { id: "completedCount", label: "Completed" },
-      { id: "inProgressCount", label: "In Progress" },
-      { id: "createdAt", label: "Created At" },
-      { id: "updatedAt", label: "Updated At" },
+      { id: "learningPathName", label: "Learning Path Name", sortType: "text", filterType: "text" },
+      { id: "description", label: "Description", sortType: "text", filterType: "text" },
+      { id: "tags", label: "Tags", sortType: "text", filterType: "multiselect", filterAccessor: (lp) => lp?.tags || [] },
+      { id: "courseLinks", label: "Course Links", sortType: "text", filterType: "text", filterAccessor: (lp) => (Array.isArray(lp.courseLinks) ? lp.courseLinks.join(" ") : "") },
+      { id: "duration", label: "Duration", sortType: "text", filterType: "select" },
+      { id: "enrolledCount", label: "Enrolled", sortType: "number", filterType: "numberRange" },
+      { id: "completedCount", label: "Completed", sortType: "number", filterType: "numberRange" },
+      { id: "inProgressCount", label: "In Progress", sortType: "number", filterType: "numberRange" },
+      { id: "createdAt", label: "Created At", sortType: "date", filterType: "dateRange" },
+      { id: "updatedAt", label: "Updated At", sortType: "date", filterType: "dateRange" },
     ],
     []
   );
@@ -2069,16 +2301,12 @@ export function LearningPathsPage() {
   const [pageIndex, setPageIndex] = React.useState(0);
 
   // Apply URL query parameters to pre-populate controls.
-  // We only set duration/tag/status if they're valid once options exist (post-load), but q can be set immediately.
   const hasAppliedQueryRef = React.useRef(false);
   React.useEffect(() => {
     const { q, status } = parseLearningPathsQuery(location.search);
 
-    // Always set q to keep input in sync with URL (also supports manual edits of the URL).
     setSearchText(q);
 
-    // Only apply status once (avoid stomping user changes on subsequent rerenders),
-    // but still respond if URL changes while on the page (new navigation).
     const normalized = normalizeLpStatusFilter(status);
     if (!hasAppliedQueryRef.current) {
       if (normalized) {
@@ -2088,11 +2316,9 @@ export function LearningPathsPage() {
       return;
     }
 
-    // If the URL changes and differs from current, update accordingly.
     if (normalized) {
       setFilters((f) => ({ ...f, status: normalized }));
     } else if (status === "") {
-      // Clear status if URL explicitly removed it.
       setFilters((f) => ({ ...f, status: "" }));
     }
   }, [location.search]);
@@ -2144,7 +2370,6 @@ export function LearningPathsPage() {
     }
     const tag = uniqueSorted(allTags);
 
-    // New: status options correspond to Home metrics deep-links
     const status = [
       { value: "", label: "All" },
       { value: "completed", label: "Completed" },
@@ -2154,20 +2379,19 @@ export function LearningPathsPage() {
     return { duration, tag, status };
   }, [rows]);
 
+  const facets = React.useMemo(() => buildFacetOptions(rows, ALL_COLUMNS), [rows, ALL_COLUMNS]);
+
   const filteredRows = React.useMemo(() => {
     const query = searchText.trim().toLowerCase();
 
-    return rows.filter((lp) => {
-      // Dropdown filters (exact match)
-      if (filters.duration && normalizeText(lp.duration) !== filters.duration) {
-        return false;
-      }
+    const basicFiltered = rows.filter((lp) => {
+      if (filters.duration && normalizeText(lp.duration) !== filters.duration) return false;
+
       if (filters.tag) {
         const tags = Array.isArray(lp.tags) ? lp.tags : [];
         if (!tags.includes(filters.tag)) return false;
       }
 
-      // New: status filter derived from counts.
       if (filters.status === "completed") {
         const n = Number(lp?.completedCount);
         if (!(Number.isFinite(n) && n > 0)) return false;
@@ -2177,7 +2401,6 @@ export function LearningPathsPage() {
         if (!(Number.isFinite(n) && n > 0)) return false;
       }
 
-      // Global search across all columns (not only visible ones)
       if (!query) return true;
 
       const anyMatch = ALL_COLUMNS.some((c) => {
@@ -2196,12 +2419,23 @@ export function LearningPathsPage() {
 
       return anyMatch;
     });
-  }, [rows, filters, searchText, ALL_COLUMNS]);
 
-  // Reset pagination when data set changes (search/filters/pageSize), matching existing pages
+    const columnFiltered = applyColumnFilters(basicFiltered, ALL_COLUMNS, columnFilters);
+    return sortRows(columnFiltered, ALL_COLUMNS, sortState);
+  }, [rows, filters, searchText, ALL_COLUMNS, columnFilters, sortState]);
+
   React.useEffect(() => {
     setPageIndex(0);
-  }, [searchText, filters.duration, filters.tag, filters.status, pageSize]);
+  }, [
+    searchText,
+    filters.duration,
+    filters.tag,
+    filters.status,
+    pageSize,
+    JSON.stringify(columnFilters),
+    sortState.columnId,
+    sortState.direction,
+  ]);
 
   const totalRows = filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
@@ -2220,8 +2454,6 @@ export function LearningPathsPage() {
       const set = new Set(prev);
       if (set.has(colId)) set.delete(colId);
       else set.add(colId);
-
-      // Ensure at least 1 column is always visible for usability.
       if (set.size === 0) return prev;
       return Array.from(set);
     });
@@ -2230,6 +2462,8 @@ export function LearningPathsPage() {
   function clearFilters() {
     setFilters({ duration: "", tag: "", status: "" });
     setSearchText("");
+    setColumnFilters({});
+    clearSort();
   }
 
   function renderCell(lp, colId) {
@@ -2314,24 +2548,12 @@ export function LearningPathsPage() {
             <div className="RmgOptionsRow">
               <label className="RmgField">
                 <span className="RmgFieldLabel">Search</span>
-                <input
-                  className="RmgInput"
-                  type="search"
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                  placeholder="Search any field…"
-                  aria-label="Global search"
-                />
+                <input className="RmgInput" type="search" value={searchText} onChange={(e) => setSearchText(e.target.value)} placeholder="Search any field…" aria-label="Global search" />
               </label>
 
               <label className="RmgField">
                 <span className="RmgFieldLabel">Duration</span>
-                <select
-                  className="RmgSelect"
-                  value={filters.duration}
-                  onChange={(e) => setFilters((f) => ({ ...f, duration: e.target.value }))}
-                  aria-label="Filter by duration"
-                >
+                <select className="RmgSelect" value={filters.duration} onChange={(e) => setFilters((f) => ({ ...f, duration: e.target.value }))} aria-label="Filter by duration">
                   <option value="">All</option>
                   {filterOptions.duration.map((v) => (
                     <option key={`lp-duration-${v}`} value={v}>
@@ -2343,12 +2565,7 @@ export function LearningPathsPage() {
 
               <label className="RmgField">
                 <span className="RmgFieldLabel">Tag</span>
-                <select
-                  className="RmgSelect"
-                  value={filters.tag}
-                  onChange={(e) => setFilters((f) => ({ ...f, tag: e.target.value }))}
-                  aria-label="Filter by tag"
-                >
+                <select className="RmgSelect" value={filters.tag} onChange={(e) => setFilters((f) => ({ ...f, tag: e.target.value }))} aria-label="Filter by tag">
                   <option value="">All</option>
                   {filterOptions.tag.map((v) => (
                     <option key={`lp-tag-${v}`} value={v}>
@@ -2360,12 +2577,7 @@ export function LearningPathsPage() {
 
               <label className="RmgField">
                 <span className="RmgFieldLabel">Status</span>
-                <select
-                  className="RmgSelect"
-                  value={filters.status}
-                  onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
-                  aria-label="Filter by status"
-                >
+                <select className="RmgSelect" value={filters.status} onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))} aria-label="Filter by status">
                   {filterOptions.status.map((opt) => (
                     <option key={`lp-status-${opt.value || "all"}`} value={opt.value}>
                       {opt.label}
@@ -2461,9 +2673,13 @@ export function LearningPathsPage() {
               <thead>
                 <tr>
                   {visibleColumns.map((c) => (
-                    <th key={c.id} scope="col">
-                      {c.label}
-                    </th>
+                    <SortableTh key={c.id} col={c} sortState={sortState} onToggle={toggleSort} />
+                  ))}
+                </tr>
+
+                <tr className="RmgFilterRow" aria-label="Column filters">
+                  {visibleColumns.map((c) => (
+                    <ColumnFilterCell key={`${c.id}-filter`} col={c} facets={facets} value={columnFilters[c.id]} onChange={updateColumnFilter} disabled={loading} />
                   ))}
                 </tr>
               </thead>
@@ -2554,40 +2770,6 @@ async function fetchAssessmentsMock({ signal } = {}) {
   return DUMMY_ASSESSMENTS_RESPONSE;
 }
 
-function formatIsoDateTimeOrDash(value) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return date.toISOString().replace(".000Z", "Z");
-}
-
-function formatMarkOrDash(value) {
-  if (value === null || value === undefined) return "—";
-  const num = Number(value);
-  return Number.isFinite(num) ? String(num) : "—";
-}
-
-function firstAssigneeOrDash(assignedTo) {
-  if (!Array.isArray(assignedTo) || assignedTo.length === 0) return "—";
-  const a = assignedTo[0];
-  const label = `${a?.employeeName || "—"} (${a?.employeeId || "—"})`;
-  return label;
-}
-
-function assigneeContactOrDash(assignedTo) {
-  if (!Array.isArray(assignedTo) || assignedTo.length === 0) return "—";
-  const a = assignedTo[0];
-  const parts = [a?.email, a?.employeeId].filter(Boolean);
-  return parts.length ? parts.join(" • ") : "—";
-}
-
-function normalizeAssessmentStatus(value) {
-  // Used only for pill styling classes.
-  // Converts e.g. "In Review" -> "in-review"
-  if (!value) return "";
-  return String(value).trim().toLowerCase().replace(/\s+/g, "-");
-}
-
 // PUBLIC_INTERFACE
 export function AssessmentsPage() {
   /** Assessments page that fetches (mocked) data and renders a table with loading and error states + client-side table UX. */
@@ -2595,28 +2777,59 @@ export function AssessmentsPage() {
   const [loading, setLoading] = React.useState(true);
   const [errorMessage, setErrorMessage] = React.useState("");
 
-  // Table options (match RMG Tracker / Skill Factories / Learning Paths UX)
+  // Table options (match existing UX)
   const [searchText, setSearchText] = React.useState("");
   const [filters, setFilters] = React.useState({
     status: "",
     dueMonth: "",
   });
 
+  // New per-column filters + sorting
+  const { sortState, toggleSort, clearSort } = useTableSorting();
+  const [columnFilters, setColumnFilters] = React.useState({});
+  function updateColumnFilter(colId, nextValue) {
+    setColumnFilters((prev) => {
+      const next = { ...prev, [colId]: nextValue };
+      const v = next[colId];
+      if (!v) return next;
+      if (v.type === "text" && !String(v.value || "").trim()) delete next[colId];
+      if (v.type === "select" && !String(v.value || "").trim()) delete next[colId];
+      if (v.type === "multiselect" && (!Array.isArray(v.values) || v.values.length === 0)) delete next[colId];
+      if (v.type === "numberRange" && !String(v.min || "").trim() && !String(v.max || "").trim()) delete next[colId];
+      if (v.type === "dateRange" && !String(v.min || "").trim() && !String(v.max || "").trim()) delete next[colId];
+      return next;
+    });
+  }
+
   const ALL_COLUMNS = React.useMemo(
     () => [
-      { id: "assessmentId", label: "Assessment ID" },
-      { id: "title", label: "Title" },
-      { id: "description", label: "Description" },
-      { id: "assignedTo", label: "Assigned To" },
-      { id: "assigneeContact", label: "Contact" },
-      { id: "dueDate", label: "Due Date" },
-      { id: "status", label: "Status" },
-      { id: "marks", label: "Marks" },
-      { id: "basisOfScoring", label: "Basis of Scoring" },
-      { id: "strength", label: "Strength" },
-      { id: "areasOfImprovement", label: "Areas of Improvement" },
-      { id: "createdAt", label: "Created At" },
-      { id: "updatedAt", label: "Updated At" },
+      { id: "assessmentId", label: "Assessment ID", sortType: "text", filterType: "text" },
+      { id: "title", label: "Title", sortType: "text", filterType: "text" },
+      { id: "description", label: "Description", sortType: "text", filterType: "text" },
+      {
+        id: "assignedTo",
+        label: "Assigned To",
+        sortType: "text",
+        filterType: "text",
+        accessor: (a) => firstAssigneeOrDash(a.assignedTo),
+        filterAccessor: (a) => firstAssigneeOrDash(a.assignedTo),
+      },
+      {
+        id: "assigneeContact",
+        label: "Contact",
+        sortType: "text",
+        filterType: "text",
+        accessor: (a) => assigneeContactOrDash(a.assignedTo),
+        filterAccessor: (a) => assigneeContactOrDash(a.assignedTo),
+      },
+      { id: "dueDate", label: "Due Date", sortType: "date", filterType: "dateRange" },
+      { id: "status", label: "Status", sortType: "text", filterType: "select" },
+      { id: "marks", label: "Marks", sortType: "number", filterType: "numberRange" },
+      { id: "basisOfScoring", label: "Basis of Scoring", sortType: "text", filterType: "text" },
+      { id: "strength", label: "Strength", sortType: "text", filterType: "text" },
+      { id: "areasOfImprovement", label: "Areas of Improvement", sortType: "text", filterType: "text" },
+      { id: "createdAt", label: "Created At", sortType: "date", filterType: "dateRange" },
+      { id: "updatedAt", label: "Updated At", sortType: "date", filterType: "dateRange" },
     ],
     []
   );
@@ -2669,17 +2882,14 @@ export function AssessmentsPage() {
   }, [load]);
 
   const filterOptions = React.useMemo(() => {
-    // Status options derived from data (and sorted)
     const status = uniqueSorted(rows.map((r) => r?.status));
 
-    // Due Month: derived from dueDate
     const months = [];
     for (const r of rows) {
       const value = r?.dueDate;
       const d = value ? new Date(value) : null;
       if (!d || Number.isNaN(d.getTime())) continue;
 
-      // YYYY-MM (safe, stable, sortable)
       const month = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
       months.push(month);
     }
@@ -2688,24 +2898,21 @@ export function AssessmentsPage() {
     return { status, dueMonth };
   }, [rows]);
 
+  const facets = React.useMemo(() => buildFacetOptions(rows, ALL_COLUMNS), [rows, ALL_COLUMNS]);
+
   const filteredRows = React.useMemo(() => {
     const query = searchText.trim().toLowerCase();
 
-    return rows.filter((a) => {
-      // Dropdown filters
-      if (filters.status && normalizeText(a.status) !== filters.status) {
-        return false;
-      }
+    const basicFiltered = rows.filter((a) => {
+      if (filters.status && normalizeText(a.status) !== filters.status) return false;
+
       if (filters.dueMonth) {
         const d = a?.dueDate ? new Date(a.dueDate) : null;
         const month =
-          d && !Number.isNaN(d.getTime())
-            ? `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`
-            : "";
+          d && !Number.isNaN(d.getTime()) ? `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}` : "";
         if (month !== filters.dueMonth) return false;
       }
 
-      // Global search across all columns (not only visible ones)
       if (!query) return true;
 
       const anyMatch = ALL_COLUMNS.some((c) => {
@@ -2727,12 +2934,22 @@ export function AssessmentsPage() {
 
       return anyMatch;
     });
-  }, [rows, filters, searchText, ALL_COLUMNS]);
 
-  // Reset pagination when the dataset changes (search/filters/pageSize)
+    const columnFiltered = applyColumnFilters(basicFiltered, ALL_COLUMNS, columnFilters);
+    return sortRows(columnFiltered, ALL_COLUMNS, sortState);
+  }, [rows, filters, searchText, ALL_COLUMNS, columnFilters, sortState]);
+
   React.useEffect(() => {
     setPageIndex(0);
-  }, [searchText, filters.status, filters.dueMonth, pageSize]);
+  }, [
+    searchText,
+    filters.status,
+    filters.dueMonth,
+    pageSize,
+    JSON.stringify(columnFilters),
+    sortState.columnId,
+    sortState.direction,
+  ]);
 
   const totalRows = filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
@@ -2751,8 +2968,6 @@ export function AssessmentsPage() {
       const set = new Set(prev);
       if (set.has(colId)) set.delete(colId);
       else set.add(colId);
-
-      // Ensure at least 1 column is always visible for usability.
       if (set.size === 0) return prev;
       return Array.from(set);
     });
@@ -2761,6 +2976,8 @@ export function AssessmentsPage() {
   function clearFilters() {
     setFilters({ status: "", dueMonth: "" });
     setSearchText("");
+    setColumnFilters({});
+    clearSort();
   }
 
   function renderCell(a, colId) {
@@ -2825,24 +3042,12 @@ export function AssessmentsPage() {
             <div className="RmgOptionsRow">
               <label className="RmgField">
                 <span className="RmgFieldLabel">Search</span>
-                <input
-                  className="RmgInput"
-                  type="search"
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                  placeholder="Search any field…"
-                  aria-label="Global search"
-                />
+                <input className="RmgInput" type="search" value={searchText} onChange={(e) => setSearchText(e.target.value)} placeholder="Search any field…" aria-label="Global search" />
               </label>
 
               <label className="RmgField">
                 <span className="RmgFieldLabel">Status</span>
-                <select
-                  className="RmgSelect"
-                  value={filters.status}
-                  onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
-                  aria-label="Filter by status"
-                >
+                <select className="RmgSelect" value={filters.status} onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))} aria-label="Filter by status">
                   <option value="">All</option>
                   {filterOptions.status.map((v) => (
                     <option key={`assessment-status-${v}`} value={v}>
@@ -2854,12 +3059,7 @@ export function AssessmentsPage() {
 
               <label className="RmgField">
                 <span className="RmgFieldLabel">Due month</span>
-                <select
-                  className="RmgSelect"
-                  value={filters.dueMonth}
-                  onChange={(e) => setFilters((f) => ({ ...f, dueMonth: e.target.value }))}
-                  aria-label="Filter by due month"
-                >
+                <select className="RmgSelect" value={filters.dueMonth} onChange={(e) => setFilters((f) => ({ ...f, dueMonth: e.target.value }))} aria-label="Filter by due month">
                   <option value="">All</option>
                   {filterOptions.dueMonth.map((v) => (
                     <option key={`assessment-duemonth-${v}`} value={v}>
@@ -2956,9 +3156,13 @@ export function AssessmentsPage() {
               <thead>
                 <tr>
                   {visibleColumns.map((c) => (
-                    <th key={c.id} scope="col">
-                      {c.label}
-                    </th>
+                    <SortableTh key={c.id} col={c} sortState={sortState} onToggle={toggleSort} alignRight={c.id === "marks"} />
+                  ))}
+                </tr>
+
+                <tr className="RmgFilterRow" aria-label="Column filters">
+                  {visibleColumns.map((c) => (
+                    <ColumnFilterCell key={`${c.id}-filter`} col={c} facets={facets} value={columnFilters[c.id]} onChange={updateColumnFilter} disabled={loading} />
                   ))}
                 </tr>
               </thead>
@@ -2974,7 +3178,9 @@ export function AssessmentsPage() {
                   pagedRows.map((a) => (
                     <tr key={a.assessmentId}>
                       {visibleColumns.map((c) => (
-                        <td key={`${a.assessmentId}-${c.id}`}>{renderCell(a, c.id)}</td>
+                        <td key={`${a.assessmentId}-${c.id}`} style={c.id === "marks" ? { textAlign: "right" } : undefined}>
+                          {renderCell(a, c.id)}
+                        </td>
                       ))}
                     </tr>
                   ))

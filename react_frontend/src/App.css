@@ -897,6 +897,102 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+/* Sortable header button (accessibility: real <button>, focus ring, clear hit area) */
+.RmgThButton {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  text-align: inherit;
+  font: inherit;
+  color: inherit;
+}
+
+.RmgThButton:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+  border-radius: 10px;
+}
+
+.RmgSortIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  background: rgba(255, 255, 255, 0.55);
+  color: rgba(15, 23, 42, 0.72);
+  font-size: 0.78rem;
+  line-height: 1;
+}
+
+.RmgSortIcon--active {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: var(--color-border-strong);
+  color: rgba(15, 23, 42, 0.92);
+  box-shadow: 0 10px 20px rgba(2, 6, 23, 0.08);
+}
+
+/* Per-column filter row under headers */
+.RmgTable thead tr.RmgFilterRow th {
+  position: sticky;
+  top: 44px; /* approx header height; keeps filter row visible while scrolling */
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.14);
+  text-transform: none;
+  letter-spacing: 0.02em;
+  padding: 10px 12px;
+}
+
+.RmgFilterControl {
+  width: 100%;
+  display: grid;
+  gap: 8px;
+}
+
+.RmgFilterControl--range {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+}
+
+.RmgFilterInput,
+.RmgFilterSelect {
+  width: 100%;
+  appearance: none;
+  border-radius: 12px;
+  border: 1px solid var(--control-border);
+  background: var(--control-surface);
+  padding: 8px 10px;
+  font-weight: 700;
+  color: rgba(15, 23, 42, 0.92);
+  box-shadow: 0 10px 18px rgba(2, 6, 23, 0.05);
+}
+
+.RmgFilterInput:focus-visible,
+.RmgFilterSelect:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .RmgFilterInput:hover,
+  .RmgFilterSelect:hover {
+    border-color: var(--control-border-strong);
+  }
+}
+
 .RmgTable tbody td {
   padding: 12px 12px;
   border-bottom: 1px solid rgba(99, 102, 241, 0.12);
