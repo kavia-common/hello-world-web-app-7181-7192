@@ -764,7 +764,14 @@
       <div class="RmgToolbar">...</div>
   - All table toolbars are now unified inside PrimeDataTableCard and styled via index.css
     (.RmgTableCard + .RmgTableControls).
+
+  Defensive safeguard:
+  - If any legacy toolbar markup still exists in the DOM (from older components or cached builds),
+    force it to never render visually.
 */
+.RmgToolbar {
+  display: none !important;
+}
 
 .RmgButton {
   appearance: none;
