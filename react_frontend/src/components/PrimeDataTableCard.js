@@ -272,105 +272,102 @@ export default function PrimeDataTableCard({
         multiple
       />
 
-      {/* Unified inner card to ensure toolbar + controls + table share one surface */}
-      <div className="RmgTableCard" aria-label={title ? `${title} card` : "Table card"}>
-        {/* Compact controls row: icon-only global search + Upload + CSV download */}
-        {showUnifiedToolbar && (
-          <div className="RmgTableControls" aria-label="Table controls">
-            <div className="RmgTableControls-left">
-              <span className="p-input-icon-left RmgTableSearch">
-                <i className="pi pi-search" aria-hidden="true" />
-                <InputText
-                  value={globalFilterValue}
-                  onChange={(e) => setGlobalFilterValue(e.target.value)}
-                  onKeyDown={handleSearchKeyDown}
-                  placeholder="Search…"
-                  aria-label="Global search"
-                  disabled={loading || isUploading}
-                />
-              </span>
-
-              <Button
-                type="button"
-                icon="pi pi-search"
-                className="p-button-outlined p-button-icon-only RmgIconButton"
-                onClick={applyGlobalSearch}
+      {/* Compact controls row: icon-only global search + Upload + CSV download */}
+      {showUnifiedToolbar && (
+        <div className="RmgTableControls" aria-label="Table controls">
+          <div className="RmgTableControls-left">
+            <span className="p-input-icon-left RmgTableSearch">
+              <i className="pi pi-search" aria-hidden="true" />
+              <InputText
+                value={globalFilterValue}
+                onChange={(e) => setGlobalFilterValue(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                placeholder="Search…"
+                aria-label="Global search"
                 disabled={loading || isUploading}
-                aria-label="Apply global search"
-                tooltip="Search"
-                tooltipOptions={{ position: "top" }}
               />
+            </span>
 
-              <Button
-                type="button"
-                icon={isUploading ? "pi pi-spin pi-spinner" : "pi pi-upload"}
-                className="p-button-outlined p-button-icon-only RmgIconButton"
-                onClick={openUploadPicker}
-                disabled={loading || isUploading || !uploadEndpointPath}
-                aria-label="Upload Excel/CSV"
-                tooltip={uploadEndpointPath ? "Upload (Excel/CSV)" : "Upload not configured"}
-                tooltipOptions={{ position: "top" }}
-              />
-            </div>
-
-            <div className="RmgTableControls-right">
-              <Button
-                type="button"
-                icon="pi pi-download"
-                className="p-button-outlined p-button-icon-only RmgIconButton"
-                onClick={exportCsv}
-                disabled={loading || isUploading || !Array.isArray(rows) || rows.length === 0}
-                aria-label="Download CSV"
-                tooltip="Download CSV"
-                tooltipOptions={{ position: "top" }}
-              />
-            </div>
-          </div>
-        )}
-
-        <DataTable
-          ref={dtRef}
-          value={Array.isArray(rows) ? rows : []}
-          loading={loading || isUploading}
-          emptyMessage={errorMessage ? "No data." : "No records found."}
-          dataKey="__internalKey"
-          rowKey={(rowData) => rowKey(rowData)}
-          paginator
-          paginatorPosition="bottom"
-          rows={defaultPageSize}
-          rowsPerPageOptions={pageSizes}
-          removableSort
-          showGridlines
-          stripedRows
-          /*
-            Scroll + pagination responsibility:
-            - Pagination is owned by the DataTable (Prime paginator, bottom only).
-            - Horizontal scrolling is owned by the DataTable (scrollable="true" + scrollDirection="horizontal").
-            - No internal vertical scroll area: we intentionally do NOT set scrollHeight so the table height
-              is content-driven.
-          */
-          scrollable
-          scrollDirection="horizontal"
-          className="p-datatable-sm RmgPrimeDataTable"
-          filters={filters}
-          onFilter={(e) => setFilters(e.filters)}
-          filterDisplay="row"
-          globalFilterFields={derivedGlobalFields}
-        >
-          {visibleColumns.map((c) => (
-            <Column
-              key={c.id}
-              field={c.id}
-              header={c.label}
-              sortable={c.sortable !== false}
-              filter
-              showFilterMenu={false}
-              filterPlaceholder="Filter…"
-              body={(rowData) => bodyTemplate(rowData, c.id)}
+            <Button
+              type="button"
+              icon="pi pi-search"
+              className="p-button-outlined p-button-icon-only RmgIconButton"
+              onClick={applyGlobalSearch}
+              disabled={loading || isUploading}
+              aria-label="Apply global search"
+              tooltip="Search"
+              tooltipOptions={{ position: "top" }}
             />
-          ))}
-        </DataTable>
-      </div>
+
+            <Button
+              type="button"
+              icon={isUploading ? "pi pi-spin pi-spinner" : "pi pi-upload"}
+              className="p-button-outlined p-button-icon-only RmgIconButton"
+              onClick={openUploadPicker}
+              disabled={loading || isUploading || !uploadEndpointPath}
+              aria-label="Upload Excel/CSV"
+              tooltip={uploadEndpointPath ? "Upload (Excel/CSV)" : "Upload not configured"}
+              tooltipOptions={{ position: "top" }}
+            />
+          </div>
+
+          <div className="RmgTableControls-right">
+            <Button
+              type="button"
+              icon="pi pi-download"
+              className="p-button-outlined p-button-icon-only RmgIconButton"
+              onClick={exportCsv}
+              disabled={loading || isUploading || !Array.isArray(rows) || rows.length === 0}
+              aria-label="Download CSV"
+              tooltip="Download CSV"
+              tooltipOptions={{ position: "top" }}
+            />
+          </div>
+        </div>
+      )}
+
+      <DataTable
+        ref={dtRef}
+        value={Array.isArray(rows) ? rows : []}
+        loading={loading || isUploading}
+        emptyMessage={errorMessage ? "No data." : "No records found."}
+        dataKey="__internalKey"
+        rowKey={(rowData) => rowKey(rowData)}
+        paginator
+        paginatorPosition="bottom"
+        rows={defaultPageSize}
+        rowsPerPageOptions={pageSizes}
+        removableSort
+        showGridlines
+        stripedRows
+        /*
+          Scroll + pagination responsibility:
+          - Pagination is owned by the DataTable (Prime paginator, bottom only).
+          - Horizontal scrolling is owned by the DataTable (scrollable="true" + scrollDirection="horizontal").
+          - No internal vertical scroll area: we intentionally do NOT set scrollHeight so the table height
+            is content-driven.
+        */
+        scrollable
+        scrollDirection="horizontal"
+        className="p-datatable-sm RmgPrimeDataTable"
+        filters={filters}
+        onFilter={(e) => setFilters(e.filters)}
+        filterDisplay="row"
+        globalFilterFields={derivedGlobalFields}
+      >
+        {visibleColumns.map((c) => (
+          <Column
+            key={c.id}
+            field={c.id}
+            header={c.label}
+            sortable={c.sortable !== false}
+            filter
+            showFilterMenu={false}
+            filterPlaceholder="Filter…"
+            body={(rowData) => bodyTemplate(rowData, c.id)}
+          />
+        ))}
+      </DataTable>
     </div>
   );
 }

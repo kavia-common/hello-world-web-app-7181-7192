@@ -23,11 +23,6 @@
   /*
     Consistent vertical spacing before ALL PrimeReact DataTables.
     Applied to the shared `.RmgTableWrap` container used by PrimeDataTableCard.
-
-    Notes:
-    - Uses margin (not padding) to keep Prime's sticky header calculations and
-      internal scroll container behavior unchanged.
-    - Keep this modest so pages still feel compact.
   */
   --rmg-table-block-gap: 10px;
 
@@ -65,31 +60,42 @@ body {
 /* ----------------------------- DataTable polish ----------------------------- */
 
 /*
-  Global PrimeReact DataTable visual settings (applies across the app):
-  1) Compact header height
-  2) Sticky header on scroll for all tables
-  3) Paginator at bottom only
-  4) Subtle row borders + comfortable row height
-  5) Consistent header label/icon alignment; no overlap with sticky areas
-
-  Notes:
-  - We do NOT re-enable filters. These styles only affect layout/visuals.
-  - PrimeDataTableCard already uses `scrollable` + explicit `scrollHeight`,
-    which is required for sticky headers.
+  PrimeReact DataTable alignment/sticky fixes (applies across pages):
+  - Stable header/body sizing
+  - Sticky headers
+  - Bottom-only paginator (defensive: hide top)
+  - Horizontal scroll only (no double scrollbars)
 */
 
 /*
-  PrimeReact DataTable alignment/sticky fixes (applies to all pages via PrimeDataTableCard):
-  - Stable column widths between thead/tbody (fixed layout)
-  - Correct sticky header layering (thead + filter row)
-  - Consistent control/icon alignment
-  - Prevent overlap with paginator/filters by avoiding double-scroll containers
+  Wrapper around tables (PrimeDataTableCard uses this):
+  - provides only spacing + layout context
+  - does NOT introduce extra scrollbars (DataTable owns horizontal scrolling)
 */
+.RmgTableWrap {
+  margin-top: var(--rmg-table-block-gap, 16px);
+  overflow: visible;
+}
+
+/*
+  DataTable is the single surface now (outer RmgTableCard removed):
+  - Apply rounded corners, border, glassy background, and clipping directly to DataTable root.
+*/
+.RmgTableWrap .RmgPrimeDataTable {
+  border-radius: 18px;
+  border: 1px solid var(--card-border);
+  background: var(--card-surface-wash), var(--card-bg);
+  box-shadow: 0 14px 32px rgba(2, 6, 23, 0.08);
+  backdrop-filter: blur(10px);
+
+  /* Clip scroll viewport + paginator to rounded edges */
+  overflow: hidden;
+}
+
 /*
   Column sizing:
-  - Remove any zoom/scaling behavior (handled in JS previously).
-  - Prefer intrinsic sizing so columns expand to fit content (max-content like behavior),
-    while still allowing horizontal scroll when the table is wider than the card.
+  - Prefer intrinsic sizing so columns expand to fit content
+  - Use horizontal scroll when needed
 */
 .RmgTableWrap .p-datatable .p-datatable-table {
   table-layout: auto;
@@ -99,17 +105,13 @@ body {
 
 /*
   Prime internal wrapper:
-  - Do NOT create an internal vertical scrolling viewport (no fixed scrollHeight).
-  - Let DataTable manage horizontal overflow when scrollable + scrollDirection="horizontal".
+  - Horizontal scrolling is allowed here
+  - No forced internal vertical viewport
+  - Inherit radius from DataTable root for clipping
 */
 .RmgTableWrap .p-datatable .p-datatable-wrapper {
   overflow-x: auto;
   overflow-y: visible;
-
-  /*
-    Let the unified card own the rounding and clip the DataTable internals
-    so the header/body/paginator follow the same radii as the card.
-  */
   border-radius: inherit;
 }
 
@@ -126,7 +128,6 @@ body {
   top: var(--rmg-table-header-height);
   z-index: 4;
 
-  /* Subtle separation but still theme-aligned */
   background: rgba(255, 255, 255, 0.78);
   backdrop-filter: blur(10px);
 }
@@ -137,11 +138,11 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 
-  /* Critical: prevent any inherited "gradient text" or transparency from global styles */
+  /* Prevent any inherited "gradient text" or transparency from global styles */
   color: var(--color-text, #0f172a);
 }
 
-/* Critical: ensure the whole header content area doesn't inherit transparent text */
+/* Critical: ensure header content area doesn't inherit transparent text */
 .RmgTableWrap .p-datatable .p-datatable-thead > tr > th .p-column-header-content,
 .RmgTableWrap .p-datatable .p-datatable-thead > tr > th {
   color: var(--color-text, #0f172a);
@@ -183,16 +184,16 @@ body {
   flex: 0 0 auto;
 }
 
-/* Paginator: bottom only + flush to card, with matching bottom radii */
+/* Hide any accidental top paginator */
+.RmgTableWrap .p-datatable .p-paginator-top {
+  display: none;
+}
+
+/* Paginator: bottom only + visually attached to table surface */
 .RmgTableWrap .p-datatable .p-paginator {
-  /*
-    Keep the paginator visually “attached” to the table content area and inside
-    the same unified card shape.
-  */
   margin-top: 0;
   padding-top: 10px;
 
-  /* Single separator line between scroll viewport and paginator (avoid double borders) */
   border-top: 1px solid rgba(3, 78, 161, 0.12);
 
   background: linear-gradient(
@@ -206,13 +207,7 @@ body {
   border-bottom-left-radius: 18px;
   border-bottom-right-radius: 18px;
 
-  /* Ensure paginator content never bleeds outside rounded corners */
   overflow: hidden;
-}
-
-/* Hide any accidental top paginator if introduced by future changes */
-.RmgTableWrap .p-datatable .p-paginator-top {
-  display: none;
 }
 
 /* Make wrapper not add unexpected padding/margins */
@@ -222,34 +217,20 @@ body {
   padding: 0 0 0.75rem 0;
 }
 
-.p-datatable .p-datatable-wrapper {
-  /*
-    The unified card controls rounding; the wrapper should inherit and not introduce
-    a second radius that can cause “double corners”.
-  */
-  border-radius: 0;
-}
-
-/* ---- Rounded-corner DataTable “skin” for PrimeDataTableCard ----
-   Goal: the table content area is visually part of the same rounded card:
-   - top rounding comes from the header area (sticky thead) within the scroll viewport
-   - bottom rounding comes from the paginator/footer
-   - clip overflow so scrollbars/content don't escape the rounded edges
+/* ---- Rounded-corner DataTable “skin” ----
+   Goal:
+   - top rounding comes from scroll viewport (sticky thead inside)
+   - bottom rounding comes from paginator
 */
-.RmgTableWrap .RmgPrimeDataTable {
-  /* Avoid any outer borders from the DataTable itself fighting the card border */
-  border: 0;
-  background: transparent;
-}
-
-/* Clip the scroll viewport to the card’s top radii (works with sticky header) */
 .RmgTableWrap .RmgPrimeDataTable .p-datatable-wrapper {
-  /* clip both header and body content to rounded corners */
   overflow: auto;
   border-top-left-radius: 18px;
   border-top-right-radius: 18px;
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
+
+  /* Avoid double line above paginator */
+  border-bottom: 0;
 }
 
 /* Ensure the internal table surface doesn’t draw its own border/background edges */
@@ -257,7 +238,7 @@ body {
   border-radius: 0;
 }
 
-/* Top corners: apply to the first/last header cells so gridlines don't “square off” */
+/* Top corners: apply to first/last header cells so gridlines don't “square off” */
 .RmgTableWrap .RmgPrimeDataTable .p-datatable-thead > tr:first-child > th:first-child {
   border-top-left-radius: 18px;
 }
@@ -281,11 +262,6 @@ body {
   border-top-right-radius: 18px;
 }
 
-/* Remove the DataTable's own bottom border so we don't get a double line above paginator */
-.RmgTableWrap .RmgPrimeDataTable .p-datatable-wrapper {
-  border-bottom: 0;
-}
-
 /* Prevent tiny header/body offsets caused by default padding/line-heights */
 .RmgTableWrap .p-datatable .p-datatable-thead > tr > th,
 .RmgTableWrap .p-datatable .p-datatable-tbody > tr > td {
@@ -298,7 +274,7 @@ body {
   text-overflow: clip;
 }
 
-/* Compact header height + stable layout (prevents sticky overlap / label drift) */
+/* Compact header height + stable layout */
 .RmgTableWrap .p-datatable .p-datatable-thead > tr > th {
   min-height: var(--rmg-table-header-height);
   height: var(--rmg-table-header-height);
@@ -314,21 +290,9 @@ body {
   font-size: var(--rmg-table-body-font-size);
 }
 
-/* Header content: ensure icons and labels align and never wrap into a second line */
-.RmgTableWrap .p-datatable .p-datatable-thead > tr > th .p-column-header-content {
-  min-height: var(--rmg-table-header-height);
-  align-items: center;
-}
-
-.RmgTableWrap .p-datatable .p-datatable-thead > tr > th .p-column-title {
-  line-height: 1.1;
-}
-
 /* Header styling aligned with gradient/glass aesthetic */
 .p-datatable .p-datatable-thead > tr > th {
-  /* Slightly stronger surface so header labels are always readable */
-  background:
-    linear-gradient(87deg, rgba(197, 22, 140, 0.10), rgba(3, 78, 161, 0.10)),
+  background: linear-gradient(87deg, rgba(197, 22, 140, 0.10), rgba(3, 78, 161, 0.10)),
     rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(10px);
   border-color: var(--rmg-border);
@@ -340,19 +304,10 @@ body {
   border-color: var(--rmg-table-row-border);
 }
 
-/* Slightly soften the gridline look (keep gridlines enabled but not heavy) */
+/* Slightly soften the gridline look */
 .p-datatable.p-datatable-gridlines .p-datatable-thead > tr > th,
 .p-datatable.p-datatable-gridlines .p-datatable-tbody > tr > td {
   border-color: rgba(3, 78, 161, 0.12);
-}
-
-/* Keep sort icon + filter icon aligned in header cells */
-.RmgTableWrap .p-datatable .p-column-header-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  width: 100%;
 }
 
 /* Prime header action buttons: normalize icon sizing and remove unexpected padding */
@@ -361,7 +316,6 @@ body {
   height: 30px;
   padding: 0;
 }
-
 .RmgTableWrap .p-datatable .p-column-header-content .p-button .p-button-icon {
   font-size: 0.95rem;
   line-height: 1;
@@ -372,11 +326,7 @@ body {
   background-clip: padding-box;
 }
 
-/*
-  Scrollbar gutter stability:
-  With horizontal-only scrolling, keeping a stable gutter on "both-edges" can
-  introduce unwanted space (and can imply vertical scrolling). Keep it minimal.
-*/
+/* Stable scrollbar gutter */
 @supports (scrollbar-gutter: stable) {
   .RmgTableWrap .p-datatable .p-datatable-wrapper {
     scrollbar-gutter: stable;
@@ -388,9 +338,13 @@ body {
   outline-offset: 2px;
 }
 
+/* Avoid wrapping by default to keep rows compact; horizontal scroll will expose overflow */
+.RmgTableWrap .p-datatable .p-datatable-tbody > tr > td {
+  white-space: nowrap;
+}
+
 /* ----------------------------- Overlay / dropdowns ----------------------------- */
 
-/* Ensure overlays appear above sticky nav/header and don't clip within cards */
 .p-overlaypanel {
   border-radius: 16px;
   border: 1px solid var(--rmg-border);
@@ -430,7 +384,6 @@ body {
 
 /* ----------------------------- Inputs & buttons ----------------------------- */
 
-/* Harmonize inputs with glassy controls and avoid height inconsistencies */
 .p-inputtext,
 .p-dropdown,
 .p-multiselect,
@@ -448,13 +401,7 @@ body {
   align-items: center;
 }
 
-/* ----------------------------- Table controls (search + CSV) -----------------------------
-   Goal:
-   - Provide a compact controls row above ALL PrimeReact DataTables (via PrimeDataTableCard)
-   - Global search input + Search button
-   - Download CSV button (exports currently visible rows/cols)
-   - Responsive wrapping, aligned with the glassy theme
-------------------------------------------------------------------------------- */
+/* ----------------------------- Table controls (search + CSV + upload) ----------------------------- */
 
 .RmgTableWrap .RmgTableControls {
   display: flex;
@@ -463,9 +410,8 @@ body {
   gap: 10px;
   flex-wrap: wrap;
 
-  /* Keep compact, but make it feel like part of the unified card */
   padding: 10px 12px;
-  margin: 10px 12px 10px; /* spacing within unified card */
+  margin: 10px 12px 10px;
   border-radius: 16px;
 
   background: linear-gradient(
@@ -485,26 +431,22 @@ body {
   gap: 10px;
 }
 
-/* Search cluster: keep input + search button adjacent */
 .RmgTableWrap .RmgTableControls-left {
   flex-wrap: nowrap;
 }
 
-/* Search input width defaults to compact */
 .RmgTableWrap .RmgTableSearch {
   width: min(320px, 100%);
   flex: 1 1 auto;
-  min-width: 220px; /* prevents the input from collapsing too aggressively */
+  min-width: 220px;
 }
 
-/* Ensure the input fills the constrained wrapper */
 .RmgTableWrap .RmgTableSearch > .p-inputtext {
   width: 100%;
   padding-left: 2.35rem;
   padding-right: 0.9rem;
 }
 
-/* Precisely position the icon inside the input */
 .RmgTableWrap .RmgTableSearch > i {
   left: 0.9rem;
   margin-top: 0;
@@ -533,7 +475,6 @@ body {
   height: 40px;
 }
 
-/* Mobile: stack controls nicely and allow full-width search */
 @media (max-width: 520px) {
   .RmgTableWrap .RmgTableControls {
     margin: 10px 10px 0;
@@ -551,14 +492,13 @@ body {
   }
 }
 
-/* Button tone: keep "Tailwind-like cool palette" feel, but let Prime handle sizing */
+/* Button tone: keep theme feel, but let Prime handle sizing */
 .p-button.p-button-secondary {
   background: rgba(3, 78, 161, 0.12);
   border-color: rgba(3, 78, 161, 0.2);
   color: #0f172a;
 }
 
-/* Outline buttons: align with theme and reduce border mismatch */
 .p-button.p-button-outlined {
   border-color: rgba(3, 78, 161, 0.22);
 }
@@ -572,7 +512,6 @@ body {
   outline-offset: 2px;
 }
 
-/* Native (non-Prime) icon-only buttons used in toolbars/errors */
 .RmgIconOnlyButton {
   display: inline-flex;
   align-items: center;
@@ -596,7 +535,6 @@ body {
   min-width: 84px;
 }
 
-/* Mobile: reduce header padding slightly and allow better wrapping */
 @media (max-width: 520px) {
   .RmgTableWrap .p-datatable .p-datatable-thead > tr > th,
   .RmgTableWrap .p-datatable .p-datatable-tbody > tr > td {
@@ -606,52 +544,6 @@ body {
   .RmgTableWrap .p-datatable .p-column-header-content {
     gap: 8px;
   }
-}
-
-/* ----------------------------- Responsive table viewport -----------------------------
-   - Normal (non-zoomed) tables.
-   - Horizontal scroll at the card level when needed.
--------------------------------------------------------------------------------------- */
-
-/* PrimeDataTableCard outer card may be styled in App.css; ensure fallback behavior here too */
-.RmgTableWrap {
-  /* Add vertical breathing room before tables across ALL pages */
-  margin-top: var(--rmg-table-block-gap, 16px);
-
-  /*
-    Outer wrapper should NOT manage scrollbars/pagination.
-    DataTable now owns horizontal scroll; height remains content-driven.
-  */
-  overflow: visible;
-}
-
-/*
-  Unified table card:
-  - Single surface for header toolbar + controls + datatable
-  - Keeps consistent padding, borders, and glassy styling across pages
-  - Does not alter Prime's internal scroll wrapper (vertical scroll stays inside .p-datatable-wrapper)
-*/
-.RmgTableWrap .RmgTableCard {
-  border-radius: 18px;
-  border: 1px solid var(--card-border);
-  background: var(--card-surface-wash), var(--card-bg);
-  box-shadow: 0 14px 32px rgba(2, 6, 23, 0.08);
-  backdrop-filter: blur(10px);
-
-  /*
-    IMPORTANT:
-    This unified card must clip the DataTable so the header/body/paginator all appear
-    within the same rounded surface (no square inner corners / overflow bleed).
-  */
-  overflow: hidden;
-
-  /* Card padding for toolbar; DataTable manages its own internal layout */
-  padding: 12px 0 0;
-}
-
-/* Avoid wrapping by default to keep rows compact; horizontal scroll will expose overflow */
-.RmgTableWrap .p-datatable .p-datatable-tbody > tr > td {
-  white-space: nowrap;
 }
 
 code {
