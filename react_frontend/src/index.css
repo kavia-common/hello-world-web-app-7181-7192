@@ -349,31 +349,59 @@ body {
   align-items: center;
 }
 
-/* ----------------------------- Global table search -----------------------------
+/* ----------------------------- Table controls (search + CSV) -----------------------------
    Goal:
-   - Reduce global search bar width across ALL PrimeReact DataTables
-   - Keep the search icon vertically centered and correctly padded inside the input
-   - Preserve existing PrimeReact behavior + our "glassy" aesthetic
+   - Provide a compact controls row above ALL PrimeReact DataTables (via PrimeDataTableCard)
+   - Global search input + Search button
+   - Download CSV button (exports currently visible rows/cols)
+   - Responsive wrapping, aligned with the glassy theme
 ------------------------------------------------------------------------------- */
 
-/* Constrain the global search control width (used in PrimeDataTableCard) */
-.RmgTableWrap .RmgOptions .p-input-icon-left {
-  /* allow the row to wrap on smaller screens, but keep the search narrower by default */
-  width: min(360px, 100%);
+.RmgTableWrap .RmgTableControls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  padding: 10px 12px;
+  margin: 12px 12px 0; /* keep inside the card, above the table wrapper */
+  border-radius: 16px;
+
+  background: linear-gradient(
+      87deg,
+      rgba(197, 22, 140, 0.06),
+      rgba(3, 78, 161, 0.06)
+    ),
+    var(--rmg-surface-glass);
+  border: 1px solid rgba(3, 78, 161, 0.14);
+  backdrop-filter: blur(10px);
+}
+
+.RmgTableWrap .RmgTableControls-left,
+.RmgTableWrap .RmgTableControls-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Search input width defaults to compact */
+.RmgTableWrap .RmgTableSearch {
+  width: min(320px, 100%);
 }
 
 /* Ensure the input fills the constrained wrapper */
-.RmgTableWrap .RmgOptions .p-input-icon-left > .p-inputtext {
+.RmgTableWrap .RmgTableSearch > .p-inputtext {
   width: 100%;
-  /* Prime's icon-left pattern needs left padding so text doesn't overlap the icon */
   padding-left: 2.35rem;
   padding-right: 0.9rem;
 }
 
-/* Precisely position the icon inside the input (vertically centered) */
-.RmgTableWrap .RmgOptions .p-input-icon-left > i {
-  left: 0.9rem; /* matches input left padding rhythm */
-  margin-top: 0; /* override theme defaults that can shift the icon */
+/* Precisely position the icon inside the input */
+.RmgTableWrap .RmgTableSearch > i {
+  left: 0.9rem;
+  margin-top: 0;
   top: 50%;
   transform: translateY(-50%);
   line-height: 1;
@@ -381,9 +409,25 @@ body {
   pointer-events: none;
 }
 
-/* Mobile: let the search take full width when space is tight */
+/* Make the "Search" button compact */
+.RmgTableWrap .RmgTableSearchBtn {
+  white-space: nowrap;
+}
+
+/* Mobile: stack controls nicely and allow full-width search */
 @media (max-width: 520px) {
-  .RmgTableWrap .RmgOptions .p-input-icon-left {
+  .RmgTableWrap .RmgTableControls {
+    margin: 10px 10px 0;
+    padding: 10px 10px;
+  }
+
+  .RmgTableWrap .RmgTableControls-left,
+  .RmgTableWrap .RmgTableControls-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .RmgTableWrap .RmgTableSearch {
     width: 100%;
   }
 }

@@ -3,14 +3,16 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { Tag } from "primereact/tag";
+import { InputText } from "primereact/inputtext";
 
 /**
  * PrimeReact DataTable wrapper that intentionally uses PrimeReact defaults:
  * - Built-in pagination (paginator)
  * - Built-in sorting (sortable columns)
  *
- * NOTE: Filtering UI (global + per-column filters) has been intentionally removed/disabled
- * per product requirements. Sorting and pagination remain enabled.
+ * Product requirement:
+ * - Keep per-column filters disabled.
+ * - Add a compact global search control + CSV download button before each table.
  *
  * This component is shared by multiple pages (RMG Tracker, Skill Factories, Learning Paths,
  * and Assessments). Any layout improvements made here apply across those screens.
@@ -58,6 +60,11 @@ export default function PrimeDataTableCard({
   renderCell,
   /** Optional: additional top controls to render before the table (e.g., extra dropdown filters). */
   extraControls,
+  /**
+   * Optional override: which fields are included in global search.
+   * If not provided, we will derive it from `columns` (using column.id).
+   */
+  globalSearchFields,
 }) {
   /** Shared table component used across pages. Provides consistent layout + Prime defaults. */
   const dtRef = React.useRef(null);
@@ -66,12 +73,32 @@ export default function PrimeDataTableCard({
     return Array.isArray(columns) ? columns : [];
   }, [columns]);
 
+  /**
+   * PrimeReact DataTable global filtering is driven by:
+   * - `filters={{ global: { value, matchMode } }}`
+   * - `globalFilterFields=[...]`
+   */
+  const [globalFilterValue, setGlobalFilterValue] = React.useState("");
+  const [filters, setFilters] = React.useState({ global: { value: "", matchMode: "contains" } });
+
+  const derivedGlobalFields = React.useMemo(() => {
+    if (Array.isArray(globalSearchFields) && globalSearchFields.length > 0) {
+      return globalSearchFields;
+    }
+    // Default: search across the column ids (which match row fields).
+    // This covers the majority of the mocked datasets used in the pages.
+    return visibleColumns.map((c) => c.id);
+  }, [globalSearchFields, visibleColumns]);
+
   function clearAll() {
-    // Intentionally no DataTable filter state to clear anymore.
-    // Kept for UX consistency (the reset icon still exists in the toolbar).
+    // Clear the global filter (per-column filters remain disabled).
+    setGlobalFilterValue("");
+    setFilters({ global: { value: "", matchMode: "contains" } });
   }
 
   function exportCsv() {
+    // PrimeReact exportCSV exports the currently visible dataset (after sorting/filtering),
+    // which matches the requirement "export currently visible rows/columns".
     if (dtRef.current) dtRef.current.exportCSV({ selectionOnly: false });
   }
 
@@ -84,6 +111,19 @@ export default function PrimeDataTableCard({
   }
 
   const showHeaderBar = Boolean(title || subtitle || extraControls);
+
+  // PUBLIC_INTERFACE
+  function applyGlobalSearch() {
+    /** Apply the current global search input to the PrimeReact DataTable global filter. */
+    setFilters({ global: { value: globalFilterValue, matchMode: "contains" } });
+  }
+
+  function handleSearchKeyDown(e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      applyGlobalSearch();
+    }
+  }
 
   return (
     <div
@@ -129,22 +169,49 @@ export default function PrimeDataTableCard({
               tooltipOptions={{ position: "top" }}
               disabled={loading}
             />
-
-            <Button
-              type="button"
-              icon="pi pi-download"
-              className="p-button-outlined p-button-icon-only"
-              onClick={exportCsv}
-              disabled={loading || !Array.isArray(rows) || rows.length === 0}
-              aria-label="Export table to CSV"
-              tooltip="Export CSV"
-              tooltipOptions={{ position: "top" }}
-            />
           </div>
         </div>
       )}
 
-      {/* Filter UI intentionally removed (no global search input, no column filter row). */}
+      {/* Compact controls row: global search + Search button + CSV download */}
+      <div className="RmgTableControls" aria-label="Table controls">
+        <div className="RmgTableControls-left">
+          <span className="p-input-icon-left RmgTableSearch">
+            <i className="pi pi-search" aria-hidden="true" />
+            <InputText
+              value={globalFilterValue}
+              onChange={(e) => setGlobalFilterValue(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              placeholder="Search…"
+              aria-label="Global search"
+              disabled={loading}
+            />
+          </span>
+
+          <Button
+            type="button"
+            icon="pi pi-search"
+            label="Search"
+            className="p-button-outlined RmgTableSearchBtn"
+            onClick={applyGlobalSearch}
+            disabled={loading}
+            aria-label="Apply global search"
+          />
+        </div>
+
+        <div className="RmgTableControls-right">
+          <Button
+            type="button"
+            icon="pi pi-download"
+            label="Download CSV"
+            className="p-button-outlined"
+            onClick={exportCsv}
+            disabled={loading || !Array.isArray(rows) || rows.length === 0}
+            aria-label="Download CSV"
+          />
+        </div>
+      </div>
+
       <DataTable
         ref={dtRef}
         value={Array.isArray(rows) ? rows : []}
@@ -166,6 +233,8 @@ export default function PrimeDataTableCard({
         */
         scrollHeight="60vh"
         className="p-datatable-sm RmgPrimeDataTable"
+        filters={filters}
+        globalFilterFields={derivedGlobalFields}
       >
         {visibleColumns.map((c) => (
           <Column
