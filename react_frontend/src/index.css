@@ -74,9 +74,14 @@ body {
   - Consistent control/icon alignment
   - Prevent overlap with paginator/filters by avoiding double-scroll containers
 */
+/* Allow body cells to show more content without awkward clipping:
+   - Use fixed layout for header/body alignment stability
+   - But allow horizontal scroll at the card level with a usable min-width
+*/
 .RmgTableWrap .p-datatable .p-datatable-table {
   table-layout: fixed;
   width: 100%;
+  min-width: max-content;
 }
 
 /* Ensure the Prime internal scroll wrapper is the only vertical scroll container */
@@ -410,6 +415,101 @@ body {
   .RmgTableWrap .p-datatable .p-column-header-content {
     gap: 8px;
   }
+}
+
+/* ----------------------------- Responsive table viewport + zoom -----------------------------
+   Used by PrimeDataTableCard:
+   - Horizontal scroll at the card level (never clip)
+   - Optional scale transform when natural width exceeds threshold
+   - Zoom controls appear only while scaling is active (rendered conditionally)
+--------------------------------------------------------------------------------------------- */
+
+/* PrimeDataTableCard outer card may be styled in App.css; ensure fallback behavior here too */
+.RmgTableWrap {
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* New: explicit viewport wrappers for measuring + scaling */
+.RmgTableViewport {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  padding: 10px 10px 0;
+}
+
+.RmgTableMeasure {
+  width: max-content; /* measure natural width */
+  min-width: 100%; /* but never shrink below card width */
+}
+
+/* Scaling wrapper (transform applied inline from JS) */
+.RmgTableScaled {
+  will-change: transform;
+}
+
+/* Zoom controls:
+   - Only rendered when scaling is active
+   - Glowy/glassy styling aligned with existing theme
+*/
+.RmgTableZoomBar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px 0;
+  position: sticky;
+  left: 0; /* stay visible during horizontal scroll */
+  z-index: 8;
+}
+
+.RmgTableZoomLabel {
+  font-weight: 900;
+  color: rgba(15, 23, 42, 0.78);
+  margin-right: 6px;
+  user-select: none;
+}
+
+.RmgZoomBtn {
+  appearance: none;
+  border: 1px solid rgba(3, 78, 161, 0.18);
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 999px;
+  padding: 8px 10px;
+  min-width: 44px;
+  min-height: 36px;
+  cursor: pointer;
+  font-weight: 950;
+  line-height: 1;
+  color: rgba(15, 23, 42, 0.88);
+  box-shadow: 0 10px 22px rgba(2, 6, 23, 0.06);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .RmgZoomBtn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    border-color: rgba(197, 22, 140, 0.26);
+    box-shadow: 0 14px 28px rgba(2, 132, 199, 0.12);
+  }
+}
+
+.RmgZoomBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.RmgZoomBtn:focus-visible {
+  outline: 3px solid rgba(197, 22, 140, 0.32);
+  outline-offset: 3px;
+}
+
+.RmgZoomBtn--reset {
+  min-width: 68px;
+}
+
+/* While we keep ellipsis in global table cell styles, explicitly avoid wrapping by default */
+.RmgTableWrap .p-datatable .p-datatable-tbody > tr > td {
+  white-space: nowrap;
 }
 
 code {
