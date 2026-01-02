@@ -4,15 +4,17 @@ import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { Tag } from "primereact/tag";
 import { InputText } from "primereact/inputtext";
+import { FilterMatchMode } from "primereact/api";
 
 /**
- * PrimeReact DataTable wrapper that intentionally uses PrimeReact defaults:
+ * PrimeReact DataTable wrapper that uses PrimeReact built-ins:
  * - Built-in pagination (paginator)
  * - Built-in sorting (sortable columns)
+ * - Built-in per-column filters (row filter UI)
  *
  * Product requirement:
- * - Keep per-column filters disabled.
- * - Add a compact global search control + CSV download button before each table.
+ * - Remove custom/top filter panel.
+ * - Keep compact global search control + CSV download button before each table.
  *
  * This component is shared by multiple pages (RMG Tracker, Skill Factories, Learning Paths,
  * and Assessments). Any layout improvements made here apply across those screens.
@@ -34,6 +36,29 @@ function defaultRowKey(row, idx) {
     row?.learningPathName ??
     idx
   );
+}
+
+function getDefaultMatchModeForValue(sampleValue) {
+  if (typeof sampleValue === "number") return FilterMatchMode.EQUALS;
+  if (typeof sampleValue === "boolean") return FilterMatchMode.EQUALS;
+  return FilterMatchMode.CONTAINS;
+}
+
+function buildInitialColumnFilters({ columns, rows }) {
+  const safeColumns = Array.isArray(columns) ? columns : [];
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const sample = safeRows[0] || {};
+
+  const next = { global: { value: "", matchMode: FilterMatchMode.CONTAINS } };
+
+  // Use column.id as the field key (matches `field` passed to <Column/>).
+  // We default all column filters to text-ish CONTAINS unless the sample value is numeric/boolean.
+  for (const c of safeColumns) {
+    const sampleValue = sample?.[c.id];
+    next[c.id] = { value: null, matchMode: getDefaultMatchModeForValue(sampleValue) };
+  }
+
+  return next;
 }
 
 // PUBLIC_INTERFACE
@@ -58,8 +83,6 @@ export default function PrimeDataTableCard({
   rowKey = defaultRowKey,
   /** Custom cell renderer: (row, columnId) => ReactNode */
   renderCell,
-  /** Optional: additional top controls to render before the table (e.g., extra dropdown filters). */
-  extraControls,
   /**
    * Optional override: which fields are included in global search.
    * If not provided, we will derive it from `columns` (using column.id).
@@ -74,48 +97,70 @@ export default function PrimeDataTableCard({
   }, [columns]);
 
   /**
-   * PrimeReact DataTable global filtering is driven by:
-   * - `filters={{ global: { value, matchMode } }}`
-   * - `globalFilterFields=[...]`
+   * PrimeReact DataTable filtering is driven by:
+   * - `filters` object (global + per-column)
+   * - `onFilter` event
    */
   const [globalFilterValue, setGlobalFilterValue] = React.useState("");
-  const [filters, setFilters] = React.useState({ global: { value: "", matchMode: "contains" } });
+  const [filters, setFilters] = React.useState(() =>
+    buildInitialColumnFilters({ columns: visibleColumns, rows })
+  );
+
+  // If column definitions change (or initial dataset shape changes), ensure we have keys for each column.
+  React.useEffect(() => {
+    setFilters((prev) => {
+      const next = { ...(prev || {}) };
+
+      // Always keep global.
+      if (!next.global) next.global = { value: "", matchMode: FilterMatchMode.CONTAINS };
+
+      const sample = Array.isArray(rows) && rows.length > 0 ? rows[0] : {};
+      for (const c of visibleColumns) {
+        if (!next[c.id]) {
+          next[c.id] = {
+            value: null,
+            matchMode: getDefaultMatchModeForValue(sample?.[c.id]),
+          };
+        }
+      }
+
+      return next;
+    });
+  }, [visibleColumns, rows]);
 
   const derivedGlobalFields = React.useMemo(() => {
     if (Array.isArray(globalSearchFields) && globalSearchFields.length > 0) {
       return globalSearchFields;
     }
     // Default: search across the column ids (which match row fields).
-    // This covers the majority of the mocked datasets used in the pages.
     return visibleColumns.map((c) => c.id);
   }, [globalSearchFields, visibleColumns]);
 
   function clearAll() {
-    // Clear the global filter (per-column filters remain disabled).
+    // Clear global + per-column filters (built-in row filter UI).
     setGlobalFilterValue("");
-    setFilters({ global: { value: "", matchMode: "contains" } });
+    setFilters(buildInitialColumnFilters({ columns: visibleColumns, rows }));
   }
 
   function exportCsv() {
-    // PrimeReact exportCSV exports the currently visible dataset (after sorting/filtering),
-    // which matches the requirement "export currently visible rows/columns".
+    // PrimeReact exportCSV exports the currently visible dataset (after sorting/filtering).
     if (dtRef.current) dtRef.current.exportCSV({ selectionOnly: false });
   }
 
   function bodyTemplate(row, colId) {
     if (typeof renderCell === "function") return renderCell(row, colId);
     const col = visibleColumns.find((c) => c.id === colId);
-    const value =
-      typeof col?.accessor === "function" ? col.accessor(row) : row?.[colId];
+    const value = typeof col?.accessor === "function" ? col.accessor(row) : row?.[colId];
     return normalizeText(value) || "—";
   }
-
-  const showHeaderBar = Boolean(title || subtitle || extraControls);
 
   // PUBLIC_INTERFACE
   function applyGlobalSearch() {
     /** Apply the current global search input to the PrimeReact DataTable global filter. */
-    setFilters({ global: { value: globalFilterValue, matchMode: "contains" } });
+    setFilters((prev) => ({
+      ...(prev || {}),
+      global: { value: globalFilterValue, matchMode: FilterMatchMode.CONTAINS },
+    }));
   }
 
   function handleSearchKeyDown(e) {
@@ -124,6 +169,8 @@ export default function PrimeDataTableCard({
       applyGlobalSearch();
     }
   }
+
+  const showHeaderBar = Boolean(title || subtitle);
 
   return (
     <div
@@ -141,31 +188,18 @@ export default function PrimeDataTableCard({
               flexWrap: "wrap",
             }}
           >
-            {title && (
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>
-                {title}
-              </h2>
-            )}
+            {title && <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>{title}</h2>}
             {subtitle && <span style={{ opacity: 0.8 }}>{subtitle}</span>}
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              gap: 10,
-              alignItems: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            {extraControls}
-
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
             <Button
               type="button"
-              icon="pi pi-refresh"
+              icon="pi pi-filter-slash"
               className="p-button-outlined p-button-icon-only"
               onClick={clearAll}
-              aria-label="Reset table"
-              tooltip="Reset"
+              aria-label="Reset filters"
+              tooltip="Reset filters"
               tooltipOptions={{ position: "top" }}
               disabled={loading}
             />
@@ -236,6 +270,8 @@ export default function PrimeDataTableCard({
         scrollHeight="60vh"
         className="p-datatable-sm RmgPrimeDataTable"
         filters={filters}
+        onFilter={(e) => setFilters(e.filters)}
+        filterDisplay="row"
         globalFilterFields={derivedGlobalFields}
       >
         {visibleColumns.map((c) => (
@@ -244,6 +280,9 @@ export default function PrimeDataTableCard({
             field={c.id}
             header={c.label}
             sortable={c.sortable !== false}
+            filter
+            showFilterMenu={false}
+            filterPlaceholder="Filter…"
             body={(rowData) => bodyTemplate(rowData, c.id)}
           />
         ))}
@@ -251,7 +290,7 @@ export default function PrimeDataTableCard({
 
       <div style={{ marginTop: 10, opacity: 0.75, fontSize: 12 }}>
         <Tag
-          value="PrimeReact defaults (paginator + sort)"
+          value="PrimeReact built-ins (paginator + sort + column filters)"
           severity="info"
           style={{
             background: "rgba(3, 78, 161, 0.12)",

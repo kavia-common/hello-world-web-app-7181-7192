@@ -1,6 +1,5 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Dropdown } from "primereact/dropdown";
 import PrimeDataTableCard from "./components/PrimeDataTableCard";
 
 /**
@@ -170,27 +169,6 @@ function buildSkillFactoriesQuery({ q, mentorPool, employeePool } = {}) {
   if (employeePool) params.set("employeePool", employeePool);
   const qs = params.toString();
   return qs ? `/skill-factories?${qs}` : "/skill-factories";
-}
-
-function parseSkillFactoriesQuery(locationSearch) {
-  const params = new URLSearchParams(locationSearch || "");
-  const q = (params.get("q") || "").trim();
-  const mentorPool = (params.get("mentorPool") || "").trim();
-  const employeePool = (params.get("employeePool") || "").trim();
-  return { q, mentorPool, employeePool };
-}
-
-function normalizePoolParam(value) {
-  const v = String(value || "").trim().toLowerCase();
-  if (v === "in" || v === "in-pool" || v === "in_pool") return "in";
-  if (v === "not-in" || v === "notin" || v === "not_in" || v === "out") return "not-in";
-  return "";
-}
-
-function poolParamToLabel(param) {
-  if (param === "in") return "In pool";
-  if (param === "not-in") return "Not in pool";
-  return "";
 }
 
 function normalizeText(value) {
@@ -772,35 +750,27 @@ function formatDateOrDash(value) {
 
 // PUBLIC_INTERFACE
 export function RmgTrackerPage() {
-  /** RMG Tracker page that fetches (mocked) data and renders a PrimeReact table while preserving existing UX features. */
+  /** RMG Tracker page that fetches (mocked) data and renders a PrimeReact table with built-in per-column filters. */
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [errorMessage, setErrorMessage] = React.useState("");
 
-  // Page-level dropdown filters (kept as in old UX)
-  const [filters, setFilters] = React.useState({
-    employeeType: "",
-    currentStatus: "",
-    location: "",
-    grade: "",
-  });
-
   const ALL_COLUMNS = React.useMemo(
     () => [
-      { id: "empId", label: "Emp ID", sortType: "text", filterType: "text" },
-      { id: "name", label: "Name", sortType: "text", filterType: "text" },
-      { id: "role", label: "Role", sortType: "text", filterType: "select" },
-      { id: "project", label: "Project", sortType: "text", filterType: "select" },
-      { id: "allocationPct", label: "Allocation %", sortType: "number", filterType: "numberRange" },
-      { id: "status", label: "Status", sortType: "text", filterType: "select" },
-      { id: "currentStatus", label: "Current Status", sortType: "text", filterType: "select" },
-      { id: "employeeType", label: "Employee Type", sortType: "text", filterType: "select" },
-      { id: "grade", label: "Grade", sortType: "text", filterType: "select" },
-      { id: "manager", label: "Manager", sortType: "text", filterType: "select" },
-      { id: "location", label: "Location", sortType: "text", filterType: "select" },
-      { id: "startDate", label: "Start", sortType: "date", filterType: "dateRange" },
-      { id: "endDate", label: "End", sortType: "date", filterType: "dateRange" },
-      { id: "skills", label: "Skills", sortType: "text", filterType: "multiselect", filterAccessor: (r) => r?.skills || [] },
+      { id: "empId", label: "Emp ID" },
+      { id: "name", label: "Name" },
+      { id: "role", label: "Role" },
+      { id: "project", label: "Project" },
+      { id: "allocationPct", label: "Allocation %" },
+      { id: "status", label: "Status" },
+      { id: "currentStatus", label: "Current Status" },
+      { id: "employeeType", label: "Employee Type" },
+      { id: "grade", label: "Grade" },
+      { id: "manager", label: "Manager" },
+      { id: "location", label: "Location" },
+      { id: "startDate", label: "Start" },
+      { id: "endDate", label: "End" },
+      { id: "skills", label: "Skills" },
     ],
     []
   );
@@ -840,25 +810,6 @@ export function RmgTrackerPage() {
       if (typeof cleanup === "function") cleanup();
     };
   }, [load]);
-
-  const filterOptions = React.useMemo(() => {
-    const employeeType = uniqueSorted(rows.map((r) => r.employeeType));
-    const currentStatus = uniqueSorted(rows.map((r) => r.currentStatus));
-    const location = uniqueSorted(rows.map((r) => r.location));
-    const grade = uniqueSorted(rows.map((r) => r.grade));
-    return { employeeType, currentStatus, location, grade };
-  }, [rows]);
-
-  // Apply page-level filters before passing into table
-  const prefilteredRows = React.useMemo(() => {
-    return (Array.isArray(rows) ? rows : []).filter((r) => {
-      if (filters.employeeType && normalizeText(r.employeeType) !== filters.employeeType) return false;
-      if (filters.currentStatus && normalizeText(r.currentStatus) !== filters.currentStatus) return false;
-      if (filters.location && normalizeText(r.location) !== filters.location) return false;
-      if (filters.grade && normalizeText(r.grade) !== filters.grade) return false;
-      return true;
-    });
-  }, [rows, filters]);
 
   function renderCell(r, colId) {
     switch (colId) {
@@ -914,74 +865,6 @@ export function RmgTrackerPage() {
           </Link>
         </div>
 
-        {!loading && !errorMessage && (
-          <div className="RmgOptions" aria-label="RMG table filters">
-            <div className="RmgOptionsRow">
-              <label className="RmgField">
-                <span className="RmgFieldLabel">Employee Type</span>
-                <Dropdown
-                  value={filters.employeeType}
-                  options={[{ label: "All", value: "" }, ...filterOptions.employeeType.map((v) => ({ label: v, value: v }))]}
-                  onChange={(e) => setFilters((f) => ({ ...f, employeeType: e.value }))}
-                  placeholder="All"
-                  aria-label="Filter by employee type"
-                  style={{ width: "100%" }}
-                />
-              </label>
-
-              <label className="RmgField">
-                <span className="RmgFieldLabel">Current Status</span>
-                <Dropdown
-                  value={filters.currentStatus}
-                  options={[{ label: "All", value: "" }, ...filterOptions.currentStatus.map((v) => ({ label: v, value: v }))]}
-                  onChange={(e) => setFilters((f) => ({ ...f, currentStatus: e.value }))}
-                  placeholder="All"
-                  aria-label="Filter by current status"
-                  style={{ width: "100%" }}
-                />
-              </label>
-
-              <label className="RmgField">
-                <span className="RmgFieldLabel">Location</span>
-                <Dropdown
-                  value={filters.location}
-                  options={[{ label: "All", value: "" }, ...filterOptions.location.map((v) => ({ label: v, value: v }))]}
-                  onChange={(e) => setFilters((f) => ({ ...f, location: e.value }))}
-                  placeholder="All"
-                  aria-label="Filter by location"
-                  style={{ width: "100%" }}
-                />
-              </label>
-
-              <label className="RmgField">
-                <span className="RmgFieldLabel">Grade</span>
-                <Dropdown
-                  value={filters.grade}
-                  options={[{ label: "All", value: "" }, ...filterOptions.grade.map((v) => ({ label: v, value: v }))]}
-                  onChange={(e) => setFilters((f) => ({ ...f, grade: e.value }))}
-                  placeholder="All"
-                  aria-label="Filter by grade"
-                  style={{ width: "100%" }}
-                />
-              </label>
-
-              <label className="RmgField">
-                <span className="RmgFieldLabel">Quick reset</span>
-                <button
-                  type="button"
-                  className="RmgButton RmgIconOnlyButton"
-                  onClick={() => setFilters({ employeeType: "", currentStatus: "", location: "", grade: "" })}
-                  disabled={loading}
-                  aria-label="Reset RMG filters"
-                  title="Reset filters"
-                >
-                  <span className="pi pi-filter-slash" aria-hidden="true" />
-                </button>
-              </label>
-            </div>
-          </div>
-        )}
-
         {loading && (
           <div className="RmgState" role="status" aria-live="polite">
             <div className="RmgSpinner" aria-hidden="true" />
@@ -1007,8 +890,10 @@ export function RmgTrackerPage() {
 
         {!loading && !errorMessage && (
           <PrimeDataTableCard
+            title="RMG Tracker"
+            subtitle="Use per-column filters in the header row, or global search above the table."
             columns={ALL_COLUMNS}
-            rows={prefilteredRows}
+            rows={rows}
             loading={loading}
             errorMessage={errorMessage}
             rowKey={(r) => r.empId}
@@ -1099,104 +984,26 @@ function safeArrayCount(value) {
 
 // PUBLIC_INTERFACE
 export function SkillFactoriesPage() {
-  /** Skill Factories page that fetches (mocked) data and renders a PrimeReact table with preserved filtering UX. */
-  const location = useLocation();
+  /** Skill Factories page that fetches (mocked) data and renders a PrimeReact table with built-in per-column filters. */
+  useLocation(); // kept to avoid changing router usage patterns; top filter panel is removed
 
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [errorMessage, setErrorMessage] = React.useState("");
 
-  const [filters, setFilters] = React.useState({
-    skillFactoryName: "",
-    mentorPoolStatus: "",
-    employeePoolStatus: "",
-  });
-
-  React.useEffect(() => {
-    const { mentorPool, employeePool } = parseSkillFactoriesQuery(location.search);
-    const nextMentorLabel = poolParamToLabel(normalizePoolParam(mentorPool));
-    const nextEmployeeLabel = poolParamToLabel(normalizePoolParam(employeePool));
-
-    setFilters((f) => ({
-      ...f,
-      mentorPoolStatus: nextMentorLabel || "",
-      employeePoolStatus: nextEmployeeLabel || "",
-    }));
-  }, [location.search]);
-
   const ALL_COLUMNS = React.useMemo(
     () => [
-      { id: "skillFactoryId", label: "Skill Factory ID", sortType: "text", filterType: "text" },
-      { id: "skillFactoryName", label: "Skill Factory Name", sortType: "text", filterType: "select" },
-      {
-        id: "mentorCount",
-        label: "Mentors (#)",
-        sortType: "number",
-        filterType: "numberRange",
-        accessor: (sf) => safeArrayCount(sf.mentors),
-        filterAccessor: (sf) => safeArrayCount(sf.mentors),
-      },
-      {
-        id: "employeeCount",
-        label: "Employees (#)",
-        sortType: "number",
-        filterType: "numberRange",
-        accessor: (sf) => safeArrayCount(sf.employees),
-        filterAccessor: (sf) => safeArrayCount(sf.employees),
-      },
-      {
-        id: "mentorPoolStatus",
-        label: "Mentors Pool",
-        sortType: "text",
-        filterType: "select",
-        accessor: (sf) => getMentorPoolStatus(sf),
-        filterAccessor: (sf) => getMentorPoolStatus(sf),
-      },
-      {
-        id: "employeePoolStatus",
-        label: "Employees Pool",
-        sortType: "text",
-        filterType: "select",
-        accessor: (sf) => getEmployeePoolStatus(sf),
-        filterAccessor: (sf) => getEmployeePoolStatus(sf),
-      },
-      {
-        id: "hasAnyPoolMembers",
-        label: "Any In Pool",
-        sortType: "text",
-        filterType: "select",
-        accessor: (sf) => yesNo(flattenPoolFlags(sf)),
-        filterAccessor: (sf) => yesNo(flattenPoolFlags(sf)),
-      },
-      {
-        id: "mentors",
-        label: "Mentors",
-        sortType: "text",
-        filterType: "text",
-        accessor: (sf) => (Array.isArray(sf.mentors) ? sf.mentors.map((m) => m?.mentorName).join(" ") : ""),
-        filterAccessor: (sf) =>
-          Array.isArray(sf.mentors)
-            ? sf.mentors.map((m) => `${m?.mentorName || ""} ${m?.mentorEmail || ""} ${m?.isInPool ? "in" : "not-in"}`).join(" ")
-            : "",
-      },
-      {
-        id: "employees",
-        label: "Employees",
-        sortType: "text",
-        filterType: "text",
-        accessor: (sf) => (Array.isArray(sf.employees) ? sf.employees.map((e) => e?.name).join(" ") : ""),
-        filterAccessor: (sf) =>
-          Array.isArray(sf.employees)
-            ? sf.employees
-                .map(
-                  (e) =>
-                    `${e?.id || ""} ${e?.name || ""} ${e?.email || ""} ${formatRatingOrDash(e?.initialRating)} ${formatRatingOrDash(e?.currentRating)} ${e?.isInPool ? "in" : "not-in"}`
-                )
-                .join(" ")
-            : "",
-      },
-      { id: "createdAt", label: "Created At", sortType: "date", filterType: "dateRange" },
-      { id: "updatedAt", label: "Updated At", sortType: "date", filterType: "dateRange" },
+      { id: "skillFactoryId", label: "Skill Factory ID" },
+      { id: "skillFactoryName", label: "Skill Factory Name" },
+      { id: "mentorCount", label: "Mentors (#)" },
+      { id: "employeeCount", label: "Employees (#)" },
+      { id: "mentorPoolStatus", label: "Mentors Pool" },
+      { id: "employeePoolStatus", label: "Employees Pool" },
+      { id: "hasAnyPoolMembers", label: "Any In Pool" },
+      { id: "mentors", label: "Mentors" },
+      { id: "employees", label: "Employees" },
+      { id: "createdAt", label: "Created At" },
+      { id: "updatedAt", label: "Updated At" },
     ],
     []
   );
@@ -1214,7 +1021,17 @@ export function SkillFactoriesPage() {
         throw new Error("Unexpected API response format.");
       }
 
-      setRows(response.data);
+      // Add derived fields used by the table columns so per-column filters work naturally.
+      const enriched = response.data.map((sf) => ({
+        ...sf,
+        mentorCount: safeArrayCount(sf.mentors),
+        employeeCount: safeArrayCount(sf.employees),
+        mentorPoolStatus: getMentorPoolStatus(sf),
+        employeePoolStatus: getEmployeePoolStatus(sf),
+        hasAnyPoolMembers: yesNo(flattenPoolFlags(sf)),
+      }));
+
+      setRows(enriched);
     } catch (err) {
       if (err?.name !== "AbortError") {
         setErrorMessage(err?.message || "Something went wrong while loading data.");
@@ -1237,37 +1054,16 @@ export function SkillFactoriesPage() {
     };
   }, [load]);
 
-  const filterOptions = React.useMemo(() => {
-    const skillFactoryName = uniqueSorted(rows.map((r) => r.skillFactoryName));
-    return {
-      skillFactoryName,
-      mentorPoolStatus: ["In pool", "Not in pool"],
-      employeePoolStatus: ["In pool", "Not in pool"],
-    };
-  }, [rows]);
-
-  const prefilteredRows = React.useMemo(() => {
-    return (Array.isArray(rows) ? rows : []).filter((sf) => {
-      const sfName = normalizeText(sf.skillFactoryName);
-
-      if (filters.skillFactoryName && sfName !== filters.skillFactoryName) return false;
-
-      const mentorsPool = getMentorPoolStatus(sf);
-      if (filters.mentorPoolStatus && mentorsPool !== filters.mentorPoolStatus) return false;
-
-      const employeesPool = getEmployeePoolStatus(sf);
-      if (filters.employeePoolStatus && employeesPool !== filters.employeePoolStatus) return false;
-
-      return true;
-    });
-  }, [rows, filters]);
-
   function renderMentorChips(sf) {
     if (!Array.isArray(sf.mentors) || sf.mentors.length === 0) return "—";
     return (
       <div className="RmgChips" aria-label={`${sf.skillFactoryName} mentors`}>
         {sf.mentors.map((m) => (
-          <span key={m.mentorId} className="RmgChip" title={`${m.mentorEmail} • ${m.isInPool ? "In pool" : "Not in pool"}`}>
+          <span
+            key={m.mentorId}
+            className="RmgChip"
+            title={`${m.mentorEmail} • ${m.isInPool ? "In pool" : "Not in pool"}`}
+          >
             {m.mentorName}
           </span>
         ))}
@@ -1300,11 +1096,14 @@ export function SkillFactoriesPage() {
       case "skillFactoryId":
         return <span className="RmgMono">{sf.skillFactoryId}</span>;
       case "mentorCount":
-        return <span className="RmgMono">{safeArrayCount(sf.mentors)}</span>;
       case "employeeCount":
-        return <span className="RmgMono">{safeArrayCount(sf.employees)}</span>;
+        return <span className="RmgMono">{sf[colId]}</span>;
       case "hasAnyPoolMembers":
-        return <span className={`RmgPill ${flattenPoolFlags(sf) ? "RmgPill--billable" : "RmgPill--bench"}`}>{yesNo(flattenPoolFlags(sf))}</span>;
+        return (
+          <span className={`RmgPill ${flattenPoolFlags(sf) ? "RmgPill--billable" : "RmgPill--bench"}`}>
+            {sf.hasAnyPoolMembers}
+          </span>
+        );
       case "mentors":
         return renderMentorChips(sf);
       case "employees":
@@ -1342,62 +1141,6 @@ export function SkillFactoriesPage() {
           </Link>
         </div>
 
-        {!loading && !errorMessage && (
-          <div className="RmgOptions" aria-label="Skill Factories filters">
-            <div className="RmgOptionsRow">
-              <label className="RmgField">
-                <span className="RmgFieldLabel">Skill Factory</span>
-                <Dropdown
-                  value={filters.skillFactoryName}
-                  options={[{ label: "All", value: "" }, ...filterOptions.skillFactoryName.map((v) => ({ label: v, value: v }))]}
-                  onChange={(e) => setFilters((f) => ({ ...f, skillFactoryName: e.value }))}
-                  placeholder="All"
-                  aria-label="Filter by skill factory name"
-                  style={{ width: "100%" }}
-                />
-              </label>
-
-              <label className="RmgField">
-                <span className="RmgFieldLabel">Mentors Pool</span>
-                <Dropdown
-                  value={filters.mentorPoolStatus}
-                  options={[{ label: "All", value: "" }, ...filterOptions.mentorPoolStatus.map((v) => ({ label: v, value: v }))]}
-                  onChange={(e) => setFilters((f) => ({ ...f, mentorPoolStatus: e.value }))}
-                  placeholder="All"
-                  aria-label="Filter by mentors pool status"
-                  style={{ width: "100%" }}
-                />
-              </label>
-
-              <label className="RmgField">
-                <span className="RmgFieldLabel">Employees Pool</span>
-                <Dropdown
-                  value={filters.employeePoolStatus}
-                  options={[{ label: "All", value: "" }, ...filterOptions.employeePoolStatus.map((v) => ({ label: v, value: v }))]}
-                  onChange={(e) => setFilters((f) => ({ ...f, employeePoolStatus: e.value }))}
-                  placeholder="All"
-                  aria-label="Filter by employees pool status"
-                  style={{ width: "100%" }}
-                />
-              </label>
-
-              <label className="RmgField">
-                <span className="RmgFieldLabel">Quick reset</span>
-                <button
-                  type="button"
-                  className="RmgButton RmgIconOnlyButton"
-                  onClick={() => setFilters({ skillFactoryName: "", mentorPoolStatus: "", employeePoolStatus: "" })}
-                  disabled={loading}
-                  aria-label="Reset Skill Factories filters"
-                  title="Reset filters"
-                >
-                  <span className="pi pi-filter-slash" aria-hidden="true" />
-                </button>
-              </label>
-            </div>
-          </div>
-        )}
-
         {loading && (
           <div className="RmgState" role="status" aria-live="polite">
             <div className="RmgSpinner" aria-hidden="true" />
@@ -1423,8 +1166,10 @@ export function SkillFactoriesPage() {
 
         {!loading && !errorMessage && (
           <PrimeDataTableCard
+            title="Skill Factories"
+            subtitle="Use per-column filters in the header row, or global search above the table."
             columns={ALL_COLUMNS}
-            rows={prefilteredRows}
+            rows={rows}
             loading={loading}
             errorMessage={errorMessage}
             rowKey={(sf) => sf.skillFactoryId}
@@ -1468,21 +1213,6 @@ async function fetchLearningPathsMock({ signal } = {}) {
   return DUMMY_LEARNING_PATHS_RESPONSE;
 }
 
-function parseLearningPathsQuery(locationSearch) {
-  const params = new URLSearchParams(locationSearch || "");
-  const q = (params.get("q") || "").trim();
-  const status = (params.get("status") || "").trim();
-  return { q, status };
-}
-
-function normalizeLpStatusFilter(value) {
-  const v = String(value || "").trim().toLowerCase();
-  if (v === "completed") return "completed";
-  if (v === "inprogress" || v === "in_progress" || v === "in-progress") return "inProgress";
-  if (v === "inprogresscount") return "inProgress";
-  return "";
-}
-
 function safeNumberOrDash(value) {
   if (value === null || value === undefined) return "—";
   const num = Number(value);
@@ -1498,46 +1228,28 @@ function formatLearningPathsIsoDateTimeOrDash(value) {
 
 // PUBLIC_INTERFACE
 export function LearningPathsPage() {
-  /** Learning Paths page that fetches (mocked) data and renders a PrimeReact table preserving existing controls. */
-  const location = useLocation();
+  /** Learning Paths page that fetches (mocked) data and renders a PrimeReact table with built-in per-column filters. */
+  useLocation(); // kept to avoid changing router usage patterns; top filter panel is removed
 
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [errorMessage, setErrorMessage] = React.useState("");
 
-  const [filters, setFilters] = React.useState({
-    duration: "",
-    tag: "",
-    status: "",
-  });
-
   const ALL_COLUMNS = React.useMemo(
     () => [
-      { id: "learningPathName", label: "Learning Path Name", sortType: "text", filterType: "text" },
-      { id: "description", label: "Description", sortType: "text", filterType: "text" },
-      { id: "tags", label: "Tags", sortType: "text", filterType: "multiselect", filterAccessor: (lp) => lp?.tags || [] },
-      {
-        id: "courseLinks",
-        label: "Course Links",
-        sortType: "text",
-        filterType: "text",
-        filterAccessor: (lp) => (Array.isArray(lp.courseLinks) ? lp.courseLinks.join(" ") : ""),
-      },
-      { id: "duration", label: "Duration", sortType: "text", filterType: "select" },
-      { id: "enrolledCount", label: "Enrolled", sortType: "number", filterType: "numberRange" },
-      { id: "completedCount", label: "Completed", sortType: "number", filterType: "numberRange" },
-      { id: "inProgressCount", label: "In Progress", sortType: "number", filterType: "numberRange" },
-      { id: "createdAt", label: "Created At", sortType: "date", filterType: "dateRange" },
-      { id: "updatedAt", label: "Updated At", sortType: "date", filterType: "dateRange" },
+      { id: "learningPathName", label: "Learning Path Name" },
+      { id: "description", label: "Description" },
+      { id: "tags", label: "Tags" },
+      { id: "courseLinks", label: "Course Links" },
+      { id: "duration", label: "Duration" },
+      { id: "enrolledCount", label: "Enrolled" },
+      { id: "completedCount", label: "Completed" },
+      { id: "inProgressCount", label: "In Progress" },
+      { id: "createdAt", label: "Created At" },
+      { id: "updatedAt", label: "Updated At" },
     ],
     []
   );
-
-  React.useEffect(() => {
-    const { status } = parseLearningPathsQuery(location.search);
-    const normalized = normalizeLpStatusFilter(status);
-    setFilters((f) => ({ ...f, status: normalized || "" }));
-  }, [location.search]);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -1574,48 +1286,6 @@ export function LearningPathsPage() {
       if (typeof cleanup === "function") cleanup();
     };
   }, [load]);
-
-  const filterOptions = React.useMemo(() => {
-    const duration = uniqueSorted(rows.map((r) => r.duration));
-
-    const allTags = [];
-    for (const r of rows) {
-      if (Array.isArray(r?.tags)) allTags.push(...r.tags);
-    }
-    const tag = uniqueSorted(allTags);
-
-    return {
-      duration,
-      tag,
-      status: [
-        { value: "", label: "All" },
-        { value: "completed", label: "Completed" },
-        { value: "inProgress", label: "In Progress" },
-      ],
-    };
-  }, [rows]);
-
-  const prefilteredRows = React.useMemo(() => {
-    return (Array.isArray(rows) ? rows : []).filter((lp) => {
-      if (filters.duration && normalizeText(lp.duration) !== filters.duration) return false;
-
-      if (filters.tag) {
-        const tags = Array.isArray(lp.tags) ? lp.tags : [];
-        if (!tags.includes(filters.tag)) return false;
-      }
-
-      if (filters.status === "completed") {
-        const n = Number(lp?.completedCount);
-        if (!(Number.isFinite(n) && n > 0)) return false;
-      }
-      if (filters.status === "inProgress") {
-        const n = Number(lp?.inProgressCount);
-        if (!(Number.isFinite(n) && n > 0)) return false;
-      }
-
-      return true;
-    });
-  }, [rows, filters]);
 
   function renderCell(lp, colId) {
     switch (colId) {
@@ -1686,62 +1356,6 @@ export function LearningPathsPage() {
           </Link>
         </div>
 
-        {!loading && !errorMessage && (
-          <div className="RmgOptions" aria-label="Learning Paths filters">
-            <div className="RmgOptionsRow">
-              <label className="RmgField">
-                <span className="RmgFieldLabel">Duration</span>
-                <Dropdown
-                  value={filters.duration}
-                  options={[{ label: "All", value: "" }, ...filterOptions.duration.map((v) => ({ label: v, value: v }))]}
-                  onChange={(e) => setFilters((f) => ({ ...f, duration: e.value }))}
-                  placeholder="All"
-                  aria-label="Filter by duration"
-                  style={{ width: "100%" }}
-                />
-              </label>
-
-              <label className="RmgField">
-                <span className="RmgFieldLabel">Tag</span>
-                <Dropdown
-                  value={filters.tag}
-                  options={[{ label: "All", value: "" }, ...filterOptions.tag.map((v) => ({ label: v, value: v }))]}
-                  onChange={(e) => setFilters((f) => ({ ...f, tag: e.value }))}
-                  placeholder="All"
-                  aria-label="Filter by tag"
-                  style={{ width: "100%" }}
-                />
-              </label>
-
-              <label className="RmgField">
-                <span className="RmgFieldLabel">Status</span>
-                <Dropdown
-                  value={filters.status}
-                  options={filterOptions.status}
-                  onChange={(e) => setFilters((f) => ({ ...f, status: e.value }))}
-                  placeholder="All"
-                  aria-label="Filter by status"
-                  style={{ width: "100%" }}
-                />
-              </label>
-
-              <label className="RmgField">
-                <span className="RmgFieldLabel">Quick reset</span>
-                <button
-                  type="button"
-                  className="RmgButton RmgIconOnlyButton"
-                  onClick={() => setFilters({ duration: "", tag: "", status: "" })}
-                  disabled={loading}
-                  aria-label="Reset Learning Paths filters"
-                  title="Reset filters"
-                >
-                  <span className="pi pi-filter-slash" aria-hidden="true" />
-                </button>
-              </label>
-            </div>
-          </div>
-        )}
-
         {loading && (
           <div className="RmgState" role="status" aria-live="polite">
             <div className="RmgSpinner" aria-hidden="true" />
@@ -1767,8 +1381,10 @@ export function LearningPathsPage() {
 
         {!loading && !errorMessage && (
           <PrimeDataTableCard
+            title="Learning Paths"
+            subtitle="Use per-column filters in the header row, or global search above the table."
             columns={ALL_COLUMNS}
-            rows={prefilteredRows}
+            rows={rows}
             loading={loading}
             errorMessage={errorMessage}
             rowKey={(lp) => lp.learningPathName}
@@ -1853,45 +1469,26 @@ function normalizeAssessmentStatus(value) {
 
 // PUBLIC_INTERFACE
 export function AssessmentsPage() {
-  /** Assessments page that fetches (mocked) data and renders a PrimeReact table preserving existing controls. */
+  /** Assessments page that fetches (mocked) data and renders a PrimeReact table with built-in per-column filters. */
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [errorMessage, setErrorMessage] = React.useState("");
 
-  const [filters, setFilters] = React.useState({
-    status: "",
-    dueMonth: "",
-  });
-
   const ALL_COLUMNS = React.useMemo(
     () => [
-      { id: "assessmentId", label: "Assessment ID", sortType: "text", filterType: "text" },
-      { id: "title", label: "Title", sortType: "text", filterType: "text" },
-      { id: "description", label: "Description", sortType: "text", filterType: "text" },
-      {
-        id: "assignedTo",
-        label: "Assigned To",
-        sortType: "text",
-        filterType: "text",
-        accessor: (a) => firstAssigneeOrDash(a.assignedTo),
-        filterAccessor: (a) => firstAssigneeOrDash(a.assignedTo),
-      },
-      {
-        id: "assigneeContact",
-        label: "Contact",
-        sortType: "text",
-        filterType: "text",
-        accessor: (a) => assigneeContactOrDash(a.assignedTo),
-        filterAccessor: (a) => assigneeContactOrDash(a.assignedTo),
-      },
-      { id: "dueDate", label: "Due Date", sortType: "date", filterType: "dateRange" },
-      { id: "status", label: "Status", sortType: "text", filterType: "select" },
-      { id: "marks", label: "Marks", sortType: "number", filterType: "numberRange" },
-      { id: "basisOfScoring", label: "Basis of Scoring", sortType: "text", filterType: "text" },
-      { id: "strength", label: "Strength", sortType: "text", filterType: "text" },
-      { id: "areasOfImprovement", label: "Areas of Improvement", sortType: "text", filterType: "text" },
-      { id: "createdAt", label: "Created At", sortType: "date", filterType: "dateRange" },
-      { id: "updatedAt", label: "Updated At", sortType: "date", filterType: "dateRange" },
+      { id: "assessmentId", label: "Assessment ID" },
+      { id: "title", label: "Title" },
+      { id: "description", label: "Description" },
+      { id: "assignedTo", label: "Assigned To" },
+      { id: "assigneeContact", label: "Contact" },
+      { id: "dueDate", label: "Due Date" },
+      { id: "status", label: "Status" },
+      { id: "marks", label: "Marks" },
+      { id: "basisOfScoring", label: "Basis of Scoring" },
+      { id: "strength", label: "Strength" },
+      { id: "areasOfImprovement", label: "Areas of Improvement" },
+      { id: "createdAt", label: "Created At" },
+      { id: "updatedAt", label: "Updated At" },
     ],
     []
   );
@@ -1909,7 +1506,14 @@ export function AssessmentsPage() {
         throw new Error("Unexpected API response format.");
       }
 
-      setRows(response.data);
+      // Add derived fields used by the table columns so per-column filters work naturally.
+      const enriched = response.data.map((a) => ({
+        ...a,
+        assignedTo: firstAssigneeOrDash(a.assignedTo),
+        assigneeContact: assigneeContactOrDash(a.assignedTo),
+      }));
+
+      setRows(enriched);
     } catch (err) {
       if (err?.name !== "AbortError") {
         setErrorMessage(err?.message || "Something went wrong while loading data.");
@@ -1932,38 +1536,6 @@ export function AssessmentsPage() {
     };
   }, [load]);
 
-  const filterOptions = React.useMemo(() => {
-    const status = uniqueSorted(rows.map((r) => r?.status));
-
-    const months = [];
-    for (const r of rows) {
-      const value = r?.dueDate;
-      const d = value ? new Date(value) : null;
-      if (!d || Number.isNaN(d.getTime())) continue;
-      const month = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-      months.push(month);
-    }
-
-    return { status, dueMonth: uniqueSorted(months) };
-  }, [rows]);
-
-  const prefilteredRows = React.useMemo(() => {
-    return (Array.isArray(rows) ? rows : []).filter((a) => {
-      if (filters.status && normalizeText(a.status) !== filters.status) return false;
-
-      if (filters.dueMonth) {
-        const d = a?.dueDate ? new Date(a.dueDate) : null;
-        const month =
-          d && !Number.isNaN(d.getTime())
-            ? `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`
-            : "";
-        if (month !== filters.dueMonth) return false;
-      }
-
-      return true;
-    });
-  }, [rows, filters]);
-
   function renderCell(a, colId) {
     switch (colId) {
       case "assessmentId":
@@ -1971,9 +1543,9 @@ export function AssessmentsPage() {
       case "title":
         return <span style={{ fontWeight: 900 }}>{normalizeText(a.title) || "—"}</span>;
       case "assignedTo":
-        return <span title={assigneeContactOrDash(a.assignedTo)}>{firstAssigneeOrDash(a.assignedTo)}</span>;
+        return <span title={a.assigneeContact}>{a.assignedTo}</span>;
       case "assigneeContact":
-        return <span className="RmgMono">{assigneeContactOrDash(a.assignedTo)}</span>;
+        return <span className="RmgMono">{a.assigneeContact}</span>;
       case "dueDate":
         return <span className="RmgMono">{formatAssessmentsIsoDateTimeOrDash(a.dueDate)}</span>;
       case "createdAt":
@@ -1982,7 +1554,11 @@ export function AssessmentsPage() {
       case "marks":
         return <span className="RmgMono">{formatMarkOrDash(a.marks)}</span>;
       case "status":
-        return <span className={`RmgPill RmgPill--${normalizeAssessmentStatus(a.status)}`}>{normalizeText(a.status) || "—"}</span>;
+        return (
+          <span className={`RmgPill RmgPill--${normalizeAssessmentStatus(a.status)}`}>
+            {normalizeText(a.status) || "—"}
+          </span>
+        );
       default:
         return normalizeText(a[colId]) || "—";
     }
@@ -2013,50 +1589,6 @@ export function AssessmentsPage() {
           </Link>
         </div>
 
-        {!loading && !errorMessage && (
-          <div className="RmgOptions" aria-label="Assessments filters">
-            <div className="RmgOptionsRow">
-              <label className="RmgField">
-                <span className="RmgFieldLabel">Status</span>
-                <Dropdown
-                  value={filters.status}
-                  options={[{ label: "All", value: "" }, ...filterOptions.status.map((v) => ({ label: v, value: v }))]}
-                  onChange={(e) => setFilters((f) => ({ ...f, status: e.value }))}
-                  placeholder="All"
-                  aria-label="Filter by status"
-                  style={{ width: "100%" }}
-                />
-              </label>
-
-              <label className="RmgField">
-                <span className="RmgFieldLabel">Due month</span>
-                <Dropdown
-                  value={filters.dueMonth}
-                  options={[{ label: "All", value: "" }, ...filterOptions.dueMonth.map((v) => ({ label: v, value: v }))]}
-                  onChange={(e) => setFilters((f) => ({ ...f, dueMonth: e.value }))}
-                  placeholder="All"
-                  aria-label="Filter by due month"
-                  style={{ width: "100%" }}
-                />
-              </label>
-
-              <label className="RmgField">
-                <span className="RmgFieldLabel">Quick reset</span>
-                <button
-                  type="button"
-                  className="RmgButton RmgIconOnlyButton"
-                  onClick={() => setFilters({ status: "", dueMonth: "" })}
-                  disabled={loading}
-                  aria-label="Reset Assessments filters"
-                  title="Reset filters"
-                >
-                  <span className="pi pi-filter-slash" aria-hidden="true" />
-                </button>
-              </label>
-            </div>
-          </div>
-        )}
-
         {loading && (
           <div className="RmgState" role="status" aria-live="polite">
             <div className="RmgSpinner" aria-hidden="true" />
@@ -2082,8 +1614,10 @@ export function AssessmentsPage() {
 
         {!loading && !errorMessage && (
           <PrimeDataTableCard
+            title="Assessments"
+            subtitle="Use per-column filters in the header row, or global search above the table."
             columns={ALL_COLUMNS}
-            rows={prefilteredRows}
+            rows={rows}
             loading={loading}
             errorMessage={errorMessage}
             rowKey={(a) => a.assessmentId}

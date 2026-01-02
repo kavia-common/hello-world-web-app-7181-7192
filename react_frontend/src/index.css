@@ -114,6 +114,10 @@ body {
   position: sticky;
   top: var(--rmg-table-header-height);
   z-index: 4;
+
+  /* Subtle separation but still theme-aligned */
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(10px);
 }
 
 /* Avoid header content wrapping that causes header height changes and misalignment */
@@ -142,6 +146,15 @@ body {
 .RmgTableWrap .p-datatable .p-datatable-thead > tr.p-filter-row > th .p-column-filter,
 .RmgTableWrap .p-datatable .p-datatable-thead > tr.p-filter-row > th .p-inputtext {
   width: 100%;
+}
+
+/* Compact per-column filter inputs (row filter UI) */
+.RmgTableWrap .p-datatable .p-datatable-thead > tr.p-filter-row > th .p-inputtext {
+  min-height: 32px;
+  height: 32px;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  padding: 6px 10px;
 }
 
 /* Normalize column header content layout: label + sort icon + (possible) menu icon */
