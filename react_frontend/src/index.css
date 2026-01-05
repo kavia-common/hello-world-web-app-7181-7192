@@ -204,8 +204,9 @@ body {
     rgba(255, 255, 255, 0.55);
   backdrop-filter: blur(10px);
 
-  border-bottom-left-radius: 18px;
-  border-bottom-right-radius: 18px;
+  /* Requested: square bottom edge */
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 
   overflow: hidden;
 }
@@ -224,8 +225,10 @@ body {
 */
 .RmgTableWrap .RmgPrimeDataTable .p-datatable-wrapper {
   overflow: auto;
-  border-top-left-radius: 18px;
-  border-top-right-radius: 18px;
+
+  /* Requested: keep table viewport edges square */
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
 
@@ -238,28 +241,28 @@ body {
   border-radius: 0;
 }
 
-/* Top corners: apply to first/last header cells so gridlines don't “square off” */
+/* Top corners: ensure header cells do NOT introduce rounding */
 .RmgTableWrap .RmgPrimeDataTable .p-datatable-thead > tr:first-child > th:first-child {
-  border-top-left-radius: 18px;
+  border-top-left-radius: 0;
 }
 .RmgTableWrap .RmgPrimeDataTable .p-datatable-thead > tr:first-child > th:last-child {
-  border-top-right-radius: 18px;
+  border-top-right-radius: 0;
 }
 
-/* If the filter row is the first row (edge case), keep corners consistent */
+/* If the filter row is the first row (edge case), keep corners square */
 .RmgTableWrap
   .RmgPrimeDataTable
   .p-datatable-thead
   > tr.p-filter-row:first-child
   > th:first-child {
-  border-top-left-radius: 18px;
+  border-top-left-radius: 0;
 }
 .RmgTableWrap
   .RmgPrimeDataTable
   .p-datatable-thead
   > tr.p-filter-row:first-child
   > th:last-child {
-  border-top-right-radius: 18px;
+  border-top-right-radius: 0;
 }
 
 /* Prevent tiny header/body offsets caused by default padding/line-heights */
@@ -410,12 +413,15 @@ body {
   - rounding/borders align perfectly
 */
 .RmgTableWrap .RmgTableSurface {
-  border-radius: 18px;
+  /* Requested: non-rounded table surface/card edges */
+  border-radius: 0;
   border: 1px solid var(--card-border);
   background: var(--card-surface-wash), var(--card-bg);
   box-shadow: 0 14px 32px rgba(2, 6, 23, 0.08);
   backdrop-filter: blur(10px);
-  overflow: hidden; /* clip toolbar + table to rounded corners */
+
+  /* Keep clipping so toolbar + table feel like one unified surface */
+  overflow: hidden;
 }
 
 /* When the DataTable is inside RmgTableSurface, it should not draw a second border/shadow */
